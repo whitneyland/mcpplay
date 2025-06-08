@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎹 MCP Play</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: #555;
+            text-align: center;
+            margin-bottom: 2rem;
+            font-weight: 300;
+        }
+        
+        .goals {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin: 2rem 0;
+            border-left: 4px solid #667eea;
+        }
+        
+        .goals h2 {
+            color: #2c3e50;
+            margin-top: 0;
+            margin-bottom: 1rem;
+        }
+        
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        li {
+            margin: 1rem 0;
+            padding: 0.5rem 0;
+            font-size: 1.1rem;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .piano-keys {
+            display: flex;
+            justify-content: center;
+            margin: 2rem 0;
+        }
+        
+        .key {
+            width: 30px;
+            height: 100px;
+            background: white;
+            border: 1px solid #ccc;
+            margin: 0 1px;
+            border-radius: 0 0 5px 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .key.black {
+            width: 20px;
+            height: 60px;
+            background: #333;
+            margin: 0 -10px;
+            z-index: 1;
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎹 MCP Play</h1>
+        
+        <div class="piano-keys">
+            <div class="key"></div>
+            <div class="key black"></div>
+            <div class="key"></div>
+            <div class="key black"></div>
+            <div class="key"></div>
+            <div class="key"></div>
+            <div class="key black"></div>
+            <div class="key"></div>
+            <div class="key black"></div>
+            <div class="key"></div>
+            <div class="key black"></div>
+            <div class="key"></div>
+        </div>
+        
+        <p class="subtitle">MCP Play is a demo project exploring real-time control of MIDI playback in an iOS app using OpenAI's Model Context Protocol (MCP).</p>
+        
+        <div class="goals">
+            <h2>This project aims to:</h2>
+            <ul>
+                <li>🔁 Trigger MIDI sequences dynamically via MCP server commands</li>
+                <li>📲 Explore push notifications and app activation strategies</li>
+                <li>🎶 Showcase AI-driven interactions like "play a C major scale" or "compose a melody"</li>
+                <li>🎛️ Test soundfont integration for custom audio output</li>
+            </ul>
+        </div>
+        
+        <div class="footer">
+            It's a proof-of-concept built to demo what's possible at the intersection of AI orchestration and mobile audio.
+        </div>
+    </div>
+</body>
+</html>
