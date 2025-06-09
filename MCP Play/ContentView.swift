@@ -53,7 +53,8 @@ struct PianoKey: View {
 }
 
 struct ContentView: View {
-    @StateObject private var audioManager = AudioManager()
+    @EnvironmentObject var audioManager: AudioManager
+    @State private var selectedSequence = "sample_sequence"
 
     // Using constants for key dimensions makes calculations clearer
     private let whiteKeyWidth: CGFloat = 50
@@ -61,12 +62,58 @@ struct ContentView: View {
 
     let whiteKeys = [60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77, 79, 81, 83]
     let blackKeys = [61, 63, 66, 68, 70, 73, 75, 78, 80, 82]
+    
+    let availableSequences = [
+        ("sample_sequence", "I-IV-V Demo"),
+        ("moonlight_sonata", "Moonlight Sonata")
+    ]
 
     var body: some View {
         VStack {
             Text("Temu Piano")
                 .font(.title)
                 .padding()
+            
+            VStack {
+                Picker("Select Sequence", selection: $selectedSequence) {
+                    ForEach(availableSequences, id: \.0) { sequence in
+                        Text(sequence.1).tag(sequence.0)
+                    }
+                }
+                .pickerStyle(SegmentedPickerStyle())
+                .padding()
+                
+                HStack(spacing: 20) {
+                    Button(action: {
+                        audioManager.playSequence(named: selectedSequence)
+                    }) {
+                        HStack {
+                            Image(systemName: "play.fill")
+                            Text("Play Sequence")
+                        }
+                        .padding()
+                        .background(audioManager.isPlaying ? Color.gray : Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                    }
+                    .disabled(audioManager.isPlaying)
+                    
+                    Button(action: {
+                        audioManager.stopSequence()
+                    }) {
+                        HStack {
+                            Image(systemName: "stop.fill")
+                            Text("Stop")
+                        }
+                        .padding()
+                        .background(Color.red)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                    }
+                    .disabled(!audioManager.isPlaying)
+                }
+            }
+            .padding()
 
             ZStack(alignment: .topLeading) {
                 // 1. Draw the White Keys (Unchanged)
@@ -121,4 +168,5 @@ struct ContentView: View {
 }
 #Preview {
     ContentView()
+        .environmentObject(AudioManager())
 }
