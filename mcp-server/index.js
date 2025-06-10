@@ -118,6 +118,14 @@ class MCPPianoServer {
           },
         },
         {
+          name: 'list_instruments',
+          description: 'List all available instruments organized by category',
+          inputSchema: {
+            type: 'object',
+            properties: {},
+          },
+        },
+        {
           name: 'stop',
           description: 'Stop any currently playing music',
           inputSchema: {
@@ -135,6 +143,9 @@ class MCPPianoServer {
         switch (name) {
           case 'play_sequence':
             return await this.playSequence(args.sequence);
+          
+          case 'list_instruments':
+            return await this.listInstruments();
           
           case 'stop':
             return await this.stop();
@@ -180,17 +191,155 @@ class MCPPianoServer {
         await this.openURL(url);
       }
       
+      // Summarize total events and tracks
+      let totalEvents = 0;
+      let trackCount = 0;
+      if (Array.isArray(sequence.tracks)) {
+        trackCount = sequence.tracks.length;
+        totalEvents = sequence.tracks.reduce((sum, t) => {
+          return sum + (Array.isArray(t.events) ? t.events.length : 0);
+        }, 0);
+      } else if (Array.isArray(sequence.events)) {
+        trackCount = 1;
+        totalEvents = sequence.events.length;
+      }
+      const summary = `Playing music sequence at ${sequence.tempo} BPM with ${totalEvents} event${totalEvents === 1 ? '' : 's'}` +
+                      (trackCount > 1 ? ` across ${trackCount} tracks` : '');
       return {
         content: [
           {
             type: 'text',
-            text: `Playing music sequence at ${sequence.tempo} BPM with ${sequence.events.length} events`,
+            text: summary,
           },
         ],
       };
     } catch (error) {
       throw new Error(`Failed to play sequence: ${error.message}`);
     }
+  }
+
+  async listInstruments() {
+    const instruments = {
+      "Piano": [
+        { name: "acoustic_grand_piano", display: "Acoustic Grand Piano" },
+        { name: "bright_acoustic_piano", display: "Bright Acoustic Piano" },
+        { name: "electric_grand_piano", display: "Electric Grand Piano" },
+        { name: "honky_tonk_piano", display: "Honky Tonk Piano" },
+        { name: "electric_piano_1", display: "Electric Piano 1" },
+        { name: "electric_piano_2", display: "Electric Piano 2" },
+        { name: "harpsichord", display: "Harpsichord" },
+        { name: "clavinet", display: "Clavinet" }
+      ],
+      "Percussion": [
+        { name: "celesta", display: "Celesta" },
+        { name: "glockenspiel", display: "Glockenspiel" },
+        { name: "music_box", display: "Music Box" },
+        { name: "vibraphone", display: "Vibraphone" },
+        { name: "marimba", display: "Marimba" },
+        { name: "xylophone", display: "Xylophone" },
+        { name: "tubular_bells", display: "Tubular Bells" },
+        { name: "dulcimer", display: "Dulcimer" }
+      ],
+      "Organ": [
+        { name: "drawbar_organ", display: "Drawbar Organ" },
+        { name: "percussive_organ", display: "Percussive Organ" },
+        { name: "rock_organ", display: "Rock Organ" },
+        { name: "church_organ", display: "Church Organ" },
+        { name: "reed_organ", display: "Reed Organ" },
+        { name: "accordion", display: "Accordion" },
+        { name: "harmonica", display: "Harmonica" },
+        { name: "tango_accordion", display: "Tango Accordion" }
+      ],
+      "Guitar": [
+        { name: "acoustic_guitar_nylon", display: "Acoustic Guitar (Nylon)" },
+        { name: "acoustic_guitar_steel", display: "Acoustic Guitar (Steel)" },
+        { name: "electric_guitar_jazz", display: "Electric Guitar (Jazz)" },
+        { name: "electric_guitar_clean", display: "Electric Guitar (Clean)" },
+        { name: "electric_guitar_muted", display: "Electric Guitar (Muted)" },
+        { name: "overdriven_guitar", display: "Overdriven Guitar" },
+        { name: "distortion_guitar", display: "Distortion Guitar" },
+        { name: "guitar_harmonics", display: "Guitar Harmonics" }
+      ],
+      "Bass": [
+        { name: "acoustic_bass", display: "Acoustic Bass" },
+        { name: "electric_bass_finger", display: "Electric Bass (Finger)" },
+        { name: "electric_bass_pick", display: "Electric Bass (Pick)" },
+        { name: "fretless_bass", display: "Fretless Bass" },
+        { name: "slap_bass_1", display: "Slap Bass 1" },
+        { name: "slap_bass_2", display: "Slap Bass 2" },
+        { name: "synth_bass_1", display: "Synth Bass 1" },
+        { name: "synth_bass_2", display: "Synth Bass 2" }
+      ],
+      "Strings": [
+        { name: "violin", display: "Violin" },
+        { name: "viola", display: "Viola" },
+        { name: "cello", display: "Cello" },
+        { name: "contrabass", display: "Contrabass" },
+        { name: "tremolo_strings", display: "Tremolo Strings" },
+        { name: "pizzicato_strings", display: "Pizzicato Strings" },
+        { name: "orchestral_harp", display: "Orchestral Harp" },
+        { name: "timpani", display: "Timpani" },
+        { name: "string_ensemble_1", display: "String Ensemble 1" },
+        { name: "string_ensemble_2", display: "String Ensemble 2" },
+        { name: "synth_strings_1", display: "Synth Strings 1" },
+        { name: "synth_strings_2", display: "Synth Strings 2" }
+      ],
+      "Brass": [
+        { name: "trumpet", display: "Trumpet" },
+        { name: "trombone", display: "Trombone" },
+        { name: "tuba", display: "Tuba" },
+        { name: "muted_trumpet", display: "Muted Trumpet" },
+        { name: "french_horn", display: "French Horn" },
+        { name: "brass_section", display: "Brass Section" },
+        { name: "synth_brass_1", display: "Synth Brass 1" },
+        { name: "synth_brass_2", display: "Synth Brass 2" }
+      ],
+      "Woodwinds": [
+        { name: "soprano_sax", display: "Soprano Sax" },
+        { name: "alto_sax", display: "Alto Sax" },
+        { name: "tenor_sax", display: "Tenor Sax" },
+        { name: "baritone_sax", display: "Baritone Sax" },
+        { name: "oboe", display: "Oboe" },
+        { name: "english_horn", display: "English Horn" },
+        { name: "bassoon", display: "Bassoon" },
+        { name: "clarinet", display: "Clarinet" },
+        { name: "piccolo", display: "Piccolo" },
+        { name: "flute", display: "Flute" },
+        { name: "recorder", display: "Recorder" },
+        { name: "pan_flute", display: "Pan Flute" },
+        { name: "blown_bottle", display: "Blown Bottle" },
+        { name: "shakuhachi", display: "Shakuhachi" },
+        { name: "whistle", display: "Whistle" },
+        { name: "ocarina", display: "Ocarina" }
+      ],
+      "Choir": [
+        { name: "choir_aahs", display: "Choir Aahs" },
+        { name: "voice_oohs", display: "Voice Oohs" },
+        { name: "synth_voice", display: "Synth Voice" },
+        { name: "orchestra_hit", display: "Orchestra Hit" }
+      ]
+    };
+
+    let output = "Available Instruments:\n\n";
+    
+    for (const [category, categoryInstruments] of Object.entries(instruments)) {
+      output += `**${category}:**\n`;
+      for (const instrument of categoryInstruments) {
+        output += `- ${instrument.name} (${instrument.display})\n`;
+      }
+      output += "\n";
+    }
+    
+    output += "Use the instrument 'name' (left side) in your track definitions.";
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: output,
+        },
+      ],
+    };
   }
 
   async stop() {
