@@ -14,7 +14,7 @@ struct MCP_PlayApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainView()
                 .environmentObject(audioManager)
                 .onOpenURL { url in
                     handleURL(url)
