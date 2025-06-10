@@ -1,8 +1,11 @@
 {
   "version": 1,
+  "title": "Gemini 1",
   "tempo": 140,
-  "instrument": "acoustic_grand_piano",
-  "events": [
+  "tracks": [
+    {
+      "instrument": "acoustic_grand_piano",
+      "events": [
     {
       "_comment": "Section 1: Dramatic Introduction - Low rumbling chord followed by a fast ascending arpeggio",
       "time": 0.0,
@@ -125,6 +128,8 @@
       "pitches": ["C2", "G2", "C3"],
       "duration": 6.0,
       "velocity": 80
+    }
+      ]
     }
   ]
 }

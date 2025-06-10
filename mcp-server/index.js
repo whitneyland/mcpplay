@@ -50,51 +50,69 @@ class MCPPianoServer {
                 properties: {
                   version: { 
                     type: 'number', 
-                    description: 'Schema version (always use 1)' 
+                    description: 'Schema version (always use 1)'
                   },
-                  tempo: { 
-                    type: 'number', 
-                    description: 'BPM (beats per minute), typically 60-200' 
+                  title: {
+                    type: 'string',
+                    description: 'Optional title for the sequence'
                   },
-                  instrument: { 
-                    type: 'string', 
-                    description: 'Instrument (use "acoustic_grand_piano")' 
+                  tempo: {
+                    type: 'number',
+                    description: 'BPM (beats per minute), typically 60-200'
                   },
-                  events: {
+                  tracks: {
                     type: 'array',
-                    description: 'Array of musical events',
+                    description: 'Array of track objects',
                     items: {
                       type: 'object',
                       properties: {
-                        time: { 
-                          type: 'number', 
-                          description: 'Start time in beats (0.0, 1.0, 2.5, etc.)' 
+                        instrument: {
+                          type: 'string',
+                          description: 'Instrument name (e.g., "acoustic_grand_piano", "string_ensemble_1")'
                         },
-                        pitches: { 
-                          type: 'array', 
-                          description: 'MIDI numbers (60-127) or note names like "C4", "F#3"',
-                          items: { 
-                            oneOf: [
-                              { type: 'number' }, 
-                              { type: 'string' }
-                            ] 
+                        name: {
+                          type: 'string',
+                          description: 'Optional track name or description'
+                        },
+                        events: {
+                          type: 'array',
+                          description: 'Array of musical events for this track',
+                          items: {
+                            type: 'object',
+                            properties: {
+                              time: {
+                                type: 'number',
+                                description: 'Start time in beats (0.0, 1.0, 2.5, etc.)'
+                              },
+                              pitches: {
+                                type: 'array',
+                                description: 'MIDI numbers (0-127) or note names like "C4", "F#3"',
+                                items: {
+                                  oneOf: [
+                                    { type: 'number' },
+                                    { type: 'string' }
+                                  ]
+                                }
+                              },
+                              duration: {
+                                type: 'number',
+                                description: 'Length in beats (1.0 = quarter note, 0.5 = eighth note)'
+                              },
+                              velocity: {
+                                type: 'number',
+                                description: 'Volume 0-127 (optional, defaults to 100)'
+                              }
+                            },
+                            required: ['time', 'pitches', 'duration']
                           }
-                        },
-                        duration: { 
-                          type: 'number', 
-                          description: 'Length in beats (1.0 = quarter note, 0.5 = eighth note)' 
-                        },
-                        velocity: { 
-                          type: 'number', 
-                          description: 'Volume 0-127 (optional, defaults to 100)' 
                         }
                       },
-                      required: ['time', 'pitches', 'duration']
+                      required: ['instrument', 'events']
                     }
                   }
                 },
-                required: ['version', 'tempo', 'instrument', 'events']
-              },
+                required: ['version', 'tempo', 'tracks']
+              }
             },
             required: ['sequence'],
           },
@@ -151,10 +169,13 @@ class MCPPianoServer {
         // Large sequence - write to file and reference by name
         const timestamp = Date.now();
         const tempFileName = `temp_sequence_${timestamp}`;
-        const tempFilePath = path.join(this.sequencesDir, `${tempFileName}.json`);
-        
+        // Ensure temp_sequences subfolder exists
+        const tempDir = path.join(this.sequencesDir, 'temp_sequences');
+        await fs.mkdir(tempDir, { recursive: true });
+        const tempFilePath = path.join(tempDir, `${tempFileName}.json`);
+
         await fs.writeFile(tempFilePath, JSON.stringify(sequence, null, 2));
-        
+
         const url = `mcpplay://play?sequence=${tempFileName}`;
         await this.openURL(url);
       }

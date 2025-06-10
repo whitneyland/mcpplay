@@ -7,17 +7,24 @@ The MCP Play app accepts musical sequences in JSON format. Each sequence defines
 ```json
 {
   "version": 1,
+  "title": "Sequence Title",
   "tempo": 120,
-  "instrument": "acoustic_grand_piano",
-  "events": [...]
+  "tracks": [
+    {
+      "instrument": "acoustic_grand_piano",
+      "name": "Track Name",
+      "events": [...]
+    }
+  ]
 }
 ```
 
 ### Fields:
 - **version** (integer): Format version, currently always `1`
 - **tempo** (number): Beats per minute (e.g., 60, 120, 140)
-- **instrument** (string): Instrument name (currently only "acoustic_grand_piano" is supported)
-- **events** (array): Array of musical events to play
+- **title** (string, optional): Title of the sequence
+- **instrument** (string): Instrument name (e.g., "acoustic_grand_piano", "string_ensemble_1")
+- **tracks** (array): Array of track objects, each with its own instrument and events
 
 ## Event Structure
 Each event in the `events` array represents notes to play at a specific time:

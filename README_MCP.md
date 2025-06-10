@@ -45,24 +45,29 @@ Once configured, you can ask Claude Desktop:
 
 ## JSON Format
 
-Music sequences use this clear JSON structure:
+Music sequences now support multi-track JSON:
 
 ```json
 {
   "version": 1,
+  "title": "My First Multi-Track Song",
   "tempo": 120,
-  "instrument": "acoustic_grand_piano",
-  "events": [
+  "tracks": [
     {
-      "time": 0.0,
-      "pitches": ["C4"],
-      "duration": 1.0,
-      "velocity": 100
+      "instrument": "acoustic_grand_piano",
+      "name": "Piano Chords",
+      "events": [
+        { "time": 0.0, "pitches": ["C3", "G3", "E4"], "duration": 4.0, "velocity": 60 },
+        { "time": 4.0, "pitches": ["A2", "E3", "C4"], "duration": 4.0, "velocity": 60 }
+      ]
     },
     {
-      "time": 1.0, 
-      "pitches": ["D4"],
-      "duration": 1.0
+      "instrument": "string_ensemble_1",
+      "name": "String Melody",
+      "events": [
+        { "time": 0.0, "pitches": ["C5"], "duration": 3.0, "velocity": 90 },
+        { "time": 3.0, "pitches": ["B4"], "duration": 1.0, "velocity": 85 }
+      ]
     }
   ]
 }

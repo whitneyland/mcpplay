@@ -1,8 +1,11 @@
 {
   "version": 1,
+  "title": "Claude Opus 1",
   "tempo": 140,
-  "instrument": "acoustic_grand_piano",
-  "events": [
+  "tracks": [
+    {
+      "instrument": "acoustic_grand_piano",
+      "events": [
     // Opening: Dramatic low D power chord
     { "time": 0.0, "pitches": ["D1", "D2"], "duration": 2.0, "velocity": 120 },
     { "time": 2.0, "pitches": ["D1", "A1", "D2"], "duration": 1.5, "velocity": 115 },
@@ -180,5 +183,7 @@
     
     // Final note
     { "time": 69.0, "pitches": ["D1"], "duration": 1.0, "velocity": 40 }
+      ]
+    }
   ]
 }

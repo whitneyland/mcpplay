@@ -1,8 +1,11 @@
 {
   "version": 1,
+  "title": "Moonlight Sonata",
   "tempo": 60,
-  "instrument": "acoustic_grand_piano",
-  "events": [
+  "tracks": [
+    {
+      "instrument": "acoustic_grand_piano",
+      "events": [
     { "time": 0.0, "pitches": ["C#4"], "duration": 0.5, "velocity": 40 },
     { "time": 0.5, "pitches": ["E4"], "duration": 0.5, "velocity": 40 },
     { "time": 1.0, "pitches": ["G#4"], "duration": 0.5, "velocity": 40 },
@@ -43,5 +46,7 @@
     { "time": 4.0, "pitches": ["C#2"], "duration": 4.0, "velocity": 30 },
     { "time": 8.0, "pitches": ["G#1"], "duration": 4.0, "velocity": 30 },
     { "time": 12.0, "pitches": ["A1"], "duration": 4.0, "velocity": 30 }
+      ]
+    }
   ]
 }

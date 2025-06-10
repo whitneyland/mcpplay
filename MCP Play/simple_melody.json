@@ -1,8 +1,11 @@
 {
   "version": 1,
+  "title": "Simple Melody",
   "tempo": 120,
-  "instrument": "acoustic_grand_piano",
-  "events": [
+  "tracks": [
+    {
+      "instrument": "acoustic_grand_piano",
+      "events": [
     {
       "time": 0,
       "pitches": [
@@ -34,6 +37,8 @@
       ],
       "duration": 2,
       "velocity": 100
+    }
+      ]
     }
   ]
 }
