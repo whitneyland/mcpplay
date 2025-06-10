@@ -7,10 +7,38 @@
 
 import Foundation
 
+/// Represents a musical sequence, possibly containing multiple tracks.
 struct MusicSequence: Decodable {
     let version: Int
+    let title: String?
     let tempo: Double
+    let tracks: [Track]
+
+    enum CodingKeys: String, CodingKey {
+        case version, title, tempo, tracks, instrument, events, name
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        version = try container.decode(Int.self, forKey: .version)
+        title = try container.decodeIfPresent(String.self, forKey: .title)
+        tempo = try container.decode(Double.self, forKey: .tempo)
+        if let decodedTracks = try? container.decode([Track].self, forKey: .tracks) {
+            tracks = decodedTracks
+        } else {
+            // Fallback for version 1 format
+            let instrument = try container.decode(String.self, forKey: .instrument)
+            let events = try container.decode([SequenceEvent].self, forKey: .events)
+            let legacyTrack = Track(instrument: instrument, name: nil, events: events)
+            tracks = [legacyTrack]
+        }
+    }
+}
+
+/// Represents a single track within a sequence.
+struct Track: Decodable {
     let instrument: String
+    let name: String?
     let events: [SequenceEvent]
 }
 

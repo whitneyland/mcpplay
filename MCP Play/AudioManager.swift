@@ -11,6 +11,7 @@ import AVFoundation
 class AudioManager: ObservableObject {
     private var audioEngine = AVAudioEngine()
     private var sampler = AVAudioUnitSampler()
+    private var trackSamplers: [AVAudioUnitSampler] = []
     private var playbackTimer: Timer?
     private var progressTimer: Timer?
     private var playbackStartTime: Date?
@@ -110,32 +111,65 @@ class AudioManager: ObservableObject {
     
     private func scheduleSequence(_ sequence: MusicSequence) {
         stopSequence()
-        
+
         let beatDuration = 60.0 / sequence.tempo
-        
         isPlaying = true
-        
-        for event in sequence.events {
-            let eventStartSeconds = event.time * beatDuration
-            let eventDuration = event.duration * beatDuration
-            let velocity = UInt8(event.velocity ?? 100)
-            
-            for pitch in event.pitches {
-                let midiNote = UInt8(pitch.midiValue)
-                
-                DispatchQueue.main.asyncAfter(deadline: .now() + eventStartSeconds) {
-                    self.sampler.startNote(midiNote, withVelocity: velocity, onChannel: 0)
-                }
-                
-                DispatchQueue.main.asyncAfter(deadline: .now() + eventStartSeconds + eventDuration) {
-                    self.sampler.stopNote(midiNote, onChannel: 0)
+
+        // Detach previous track samplers
+        for ts in trackSamplers {
+            audioEngine.detach(ts)
+        }
+        trackSamplers.removeAll()
+
+        guard let soundFontURL = Bundle.main.url(forResource: "90_sNutz_GM", withExtension: "sf2") else {
+            print("Could not find soundfont file for tracks")
+            return
+        }
+        // Map instrument names to GM program numbers
+        let instrumentPrograms: [String: UInt8] = [
+            "acoustic_grand_piano": 0,
+            "string_ensemble_1": 48
+        ]
+        // Attach and load each track's sampler
+        for track in sequence.tracks {
+            let ts = AVAudioUnitSampler()
+            audioEngine.attach(ts)
+            audioEngine.connect(ts, to: audioEngine.mainMixerNode, format: nil)
+            let program = instrumentPrograms[track.instrument] ?? 0
+            do {
+                try ts.loadSoundBankInstrument(at: soundFontURL, program: program, bankMSB: 0x79, bankLSB: 0)
+            } catch {
+                print("Failed to load instrument \(track.instrument): \(error)")
+            }
+            trackSamplers.append(ts)
+        }
+
+        // Schedule events for each track
+        for (trackIndex, track) in sequence.tracks.enumerated() {
+            let ts = trackSamplers[trackIndex]
+            for event in track.events {
+                let startSec = event.time * beatDuration
+                let durSec = event.duration * beatDuration
+                let velocity = UInt8(event.velocity ?? 100)
+                for pitch in event.pitches {
+                    let midiNote = UInt8(pitch.midiValue)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + startSec) {
+                        ts.startNote(midiNote, withVelocity: velocity, onChannel: 0)
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + startSec + durSec) {
+                        ts.stopNote(midiNote, onChannel: 0)
+                    }
                 }
             }
         }
-        
-        totalDuration = (sequence.events.map { $0.time + $0.duration }.max() ?? 0) * beatDuration
+
+        // Compute total duration across all tracks
+        let maxEnd = sequence.tracks
+            .flatMap { $0.events.map { $0.time + $0.duration } }
+            .max() ?? 0
+        totalDuration = maxEnd * beatDuration
         playbackStartTime = Date()
-        
+
         playbackTimer = Timer.scheduledTimer(withTimeInterval: totalDuration, repeats: false) { _ in
             DispatchQueue.main.async {
                 self.isPlaying = false
@@ -143,7 +177,7 @@ class AudioManager: ObservableObject {
                 self.stopProgressTimer()
             }
         }
-        
+
         startProgressTimer()
     }
     
@@ -152,8 +186,15 @@ class AudioManager: ObservableObject {
         playbackTimer = nil
         stopProgressTimer()
         
+        // Stop manual sampler notes
         for note in 0...127 {
             sampler.stopNote(UInt8(note), onChannel: 0)
+        }
+        // Stop track sampler notes
+        for ts in trackSamplers {
+            for note in 0...127 {
+                ts.stopNote(UInt8(note), onChannel: 0)
+            }
         }
         
         isPlaying = false
@@ -193,8 +234,11 @@ class AudioManager: ObservableObject {
         do {
             let sequence = try JSONDecoder().decode(MusicSequence.self, from: data)
             let beatDuration = 60.0 / sequence.tempo
-            let maxEndTime = sequence.events.map { $0.time + $0.duration }.max() ?? 0
-            totalDuration = maxEndTime * beatDuration
+            // Determine max end time across all tracks
+            let maxEnd = sequence.tracks
+                .flatMap { $0.events.map { $0.time + $0.duration } }
+                .max() ?? 0
+            totalDuration = maxEnd * beatDuration
         } catch {
             totalDuration = 0
         }
