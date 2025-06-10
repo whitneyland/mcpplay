@@ -1,0 +1,184 @@
+{
+  "version": 1,
+  "tempo": 140,
+  "instrument": "acoustic_grand_piano",
+  "events": [
+    // Opening: Dramatic low D power chord
+    { "time": 0.0, "pitches": ["D1", "D2"], "duration": 2.0, "velocity": 120 },
+    { "time": 2.0, "pitches": ["D1", "A1", "D2"], "duration": 1.5, "velocity": 115 },
+    { "time": 3.5, "pitches": ["C#1", "C#2"], "duration": 0.5, "velocity": 110 },
+    
+    // Ascending dramatic intro
+    { "time": 4.0, "pitches": ["D2", "A2", "D3"], "duration": 0.5, "velocity": 100 },
+    { "time": 4.5, "pitches": ["F2", "C3", "F3"], "duration": 0.5, "velocity": 95 },
+    { "time": 5.0, "pitches": ["A2", "E3", "A3"], "duration": 0.5, "velocity": 90 },
+    { "time": 5.5, "pitches": ["D3", "A3", "D4"], "duration": 0.5, "velocity": 85 },
+    { "time": 6.0, "pitches": ["F3", "C4", "F4"], "duration": 1.0, "velocity": 90 },
+    { "time": 7.0, "pitches": ["E3", "B3", "E4", "G#4"], "duration": 1.0, "velocity": 95 },
+    
+    // Main theme begins - melody with bass
+    { "time": 8.0, "pitches": ["D2"], "duration": 2.0, "velocity": 70 },
+    { "time": 8.0, "pitches": ["D5"], "duration": 0.75, "velocity": 100 },
+    { "time": 8.75, "pitches": ["E5"], "duration": 0.25, "velocity": 90 },
+    { "time": 9.0, "pitches": ["F5"], "duration": 0.5, "velocity": 95 },
+    { "time": 9.5, "pitches": ["E5"], "duration": 0.5, "velocity": 90 },
+    
+    { "time": 10.0, "pitches": ["Bb1"], "duration": 2.0, "velocity": 70 },
+    { "time": 10.0, "pitches": ["D5"], "duration": 0.5, "velocity": 100 },
+    { "time": 10.5, "pitches": ["C#5"], "duration": 0.5, "velocity": 95 },
+    { "time": 11.0, "pitches": ["D5"], "duration": 0.5, "velocity": 100 },
+    { "time": 11.5, "pitches": ["A4"], "duration": 0.5, "velocity": 90 },
+    
+    { "time": 12.0, "pitches": ["A1"], "duration": 2.0, "velocity": 70 },
+    { "time": 12.0, "pitches": ["F5"], "duration": 1.0, "velocity": 105 },
+    { "time": 13.0, "pitches": ["E5"], "duration": 0.5, "velocity": 95 },
+    { "time": 13.5, "pitches": ["D5"], "duration": 0.5, "velocity": 90 },
+    
+    { "time": 14.0, "pitches": ["G1"], "duration": 2.0, "velocity": 70 },
+    { "time": 14.0, "pitches": ["Bb4"], "duration": 0.5, "velocity": 85 },
+    { "time": 14.5, "pitches": ["A4"], "duration": 0.5, "velocity": 85 },
+    { "time": 15.0, "pitches": ["G4"], "duration": 0.5, "velocity": 85 },
+    { "time": 15.5, "pitches": ["F4"], "duration": 0.5, "velocity": 85 },
+    
+    // Transition with diminished chord
+    { "time": 16.0, "pitches": ["C#2", "E2", "G2", "Bb2"], "duration": 2.0, "velocity": 80 },
+    { "time": 16.0, "pitches": ["E5"], "duration": 0.5, "velocity": 100 },
+    { "time": 16.5, "pitches": ["G5"], "duration": 0.5, "velocity": 105 },
+    { "time": 17.0, "pitches": ["Bb5"], "duration": 0.5, "velocity": 110 },
+    { "time": 17.5, "pitches": ["C#6"], "duration": 0.5, "velocity": 115 },
+    
+    // Virtuosic arpeggio section
+    { "time": 18.0, "pitches": ["D2"], "duration": 4.0, "velocity": 60 },
+    { "time": 18.0, "pitches": ["D4"], "duration": 0.25, "velocity": 75 },
+    { "time": 18.25, "pitches": ["F4"], "duration": 0.25, "velocity": 75 },
+    { "time": 18.5, "pitches": ["A4"], "duration": 0.25, "velocity": 75 },
+    { "time": 18.75, "pitches": ["D5"], "duration": 0.25, "velocity": 80 },
+    { "time": 19.0, "pitches": ["F5"], "duration": 0.25, "velocity": 80 },
+    { "time": 19.25, "pitches": ["A5"], "duration": 0.25, "velocity": 85 },
+    { "time": 19.5, "pitches": ["F5"], "duration": 0.25, "velocity": 80 },
+    { "time": 19.75, "pitches": ["D5"], "duration": 0.25, "velocity": 80 },
+    
+    { "time": 20.0, "pitches": ["A4"], "duration": 0.25, "velocity": 75 },
+    { "time": 20.25, "pitches": ["F4"], "duration": 0.25, "velocity": 75 },
+    { "time": 20.5, "pitches": ["D4"], "duration": 0.25, "velocity": 75 },
+    { "time": 20.75, "pitches": ["A3"], "duration": 0.25, "velocity": 70 },
+    { "time": 21.0, "pitches": ["F3"], "duration": 0.25, "velocity": 70 },
+    { "time": 21.25, "pitches": ["D3"], "duration": 0.25, "velocity": 70 },
+    { "time": 21.5, "pitches": ["F3"], "duration": 0.25, "velocity": 70 },
+    { "time": 21.75, "pitches": ["A3"], "duration": 0.25, "velocity": 70 },
+    
+    { "time": 22.0, "pitches": ["C2"], "duration": 4.0, "velocity": 60 },
+    { "time": 22.0, "pitches": ["C4"], "duration": 0.25, "velocity": 75 },
+    { "time": 22.25, "pitches": ["E4"], "duration": 0.25, "velocity": 75 },
+    { "time": 22.5, "pitches": ["G4"], "duration": 0.25, "velocity": 75 },
+    { "time": 22.75, "pitches": ["C5"], "duration": 0.25, "velocity": 80 },
+    { "time": 23.0, "pitches": ["E5"], "duration": 0.25, "velocity": 80 },
+    { "time": 23.25, "pitches": ["G5"], "duration": 0.25, "velocity": 85 },
+    { "time": 23.5, "pitches": ["E5"], "duration": 0.25, "velocity": 80 },
+    { "time": 23.75, "pitches": ["C5"], "duration": 0.25, "velocity": 80 },
+    
+    // Jazz-influenced progression
+    { "time": 24.0, "pitches": ["Bb1", "F2", "Bb2"], "duration": 2.0, "velocity": 75 },
+    { "time": 24.0, "pitches": ["D4", "F4", "A4", "C5"], "duration": 2.0, "velocity": 85 },
+    
+    { "time": 26.0, "pitches": ["Eb2", "Bb2", "Eb3"], "duration": 2.0, "velocity": 75 },
+    { "time": 26.0, "pitches": ["G4", "Bb4", "D5", "F5"], "duration": 2.0, "velocity": 85 },
+    
+    { "time": 28.0, "pitches": ["A1", "E2", "A2"], "duration": 2.0, "velocity": 80 },
+    { "time": 28.0, "pitches": ["C#4", "E4", "G4", "A4"], "duration": 1.0, "velocity": 90 },
+    { "time": 29.0, "pitches": ["C#5", "E5", "G5"], "duration": 1.0, "velocity": 95 },
+    
+    { "time": 30.0, "pitches": ["D2", "A2", "D3"], "duration": 2.0, "velocity": 85 },
+    { "time": 30.0, "pitches": ["F#4", "A4", "D5"], "duration": 2.0, "velocity": 90 },
+    
+    // Syncopated rhythm section
+    { "time": 32.0, "pitches": ["G1"], "duration": 0.5, "velocity": 100 },
+    { "time": 32.5, "pitches": ["G1", "D2"], "duration": 0.5, "velocity": 95 },
+    { "time": 33.0, "pitches": ["G2"], "duration": 0.25, "velocity": 85 },
+    { "time": 33.25, "pitches": ["D3"], "duration": 0.25, "velocity": 85 },
+    { "time": 33.5, "pitches": ["G3"], "duration": 0.5, "velocity": 90 },
+    
+    { "time": 34.0, "pitches": ["C2"], "duration": 0.5, "velocity": 100 },
+    { "time": 34.5, "pitches": ["C2", "G2"], "duration": 0.5, "velocity": 95 },
+    { "time": 35.0, "pitches": ["C3"], "duration": 0.25, "velocity": 85 },
+    { "time": 35.25, "pitches": ["E3"], "duration": 0.25, "velocity": 85 },
+    { "time": 35.5, "pitches": ["G3"], "duration": 0.5, "velocity": 90 },
+    
+    { "time": 36.0, "pitches": ["F1"], "duration": 0.5, "velocity": 100 },
+    { "time": 36.5, "pitches": ["F1", "C2"], "duration": 0.5, "velocity": 95 },
+    { "time": 37.0, "pitches": ["F2"], "duration": 0.25, "velocity": 85 },
+    { "time": 37.25, "pitches": ["A2"], "duration": 0.25, "velocity": 85 },
+    { "time": 37.5, "pitches": ["C3"], "duration": 0.5, "velocity": 90 },
+    
+    { "time": 38.0, "pitches": ["Bb1"], "duration": 0.5, "velocity": 100 },
+    { "time": 38.5, "pitches": ["Bb1", "F2"], "duration": 0.5, "velocity": 95 },
+    { "time": 39.0, "pitches": ["Bb2"], "duration": 0.25, "velocity": 85 },
+    { "time": 39.25, "pitches": ["D3"], "duration": 0.25, "velocity": 85 },
+    { "time": 39.5, "pitches": ["F3"], "duration": 0.5, "velocity": 90 },
+    
+    // Building to climax
+    { "time": 40.0, "pitches": ["A1", "E2", "A2"], "duration": 4.0, "velocity": 80 },
+    { "time": 40.0, "pitches": ["C#4", "E4", "A4"], "duration": 0.5, "velocity": 90 },
+    { "time": 40.5, "pitches": ["D4", "F#4", "A4"], "duration": 0.5, "velocity": 92 },
+    { "time": 41.0, "pitches": ["E4", "G4", "B4"], "duration": 0.5, "velocity": 94 },
+    { "time": 41.5, "pitches": ["F#4", "A4", "C#5"], "duration": 0.5, "velocity": 96 },
+    { "time": 42.0, "pitches": ["G4", "B4", "D5"], "duration": 0.5, "velocity": 98 },
+    { "time": 42.5, "pitches": ["A4", "C#5", "E5"], "duration": 0.5, "velocity": 100 },
+    { "time": 43.0, "pitches": ["B4", "D5", "F#5"], "duration": 0.5, "velocity": 102 },
+    { "time": 43.5, "pitches": ["C#5", "E5", "G5"], "duration": 0.5, "velocity": 105 },
+    
+    // Climactic section with full chords
+    { "time": 44.0, "pitches": ["D2", "A2", "D3", "F#3"], "duration": 2.0, "velocity": 110 },
+    { "time": 44.0, "pitches": ["D5", "F#5", "A5", "D6"], "duration": 2.0, "velocity": 115 },
+    
+    { "time": 46.0, "pitches": ["G1", "D2", "G2", "B2"], "duration": 2.0, "velocity": 110 },
+    { "time": 46.0, "pitches": ["G4", "B4", "D5", "G5"], "duration": 2.0, "velocity": 115 },
+    
+    { "time": 48.0, "pitches": ["C2", "G2", "C3", "E3"], "duration": 2.0, "velocity": 110 },
+    { "time": 48.0, "pitches": ["E4", "G4", "C5", "E5"], "duration": 2.0, "velocity": 115 },
+    
+    { "time": 50.0, "pitches": ["F1", "C2", "F2", "A2"], "duration": 2.0, "velocity": 110 },
+    { "time": 50.0, "pitches": ["A3", "C4", "F4", "A4"], "duration": 2.0, "velocity": 115 },
+    
+    { "time": 52.0, "pitches": ["Bb1", "F2", "Bb2", "D3"], "duration": 2.0, "velocity": 110 },
+    { "time": 52.0, "pitches": ["D4", "F4", "Bb4", "D5"], "duration": 2.0, "velocity": 115 },
+    
+    { "time": 54.0, "pitches": ["A1", "E2", "A2", "C#3"], "duration": 2.0, "velocity": 115 },
+    { "time": 54.0, "pitches": ["E4", "A4", "C#5", "E5", "A5"], "duration": 2.0, "velocity": 120 },
+    
+    // Grand finale
+    { "time": 56.0, "pitches": ["D1", "D2"], "duration": 1.0, "velocity": 120 },
+    { "time": 57.0, "pitches": ["D1", "A1", "D2"], "duration": 1.0, "velocity": 122 },
+    { "time": 58.0, "pitches": ["D1", "F#1", "A1", "D2"], "duration": 1.0, "velocity": 124 },
+    
+    // Final cascade
+    { "time": 59.0, "pitches": ["D2"], "duration": 0.125, "velocity": 100 },
+    { "time": 59.125, "pitches": ["F#2"], "duration": 0.125, "velocity": 100 },
+    { "time": 59.25, "pitches": ["A2"], "duration": 0.125, "velocity": 100 },
+    { "time": 59.375, "pitches": ["D3"], "duration": 0.125, "velocity": 105 },
+    { "time": 59.5, "pitches": ["F#3"], "duration": 0.125, "velocity": 105 },
+    { "time": 59.625, "pitches": ["A3"], "duration": 0.125, "velocity": 105 },
+    { "time": 59.75, "pitches": ["D4"], "duration": 0.125, "velocity": 110 },
+    { "time": 59.875, "pitches": ["F#4"], "duration": 0.125, "velocity": 110 },
+    
+    { "time": 60.0, "pitches": ["A4"], "duration": 0.125, "velocity": 110 },
+    { "time": 60.125, "pitches": ["D5"], "duration": 0.125, "velocity": 115 },
+    { "time": 60.25, "pitches": ["F#5"], "duration": 0.125, "velocity": 115 },
+    { "time": 60.375, "pitches": ["A5"], "duration": 0.125, "velocity": 115 },
+    { "time": 60.5, "pitches": ["D6"], "duration": 0.125, "velocity": 120 },
+    { "time": 60.625, "pitches": ["F#6"], "duration": 0.125, "velocity": 120 },
+    { "time": 60.75, "pitches": ["A6"], "duration": 0.125, "velocity": 125 },
+    { "time": 60.875, "pitches": ["D7"], "duration": 0.125, "velocity": 127 },
+    
+    // Final chord
+    { "time": 61.0, "pitches": ["D1", "A1", "D2", "F#2", "A2", "D3"], "duration": 4.0, "velocity": 120 },
+    { "time": 61.0, "pitches": ["F#3", "A3", "D4", "F#4", "A4", "D5"], "duration": 4.0, "velocity": 120 },
+    
+    // Soft resolution
+    { "time": 65.0, "pitches": ["D2", "A2", "D3"], "duration": 4.0, "velocity": 50 },
+    { "time": 65.0, "pitches": ["F#4", "A4", "D5"], "duration": 4.0, "velocity": 45 },
+    
+    // Final note
+    { "time": 69.0, "pitches": ["D1"], "duration": 1.0, "velocity": 40 }
+  ]
+}

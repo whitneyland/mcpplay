@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "tempo": 100,
+  "instrument": "acoustic_grand_piano",
+  "events": [
+    { "time": 0.0, "pitches": [60, 64, 67], "duration": 1.0 },
+    { "time": 1.0, "pitches": [65, 69, 72], "duration": 1.0 },
+    { "time": 2.0, "pitches": [67, 71, 74], "duration": 1.0 },
+    { "time": 3.0, "pitches": ["E5"], "duration": 0.5 },
+    { "time": 3.5, "pitches": ["G5"], "duration": 0.5 },
+    { "time": 4.0, "pitches": [60, 64, 67], "duration": 2.0 }
+  ]
+}

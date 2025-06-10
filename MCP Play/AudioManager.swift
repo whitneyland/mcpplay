@@ -12,7 +12,12 @@ class AudioManager: ObservableObject {
     private var audioEngine = AVAudioEngine()
     private var sampler = AVAudioUnitSampler()
     private var playbackTimer: Timer?
+    private var progressTimer: Timer?
+    private var playbackStartTime: Date?
+    @Published var totalDuration: Double = 0
     @Published var isPlaying = false
+    @Published var progress: Double = 0.0
+    @Published var elapsedTime: Double = 0.0
     
     init() {
         setupAudio()
@@ -67,7 +72,9 @@ class AudioManager: ObservableObject {
     }
     
     func playSequenceFromJSON(_ jsonString: String) {
-        guard let data = jsonString.data(using: .utf8) else {
+        let cleanedJSON = stripComments(from: jsonString)
+        
+        guard let data = cleanedJSON.data(using: .utf8) else {
             print("Failed to convert JSON string to data")
             return
         }
@@ -78,6 +85,27 @@ class AudioManager: ObservableObject {
         } catch {
             print("Failed to decode JSON sequence: \(error)")
         }
+    }
+    
+    private func stripComments(from jsonString: String) -> String {
+        var cleanedString = jsonString
+        
+        // Replace smart quotes with regular quotes
+        cleanedString = cleanedString.replacingOccurrences(of: "“", with: "\"")
+        cleanedString = cleanedString.replacingOccurrences(of: "”", with: "\"")
+        
+        // Remove // comments
+        let lines = cleanedString.components(separatedBy: .newlines)
+        let cleanedLines = lines.map { line in
+            if let commentIndex = line.firstIndex(of: "/"),
+               commentIndex < line.endIndex,
+               line.index(after: commentIndex) < line.endIndex,
+               line[line.index(after: commentIndex)] == "/" {
+                return String(line[..<commentIndex]).trimmingCharacters(in: .whitespaces)
+            }
+            return line
+        }
+        return cleanedLines.joined(separator: "\n")
     }
     
     private func scheduleSequence(_ sequence: MusicSequence) {
@@ -105,24 +133,70 @@ class AudioManager: ObservableObject {
             }
         }
         
-        let totalDuration = sequence.events.map { $0.time + $0.duration }.max() ?? 0
-        let playbackDuration = totalDuration * beatDuration
+        totalDuration = (sequence.events.map { $0.time + $0.duration }.max() ?? 0) * beatDuration
+        playbackStartTime = Date()
         
-        playbackTimer = Timer.scheduledTimer(withTimeInterval: playbackDuration, repeats: false) { _ in
+        playbackTimer = Timer.scheduledTimer(withTimeInterval: totalDuration, repeats: false) { _ in
             DispatchQueue.main.async {
                 self.isPlaying = false
+                self.progress = 1.0
+                self.stopProgressTimer()
             }
         }
+        
+        startProgressTimer()
     }
     
     func stopSequence() {
         playbackTimer?.invalidate()
         playbackTimer = nil
+        stopProgressTimer()
         
         for note in 0...127 {
             sampler.stopNote(UInt8(note), onChannel: 0)
         }
         
         isPlaying = false
+        progress = 0.0
+        elapsedTime = 0.0
+    }
+    
+    private func startProgressTimer() {
+        progressTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+            DispatchQueue.main.async {
+                self.updateProgress()
+            }
+        }
+    }
+    
+    private func stopProgressTimer() {
+        progressTimer?.invalidate()
+        progressTimer = nil
+    }
+    
+    private func updateProgress() {
+        guard let startTime = playbackStartTime, totalDuration > 0 else { return }
+        
+        let elapsed = Date().timeIntervalSince(startTime)
+        elapsedTime = elapsed
+        progress = min(elapsed / totalDuration, 1.0)
+    }
+    
+    func calculateDurationFromJSON(_ jsonString: String) {
+        let cleanedJSON = stripComments(from: jsonString)
+        
+        guard let data = cleanedJSON.data(using: .utf8) else {
+            totalDuration = 0
+            return
+        }
+        
+        do {
+            let sequence = try JSONDecoder().decode(MusicSequence.self, from: data)
+            let beatDuration = 60.0 / sequence.tempo
+            let maxEndTime = sequence.events.map { $0.time + $0.duration }.max() ?? 0
+            totalDuration = maxEndTime * beatDuration
+        } catch {
+            totalDuration = 0
+        }
     }
 }

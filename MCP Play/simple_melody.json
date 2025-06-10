@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "tempo": 120,
+  "instrument": "acoustic_grand_piano",
+  "events": [
+    {
+      "time": 0,
+      "pitches": [
+        "C4"
+      ],
+      "duration": 1,
+      "velocity": 100
+    },
+    {
+      "time": 1,
+      "pitches": [
+        "E4"
+      ],
+      "duration": 1,
+      "velocity": 100
+    },
+    {
+      "time": 2,
+      "pitches": [
+        "G4"
+      ],
+      "duration": 1,
+      "velocity": 100
+    },
+    {
+      "time": 3,
+      "pitches": [
+        "C5"
+      ],
+      "duration": 2,
+      "velocity": 100
+    }
+  ]
+}

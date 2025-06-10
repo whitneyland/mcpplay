@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "tempo": 60,
+  "instrument": "acoustic_grand_piano",
+  "events": [
+    {
+      "time": 0,
+      "pitches": [
+        60
+      ],
+      "duration": 1,
+      "velocity": 80
+    }
+  ]
+}
