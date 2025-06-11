@@ -44,77 +44,70 @@ class MCPPianoServer {
           inputSchema: {
             type: 'object',
             properties: {
-              sequence: {
-                type: 'object',
-                description: 'Music sequence to play',
-                properties: {
-                  version: { 
-                    type: 'number', 
-                    description: 'Schema version (always use 1)'
-                  },
-                  title: {
-                    type: 'string',
-                    description: 'Optional title for the sequence'
-                  },
-                  tempo: {
-                    type: 'number',
-                    description: 'BPM (beats per minute), typically 60-200'
-                  },
-                  tracks: {
-                    type: 'array',
-                    description: 'Array of track objects',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        instrument: {
-                          type: 'string',
-                          description: 'Instrument name (e.g., "acoustic_grand_piano", "string_ensemble_1")'
-                        },
-                        name: {
-                          type: 'string',
-                          description: 'Optional track name or description'
-                        },
-                        events: {
-                          type: 'array',
-                          description: 'Array of musical events for this track',
-                          items: {
-                            type: 'object',
-                            properties: {
-                              time: {
-                                type: 'number',
-                                description: 'Start time in beats (0.0, 1.0, 2.5, etc.)'
-                              },
-                              pitches: {
-                                type: 'array',
-                                description: 'MIDI numbers (0-127) or note names like "C4", "F#3"',
-                                items: {
-                                  oneOf: [
-                                    { type: 'number' },
-                                    { type: 'string' }
-                                  ]
-                                }
-                              },
-                              duration: {
-                                type: 'number',
-                                description: 'Length in beats (1.0 = quarter note, 0.5 = eighth note)'
-                              },
-                              velocity: {
-                                type: 'number',
-                                description: 'Volume 0-127 (optional, defaults to 100)'
-                              }
-                            },
-                            required: ['time', 'pitches', 'duration']
+              version: { 
+                type: 'number', 
+                description: 'Schema version (always use 1)'
+              },
+              title: {
+                type: 'string',
+                description: 'Optional title for the sequence'
+              },
+              tempo: {
+                type: 'number',
+                description: 'BPM (beats per minute), typically 60-200'
+              },
+              tracks: {
+                type: 'array',
+                description: 'Array of track objects',
+                items: {
+                  type: 'object',
+                  properties: {
+                    instrument: {
+                      type: 'string',
+                      description: 'Instrument name (e.g., "acoustic_grand_piano", "string_ensemble_1")'
+                    },
+                    name: {
+                      type: 'string',
+                      description: 'Optional track name or description'
+                    },
+                    events: {
+                      type: 'array',
+                      description: 'Array of musical events for this track',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          time: {
+                            type: 'number',
+                            description: 'Start time in beats (0.0, 1.0, 2.5, etc.)'
+                          },
+                          pitches: {
+                            type: 'array',
+                            description: 'MIDI numbers (0-127) or note names like "C4", "F#3"',
+                            items: {
+                              oneOf: [
+                                { type: 'number' },
+                                { type: 'string' }
+                              ]
+                            }
+                          },
+                          duration: {
+                            type: 'number',
+                            description: 'Length in beats (1.0 = quarter note, 0.5 = eighth note)'
+                          },
+                          velocity: {
+                            type: 'number',
+                            description: 'Volume 0-127 (optional, defaults to 100)'
                           }
-                        }
-                      },
-                      required: ['instrument', 'events']
+                        },
+                        required: ['time', 'pitches', 'duration']
+                      }
                     }
-                  }
-                },
-                required: ['version', 'tempo', 'tracks']
+                  },
+                  required: ['instrument', 'events']
+                }
               }
             },
-            required: ['sequence'],
+            required: ['version', 'tempo', 'tracks'],
           },
         },
         {
@@ -142,7 +135,7 @@ class MCPPianoServer {
       try {
         switch (name) {
           case 'play_sequence':
-            return await this.playSequence(args.sequence);
+            return await this.playSequence(args);
           
           case 'list_instruments':
             return await this.listInstruments();
@@ -168,6 +161,46 @@ class MCPPianoServer {
 
   async playSequence(sequence) {
     try {
+      // Validate sequence structure
+      if (!sequence || typeof sequence !== 'object') {
+        throw new Error('Invalid sequence: must be an object');
+      }
+      
+      if (typeof sequence.tempo !== 'number') {
+        throw new Error('Invalid sequence: tempo must be a number');
+      }
+      
+      if (!Array.isArray(sequence.tracks)) {
+        throw new Error('Invalid sequence: tracks must be an array');
+      }
+      
+      if (sequence.tracks.length === 0) {
+        throw new Error('Invalid sequence: must have at least one track');
+      }
+      
+      // Get valid instrument names for validation
+      const validInstruments = this.getValidInstrumentNames();
+      
+      // Validate each track
+      for (let i = 0; i < sequence.tracks.length; i++) {
+        const track = sequence.tracks[i];
+        if (!track || typeof track !== 'object') {
+          throw new Error(`Invalid track ${i}: must be an object`);
+        }
+        
+        if (typeof track.instrument !== 'string') {
+          throw new Error(`Invalid track ${i}: instrument must be a string`);
+        }
+        
+        if (!validInstruments.includes(track.instrument)) {
+          throw new Error(`Invalid track ${i}: instrument "${track.instrument}" is not available. Use list_instruments tool to see valid options.`);
+        }
+        
+        if (!Array.isArray(track.events)) {
+          throw new Error(`Invalid track ${i}: events must be an array`);
+        }
+      }
+      
       const jsonString = JSON.stringify(sequence);
       const jsonSize = Buffer.byteLength(jsonString, 'utf8');
       
@@ -194,12 +227,13 @@ class MCPPianoServer {
       // Summarize total events and tracks
       let totalEvents = 0;
       let trackCount = 0;
-      if (Array.isArray(sequence.tracks)) {
+      if (sequence && Array.isArray(sequence.tracks)) {
         trackCount = sequence.tracks.length;
         totalEvents = sequence.tracks.reduce((sum, t) => {
-          return sum + (Array.isArray(t.events) ? t.events.length : 0);
+          return sum + (t && Array.isArray(t.events) ? t.events.length : 0);
         }, 0);
-      } else if (Array.isArray(sequence.events)) {
+      } else if (sequence && Array.isArray(sequence.events)) {
+        // Legacy format support
         trackCount = 1;
         totalEvents = sequence.events.length;
       }
@@ -218,8 +252,8 @@ class MCPPianoServer {
     }
   }
 
-  async listInstruments() {
-    const instruments = {
+  getInstrumentsData() {
+    return {
       "Piano": [
         { name: "acoustic_grand_piano", display: "Acoustic Grand Piano" },
         { name: "bright_acoustic_piano", display: "Bright Acoustic Piano" },
@@ -319,6 +353,22 @@ class MCPPianoServer {
         { name: "orchestra_hit", display: "Orchestra Hit" }
       ]
     };
+  }
+
+  getValidInstrumentNames() {
+    const instruments = this.getInstrumentsData();
+    // Extract all instrument names
+    const allInstruments = [];
+    for (const categoryInstruments of Object.values(instruments)) {
+      for (const instrument of categoryInstruments) {
+        allInstruments.push(instrument.name);
+      }
+    }
+    return allInstruments;
+  }
+
+  async listInstruments() {
+    const instruments = this.getInstrumentsData();
 
     let output = "Available Instruments:\n\n";
     
@@ -363,25 +413,67 @@ class MCPPianoServer {
   async openURL(url) {
     return new Promise((resolve, reject) => {
       console.error(`Opening URL: ${url}`);
-      const process = spawn('open', [url], { stdio: ['ignore', 'pipe', 'pipe'] });
       
-      let stderr = '';
-      process.stderr.on('data', (data) => {
-        stderr += data.toString();
-      });
+      // Check if MCP Play app is already running
+      const checkProcess = spawn('pgrep', ['-f', 'MCP Play'], { stdio: ['ignore', 'pipe', 'pipe'] });
       
-      process.on('close', (code) => {
+      checkProcess.on('close', (code) => {
+        let openArgs;
         if (code === 0) {
-          resolve();
+          // App is running - send URL to existing instance without launching new one
+          openArgs = ['-g', url]; // -g flag prevents app activation/launching
+          console.error('App already running, sending URL to existing instance');
         } else {
-          console.error(`open command failed with code ${code}, stderr: ${stderr}`);
-          reject(new Error(`Failed to open URL (code ${code}): ${url}`));
+          // App not running - use normal open which will launch it
+          openArgs = [url];
+          console.error('App not running, launching app');
         }
+        
+        const openProcess = spawn('open', openArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
+        
+        let stderr = '';
+        openProcess.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+        
+        openProcess.on('close', (openCode) => {
+          if (openCode === 0) {
+            resolve();
+          } else {
+            console.error(`open command failed with code ${openCode}, stderr: ${stderr}`);
+            reject(new Error(`Failed to open URL (code ${openCode}): ${url}`));
+          }
+        });
+        
+        openProcess.on('error', (error) => {
+          console.error(`spawn error: ${error}`);
+          reject(new Error(`Failed to spawn open command: ${error.message}`));
+        });
       });
       
-      process.on('error', (error) => {
-        console.error(`spawn error: ${error}`);
-        reject(new Error(`Failed to spawn open command: ${error.message}`));
+      checkProcess.on('error', (error) => {
+        console.error(`pgrep error: ${error}, falling back to normal open`);
+        // Fall back to normal open if pgrep fails
+        const process = spawn('open', [url], { stdio: ['ignore', 'pipe', 'pipe'] });
+        
+        let stderr = '';
+        process.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+        
+        process.on('close', (code) => {
+          if (code === 0) {
+            resolve();
+          } else {
+            console.error(`open command failed with code ${code}, stderr: ${stderr}`);
+            reject(new Error(`Failed to open URL (code ${code}): ${url}`));
+          }
+        });
+        
+        process.on('error', (error) => {
+          console.error(`spawn error: ${error}`);
+          reject(new Error(`Failed to spawn open command: ${error.message}`));
+        });
       });
     });
   }

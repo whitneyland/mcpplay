@@ -23,7 +23,7 @@ The MCP Play app accepts musical sequences in JSON format. Each sequence defines
 - **version** (integer): Format version, currently always `1`
 - **tempo** (number): Beats per minute (e.g., 60, 120, 140)
 - **title** (string, optional): Title of the sequence
-- **instrument** (string): Instrument name (e.g., "acoustic_grand_piano", "string_ensemble_1")
+- **instrument** (string): Instrument name (see Available Instruments section below)
 - **tracks** (array): Array of track objects, each with its own instrument and events
 
 ## Event Structure
@@ -107,9 +107,72 @@ Pitches can be specified in two ways:
    - Half note = 2.0 beats
    - Whole note = 4.0 beats
 
+## Available Instruments
+
+The MCP server provides a `list_instruments` tool to discover all available instruments. Currently supported instruments are organized by category:
+
+### Piano (8 instruments)
+- acoustic_grand_piano, bright_acoustic_piano, electric_grand_piano, honky_tonk_piano
+- electric_piano_1, electric_piano_2, harpsichord, clavinet
+
+### Percussion (8 instruments)  
+- celesta, glockenspiel, music_box, vibraphone, marimba, xylophone, tubular_bells, dulcimer
+
+### Organ (8 instruments)
+- drawbar_organ, percussive_organ, rock_organ, church_organ, reed_organ, accordion, harmonica, tango_accordion
+
+### Guitar (8 instruments)
+- acoustic_guitar_nylon, acoustic_guitar_steel, electric_guitar_jazz, electric_guitar_clean
+- electric_guitar_muted, overdriven_guitar, distortion_guitar, guitar_harmonics
+
+### Bass (8 instruments)
+- acoustic_bass, electric_bass_finger, electric_bass_pick, fretless_bass
+- slap_bass_1, slap_bass_2, synth_bass_1, synth_bass_2
+
+### Strings (12 instruments)
+- violin, viola, cello, contrabass, tremolo_strings, pizzicato_strings
+- orchestral_harp, timpani, string_ensemble_1, string_ensemble_2, synth_strings_1, synth_strings_2
+
+### Brass (8 instruments)
+- trumpet, trombone, tuba, muted_trumpet, french_horn, brass_section, synth_brass_1, synth_brass_2
+
+### Woodwinds (16 instruments)
+- soprano_sax, alto_sax, tenor_sax, baritone_sax, oboe, english_horn, bassoon, clarinet
+- piccolo, flute, recorder, pan_flute, blown_bottle, shakuhachi, whistle, ocarina
+
+### Choir (4 instruments)
+- choir_aahs, voice_oohs, synth_voice, orchestra_hit
+
+**Total: 70 instruments available**
+
+Use the exact instrument name (left side) in your track definitions. The MCP server's `list_instruments` tool provides the complete list with human-readable descriptions.
+
+## MCP Server Tools
+
+When using the MCP server, you have access to these tools:
+
+### `list_instruments`
+- **Purpose**: Lists all available instruments organized by category
+- **Parameters**: None
+- **Returns**: Formatted list of all 70 instruments with technical names and display names
+- **Usage**: Call this first to see available instrument options before composing
+
+### `play_sequence` 
+- **Purpose**: Play a music sequence directly from JSON data
+- **Parameters**: `sequence` (JSON object matching the format above)
+- **Returns**: Confirmation of playback start
+- **Usage**: Send complete musical sequences for immediate playback
+
+### `stop`
+- **Purpose**: Stop any currently playing music
+- **Parameters**: None  
+- **Returns**: Confirmation of stopped playback
+- **Usage**: Stop playback at any time
+
 ## Validation Rules
 - All required fields must be present
 - `time` and `duration` must be non-negative numbers
 - `velocity` must be 1-127 if provided
 - MIDI numbers must be 0-127
 - Note names must follow the format exactly (case-insensitive)
+- Instrument names must match exactly (use `list_instruments` to see valid options)

@@ -15,6 +15,7 @@ class AudioManager: ObservableObject {
     private var playbackTimer: Timer?
     private var progressTimer: Timer?
     private var playbackStartTime: Date?
+    private var scheduledWorkItems: [DispatchWorkItem] = []
     @Published var totalDuration: Double = 0
     @Published var isPlaying = false
     @Published var progress: Double = 0.0
@@ -73,7 +74,7 @@ class AudioManager: ObservableObject {
     }
     
     func playSequenceFromJSON(_ jsonString: String) {
-        let cleanedJSON = stripComments(from: jsonString)
+        let cleanedJSON = cleanJSON(from: jsonString)
         
         guard let data = cleanedJSON.data(using: .utf8) else {
             print("Failed to convert JSON string to data")
@@ -88,29 +89,61 @@ class AudioManager: ObservableObject {
         }
     }
     
-    private func stripComments(from jsonString: String) -> String {
+    /// Attempts to make a user-supplied string parseable as JSON by performing
+    /// a few pragmatic clean-ups:
+    /// 1. Replace “smart quotes”, ‘smart apostrophes’ and back-ticks with plain
+    ///    double quotes (").  Users frequently paste content from ChatGPT or
+    ///    text editors that converts the quotes, which the JSON parser cannot
+    ///    handle.
+    /// 2. Remove single-line "// …" comments.
+    /// 3. Strip trailing commas that appear immediately before a closing
+    ///    object/array bracket (", }" or ", ]"), which are illegal in JSON but
+    ///    common in hand-edited snippets.
+    /// Cleans a user-supplied JSON-like string so that it can be parsed by
+    /// `JSONDecoder`.  See inline documentation for the exact steps.
+    private func cleanJSON(from jsonString: String) -> String {
         var cleanedString = jsonString
-        
-        // Replace smart quotes with regular quotes
-        cleanedString = cleanedString.replacingOccurrences(of: "“", with: "\"")
-        cleanedString = cleanedString.replacingOccurrences(of: "”", with: "\"")
-        
-        // Remove // comments
+
+        // 1. Normalise quotes/back-ticks to standard double quotes
+        let quoteReplacements: [String: String] = [
+            "“": "\"",
+            "”": "\"",
+            "‘": "\"",
+            "’": "\"",
+            "`": "\""
+        ]
+        for (target, replacement) in quoteReplacements {
+            cleanedString = cleanedString.replacingOccurrences(of: target, with: replacement)
+        }
+
+        // 2. Remove // comments (keep code before comment on the same line)
         let lines = cleanedString.components(separatedBy: .newlines)
-        let cleanedLines = lines.map { line in
-            if let commentIndex = line.firstIndex(of: "/"),
-               commentIndex < line.endIndex,
-               line.index(after: commentIndex) < line.endIndex,
-               line[line.index(after: commentIndex)] == "/" {
-                return String(line[..<commentIndex]).trimmingCharacters(in: .whitespaces)
+        let uncommentedLines = lines.map { line -> String in
+            guard let idx = line.firstIndex(of: "/") else { return line }
+            let nextIdx = line.index(after: idx)
+            if nextIdx < line.endIndex && line[nextIdx] == "/" {
+                // Trim whitespace at the end to avoid stray spaces
+                return String(line[..<idx]).trimmingCharacters(in: .whitespaces)
             }
             return line
         }
-        return cleanedLines.joined(separator: "\n")
+        cleanedString = uncommentedLines.joined(separator: "\n")
+
+        // 3. Remove trailing commas before a closing } or ]
+        // Remove trailing commas before a closing brace or bracket
+        if let trailingCommaRegex = try? NSRegularExpression(pattern: #",\s*(?=[}\]])"#, options: []) {
+            let range = NSRange(location: 0, length: cleanedString.utf16.count)
+            cleanedString = trailingCommaRegex.stringByReplacingMatches(in: cleanedString, options: [], range: range, withTemplate: "")
+        }
+
+        return cleanedString
     }
     
     private func scheduleSequence(_ sequence: MusicSequence) {
         stopSequence()
+        
+        // Clear any previous work items
+        scheduledWorkItems.removeAll()
 
         let beatDuration = 60.0 / sequence.tempo
         isPlaying = true
@@ -127,8 +160,103 @@ class AudioManager: ObservableObject {
         }
         // Map instrument names to GM program numbers
         let instrumentPrograms: [String: UInt8] = [
+            // Piano
             "acoustic_grand_piano": 0,
-            "string_ensemble_1": 48
+            "bright_acoustic_piano": 1,
+            "electric_grand_piano": 2,
+            "honky_tonk_piano": 3,
+            "electric_piano_1": 4,
+            "electric_piano_2": 5,
+            "harpsichord": 6,
+            "clavinet": 7,
+            
+            // Percussion
+            "celesta": 8,
+            "glockenspiel": 9,
+            "music_box": 10,
+            "vibraphone": 11,
+            "marimba": 12,
+            "xylophone": 13,
+            "tubular_bells": 14,
+            "dulcimer": 15,
+            
+            // Organ
+            "drawbar_organ": 16,
+            "percussive_organ": 17,
+            "rock_organ": 18,
+            "church_organ": 19,
+            "reed_organ": 20,
+            "accordion": 21,
+            "harmonica": 22,
+            "tango_accordion": 23,
+            
+            // Guitar
+            "acoustic_guitar_nylon": 24,
+            "acoustic_guitar_steel": 25,
+            "electric_guitar_jazz": 26,
+            "electric_guitar_clean": 27,
+            "electric_guitar_muted": 28,
+            "overdriven_guitar": 29,
+            "distortion_guitar": 30,
+            "guitar_harmonics": 31,
+            
+            // Bass
+            "acoustic_bass": 32,
+            "electric_bass_finger": 33,
+            "electric_bass_pick": 34,
+            "fretless_bass": 35,
+            "slap_bass_1": 36,
+            "slap_bass_2": 37,
+            "synth_bass_1": 38,
+            "synth_bass_2": 39,
+            
+            // Strings
+            "violin": 40,
+            "viola": 41,
+            "cello": 42,
+            "contrabass": 43,
+            "tremolo_strings": 44,
+            "pizzicato_strings": 45,
+            "orchestral_harp": 46,
+            "timpani": 47,
+            "string_ensemble_1": 48,
+            "string_ensemble_2": 49,
+            "synth_strings_1": 50,
+            "synth_strings_2": 51,
+            
+            // Choir
+            "choir_aahs": 52,
+            "voice_oohs": 53,
+            "synth_voice": 54,
+            "orchestra_hit": 55,
+            
+            // Brass
+            "trumpet": 56,
+            "trombone": 57,
+            "tuba": 58,
+            "muted_trumpet": 59,
+            "french_horn": 60,
+            "brass_section": 61,
+            "synth_brass_1": 62,
+            "synth_brass_2": 63,
+            
+            // Woodwinds
+            "soprano_sax": 64,
+            "alto_sax": 65,
+            "tenor_sax": 66,
+            "baritone_sax": 67,
+            "oboe": 68,
+            "english_horn": 69,
+            "bassoon": 70,
+            "clarinet": 71,
+            "piccolo": 72,
+            "flute": 73,
+            "recorder": 74,
+            "pan_flute": 75,
+            "blown_bottle": 76,
+            "shakuhachi": 77,
+            "whistle": 78,
+            "ocarina": 79
         ]
         // Attach and load each track's sampler
         for track in sequence.tracks {
@@ -153,12 +281,20 @@ class AudioManager: ObservableObject {
                 let velocity = UInt8(event.velocity ?? 100)
                 for pitch in event.pitches {
                     let midiNote = UInt8(pitch.midiValue)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + startSec) {
+                    
+                    // Schedule note start
+                    let startWorkItem = DispatchWorkItem {
                         ts.startNote(midiNote, withVelocity: velocity, onChannel: 0)
                     }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + startSec + durSec) {
+                    scheduledWorkItems.append(startWorkItem)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + startSec, execute: startWorkItem)
+                    
+                    // Schedule note stop
+                    let stopWorkItem = DispatchWorkItem {
                         ts.stopNote(midiNote, onChannel: 0)
                     }
+                    scheduledWorkItems.append(stopWorkItem)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + startSec + durSec, execute: stopWorkItem)
                 }
             }
         }
@@ -185,6 +321,12 @@ class AudioManager: ObservableObject {
         playbackTimer?.invalidate()
         playbackTimer = nil
         stopProgressTimer()
+        
+        // Cancel all scheduled work items
+        for workItem in scheduledWorkItems {
+            workItem.cancel()
+        }
+        scheduledWorkItems.removeAll()
         
         // Stop manual sampler notes
         for note in 0...127 {
@@ -224,7 +366,7 @@ class AudioManager: ObservableObject {
     }
     
     func calculateDurationFromJSON(_ jsonString: String) {
-        let cleanedJSON = stripComments(from: jsonString)
+        let cleanedJSON = cleanJSON(from: jsonString)
         
         guard let data = cleanedJSON.data(using: .utf8) else {
             totalDuration = 0

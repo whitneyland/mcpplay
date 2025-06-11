@@ -10,13 +10,13 @@ import SwiftUI
 
 struct MainView: View {
     @EnvironmentObject var audioManager: AudioManager
-    @State private var selectedSequence = "sample_sequence"
+    @State private var selectedSequence = "sonnet_4_multi"
     @State private var jsonInput = ""
 
     // Piano keyboard view extracted to PianoView
     
     let availableSequences = [
-        ("sample_sequence", "I-IV-V Demo"),
+        ("sonnet_4_multi", "Sonnet 4 Multi"),
         ("moonlight_sonata", "Moonlight Sonata"),
         ("gemini_1", "Gemini 1"),
         ("claude_opus_1", "Claude Opus 1")
@@ -24,14 +24,14 @@ struct MainView: View {
 
     var body: some View {
         VStack {
-            Text("Temu Piano")
-                .font(.title)
-                .padding()
+//            Text("Temu Piano")
+//                .font(.title)
+//                .padding()
             
             VStack {
-                Text("JSON Sequence")
-                    .font(.headline)
-                    .padding(.top)
+//                Text("JSON Sequence")
+//                    .font(.headline)
+//                    .padding(.top)
                 
                 TextEditor(text: $jsonInput)
                     .frame(height: 120)
@@ -70,7 +70,7 @@ struct MainView: View {
                             Text("Play Sequence")
                         }
                         .padding()
-                        .background(audioManager.isPlaying ? Color.gray : Color.blue)
+                        .background(audioManager.isPlaying ? Color.gray : Color.gray30)
                         .foregroundColor(.white)
                         .cornerRadius(8)
                     }
@@ -84,7 +84,7 @@ struct MainView: View {
                             Text("Stop")
                         }
                         .padding()
-                        .background(Color.red)
+                        .background(Color.gray30)
                         .foregroundColor(.white)
                         .cornerRadius(8)
                     }
@@ -98,7 +98,7 @@ struct MainView: View {
                             Text("Test URL")
                         }
                         .padding()
-                        .background(Color.green)
+                        .background(Color.gray30)
                         .foregroundColor(.white)
                         .cornerRadius(8)
                     }
