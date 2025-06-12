@@ -103,11 +103,11 @@ class MCPPianoServer {
                       }
                     }
                   },
-                  required: ['instrument', 'events']
+                  required: ['events']
                 }
               }
             },
-            required: ['version', 'tempo', 'tracks'],
+            required: ['tempo', 'tracks'],
           },
         },
         {
@@ -170,6 +170,11 @@ class MCPPianoServer {
         throw new Error('Invalid sequence: tempo must be a number');
       }
       
+      // Set defaults for optional fields
+      if (sequence.version === undefined) {
+        sequence.version = 1;
+      }
+      
       if (!Array.isArray(sequence.tracks)) {
         throw new Error('Invalid sequence: tracks must be an array');
       }
@@ -188,8 +193,9 @@ class MCPPianoServer {
           throw new Error(`Invalid track ${i}: must be an object`);
         }
         
-        if (typeof track.instrument !== 'string') {
-          throw new Error(`Invalid track ${i}: instrument must be a string`);
+        // Set default instrument if missing
+        if (!track.instrument || typeof track.instrument !== 'string') {
+          track.instrument = 'acoustic_grand_piano';
         }
         
         if (!validInstruments.includes(track.instrument)) {
@@ -198,6 +204,14 @@ class MCPPianoServer {
         
         if (!Array.isArray(track.events)) {
           throw new Error(`Invalid track ${i}: events must be an array`);
+        }
+        
+        // Set default velocity for events if missing
+        for (let j = 0; j < track.events.length; j++) {
+          const event = track.events[j];
+          if (event.velocity === undefined || typeof event.velocity !== 'number') {
+            event.velocity = 100;
+          }
         }
       }
       
@@ -413,66 +427,58 @@ class MCPPianoServer {
   async openURL(url) {
     return new Promise((resolve, reject) => {
       console.error(`Opening URL: ${url}`);
-      
-      // Check if MCP Play app is already running
-      const checkProcess = spawn('pgrep', ['-f', 'MCP Play'], { stdio: ['ignore', 'pipe', 'pipe'] });
-      
-      checkProcess.on('close', (code) => {
-        let openArgs;
-        if (code === 0) {
-          // App is running - send URL to existing instance without launching new one
-          openArgs = ['-g', url]; // -g flag prevents app activation/launching
-          console.error('App already running, sending URL to existing instance');
-        } else {
-          // App not running - use normal open which will launch it
-          openArgs = [url];
-          console.error('App not running, launching app');
-        }
-        
-        const openProcess = spawn('open', openArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
-        
-        let stderr = '';
-        openProcess.stderr.on('data', (data) => {
-          stderr += data.toString();
-        });
-        
-        openProcess.on('close', (openCode) => {
-          if (openCode === 0) {
-            resolve();
-          } else {
-            console.error(`open command failed with code ${openCode}, stderr: ${stderr}`);
-            reject(new Error(`Failed to open URL (code ${openCode}): ${url}`));
-          }
-        });
-        
-        openProcess.on('error', (error) => {
-          console.error(`spawn error: ${error}`);
-          reject(new Error(`Failed to spawn open command: ${error.message}`));
-        });
+
+      // Using AppleScript ensures the URL is delivered to an existing
+      // instance of “MCP Play” when it is already running and only launches
+      // the application if necessary.
+
+      // Escape any embedded quotes to keep the AppleScript valid
+      const escapedUrl = url.replace(/"/g, '\\"');
+
+      const appleScript = [
+        'set _url_ to "' + escapedUrl + '"',
+        'if application "MCP Play" is running then',
+        '    tell application "MCP Play" to open location _url_',
+        'else',
+        '    do shell script "open " & quoted form of _url_',
+        'end if',
+      ];
+
+      const osa = spawn('osascript', appleScript.flatMap(line => ['-e', line]), {
+        stdio: ['ignore', 'pipe', 'pipe'],
       });
-      
-      checkProcess.on('error', (error) => {
-        console.error(`pgrep error: ${error}, falling back to normal open`);
-        // Fall back to normal open if pgrep fails
-        const process = spawn('open', [url], { stdio: ['ignore', 'pipe', 'pipe'] });
-        
-        let stderr = '';
-        process.stderr.on('data', (data) => {
-          stderr += data.toString();
+
+      let stderr = '';
+      osa.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      osa.on('close', (code) => {
+        if (code === 0) {
+          resolve();
+        } else {
+          console.error(`osascript exited with code ${code}, stderr: ${stderr}`);
+          reject(new Error(`osascript failed (code ${code})`));
+        }
+      });
+
+      osa.on('error', (error) => {
+        console.error(`osascript spawn error: ${error}`);
+        // Fall back to plain open – worst-case we still launch the app.
+        const fallbackProcess = spawn('open', [url], { stdio: ['ignore', 'pipe', 'pipe'] });
+
+        let fbStderr = '';
+        fallbackProcess.stderr.on('data', (data) => {
+          fbStderr += data.toString();
         });
-        
-        process.on('close', (code) => {
+
+        fallbackProcess.on('close', (code) => {
           if (code === 0) {
             resolve();
           } else {
-            console.error(`open command failed with code ${code}, stderr: ${stderr}`);
+            console.error(`Fallback open failed with code ${code}, stderr: ${fbStderr}`);
             reject(new Error(`Failed to open URL (code ${code}): ${url}`));
           }
-        });
-        
-        process.on('error', (error) => {
-          console.error(`spawn error: ${error}`);
-          reject(new Error(`Failed to spawn open command: ${error.message}`));
         });
       });
     });

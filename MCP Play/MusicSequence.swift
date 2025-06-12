@@ -20,14 +20,14 @@ struct MusicSequence: Decodable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        version = try container.decode(Int.self, forKey: .version)
+        version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 1
         title = try container.decodeIfPresent(String.self, forKey: .title)
         tempo = try container.decode(Double.self, forKey: .tempo)
         if let decodedTracks = try? container.decode([Track].self, forKey: .tracks) {
             tracks = decodedTracks
         } else {
             // Fallback for version 1 format
-            let instrument = try container.decode(String.self, forKey: .instrument)
+            let instrument = try container.decodeIfPresent(String.self, forKey: .instrument) ?? "acoustic_grand_piano"
             let events = try container.decode([SequenceEvent].self, forKey: .events)
             let legacyTrack = Track(instrument: instrument, name: nil, events: events)
             tracks = [legacyTrack]
@@ -40,6 +40,24 @@ struct Track: Decodable {
     let instrument: String
     let name: String?
     let events: [SequenceEvent]
+    
+    enum CodingKeys: String, CodingKey {
+        case instrument, name, events
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        instrument = try container.decodeIfPresent(String.self, forKey: .instrument) ?? "acoustic_grand_piano"
+        name = try container.decodeIfPresent(String.self, forKey: .name)
+        events = try container.decode([SequenceEvent].self, forKey: .events)
+    }
+    
+    // Manual initializer for legacy track creation
+    init(instrument: String, name: String?, events: [SequenceEvent]) {
+        self.instrument = instrument
+        self.name = name
+        self.events = events
+    }
 }
 
 struct SequenceEvent: Decodable {
