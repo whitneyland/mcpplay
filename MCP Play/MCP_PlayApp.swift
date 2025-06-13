@@ -8,6 +8,7 @@
 import SwiftUI
 import Foundation
 
+
 @main
 struct MCP_PlayApp: App {
     @StateObject private var audioManager = AudioManager()
@@ -23,6 +24,16 @@ struct MCP_PlayApp: App {
     }
 
     private func handleURL(_ url: URL) {
+        let startTime = Date()
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss"
+        let timeString = formatter.string(from: startTime) + ".\(Int(startTime.timeIntervalSince1970.truncatingRemainder(dividingBy: 1) * 10))"
+        let timingMsg = "================================================================\n[TIMING] handleURL started at \(timeString)\n"
+        print(timingMsg)
+        if let data = timingMsg.data(using: .utf8) {
+            let fileURL = URL(fileURLWithPath: "/tmp/mcp-timing.log")
+            try? data.append(to: fileURL)
+        }
         print("🔗 handleURL called with: \(url)")
         guard url.scheme == "mcpplay" else {
             print("❌ Invalid scheme: \(url.scheme ?? "nil")")
@@ -52,9 +63,11 @@ struct MCP_PlayApp: App {
                     return
                 }
                 print("🎵 Final JSON ready to parse -> \(tidyJSON)")
+                print("[TIMING] About to call playSequenceFromJSON at \(Date().timeIntervalSince(startTime) * 1000)ms")
                 audioManager.playSequenceFromJSON(tidyJSON)
             } else if let sequenceName = components?.queryItems?.first(where: { $0.name == "sequence" })?.value {
                 print("🎵 Playing sequence: \(sequenceName)")
+                print("[TIMING] About to call playSequence(named:) at \(Date().timeIntervalSince(startTime) * 1000)ms")
                 audioManager.playSequence(named: sequenceName)
             } else {
                 print("❌ No valid play parameters found")

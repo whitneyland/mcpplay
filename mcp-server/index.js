@@ -160,6 +160,17 @@ class MCPPianoServer {
   }
 
   async playSequence(sequence) {
+    const startTime = Date.now();
+    const now = new Date();
+    const timeString = now.toTimeString().split(' ')[0] + '.' + Math.floor(now.getMilliseconds() / 100);
+    const timingLog = `================================================================\n[TIMING] playSequence started at ${timeString}\n`;
+    console.error(timingLog);
+    
+    // Write timing log
+    await fs.appendFile('/tmp/mcp-timing.log', timingLog).catch((e) => {
+      console.error('Failed to write timing log:', e.message);
+    });
+    
     try {
       // Validate sequence structure
       if (!sequence || typeof sequence !== 'object') {
@@ -218,13 +229,19 @@ class MCPPianoServer {
       const jsonString = JSON.stringify(sequence);
       const jsonSize = Buffer.byteLength(jsonString, 'utf8');
       
+      const validationTime = `[TIMING] Validation completed in ${Date.now() - startTime}ms\n`;
+      console.error(validationTime);
+      await fs.appendFile('/tmp/mcp-timing.log', validationTime).catch(() => {});
+      
       if (jsonSize < 2000) {
         // Small sequence - pass directly in URL
+        console.error(`[TIMING] Using direct URL method (${jsonSize} bytes)`);
         const encodedJson = encodeURIComponent(jsonString);
         const url = `mcpplay://play?json=${encodedJson}`;
         await this.openURL(url);
       } else {
         // Large sequence - write to file and reference by name
+        console.error(`[TIMING] Using file method (${jsonSize} bytes)`);
         const timestamp = Date.now();
         const tempFileName = `temp_sequence_${timestamp}`;
         // Ensure temp_sequences subfolder exists
@@ -233,6 +250,7 @@ class MCPPianoServer {
         const tempFilePath = path.join(tempDir, `${tempFileName}.json`);
 
         await fs.writeFile(tempFilePath, JSON.stringify(sequence, null, 2));
+        console.error(`[TIMING] File written in ${Date.now() - startTime}ms`);
 
         const url = `mcpplay://play?sequence=${tempFileName}`;
         await this.openURL(url);
@@ -253,6 +271,11 @@ class MCPPianoServer {
       }
       const summary = `Playing music sequence at ${sequence.tempo} BPM with ${totalEvents} event${totalEvents === 1 ? '' : 's'}` +
                       (trackCount > 1 ? ` across ${trackCount} tracks` : '');
+      
+      const completionTime = `[TIMING] playSequence completed in ${Date.now() - startTime}ms\n`;
+      console.error(completionTime);
+      await fs.appendFile('/tmp/mcp-timing.log', completionTime).catch(() => {});
+      
       return {
         content: [
           {
@@ -425,7 +448,13 @@ class MCPPianoServer {
   }
 
   async openURL(url) {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
+      const urlStartTimeMs = Date.now();
+      const urlStartTime = new Date();
+      const urlTimeString = urlStartTime.toTimeString().split(' ')[0] + '.' + Math.floor(urlStartTime.getMilliseconds() / 100);
+      const urlStartLog = `[TIMING] openURL started at ${urlTimeString}\n`;
+      console.error(urlStartLog);
+      await fs.appendFile('/tmp/mcp-timing.log', urlStartLog).catch(() => {});
       console.error(`Opening URL: ${url}`);
 
       // Using AppleScript ensures the URL is delivered to an existing
@@ -435,13 +464,30 @@ class MCPPianoServer {
       // Escape any embedded quotes to keep the AppleScript valid
       const escapedUrl = url.replace(/"/g, '\\"');
 
+      // First check if app is running and log the result
+      console.error(`[DEBUG] Checking if MCP Play is already running...`);
+      
       const appleScript = [
         'set _url_ to "' + escapedUrl + '"',
-        'if application "MCP Play" is running then',
-        '    tell application "MCP Play" to open location _url_',
-        'else',
-        '    do shell script "open " & quoted form of _url_',
-        'end if',
+        'tell application "System Events"',
+        '    set mcpPlayProcesses to (every process whose name is "MCP Play")',
+        '    set processCount to length of mcpPlayProcesses',
+        '    log "Found " & processCount & " MCP Play processes"',
+        '    if processCount > 0 then',
+        '        log "Using existing MCP Play instance via bundle ID"',
+        '        try',
+        '            tell application id "com.whitneyland.MCP-Play"',
+        '                open location _url_',
+        '            end tell',
+        '        on error',
+        '            log "Bundle ID approach failed, trying shell command"',
+        '            do shell script "open -b com.whitneyland.MCP-Play " & quoted form of _url_',
+        '        end try',
+        '    else',
+        '        log "Launching new MCP Play instance via open -b"',
+        '        do shell script "open -b com.whitneyland.MCP-Play " & quoted form of _url_',
+        '    end if',
+        'end tell',
       ];
 
       const osa = spawn('osascript', appleScript.flatMap(line => ['-e', line]), {
@@ -450,10 +496,20 @@ class MCPPianoServer {
 
       let stderr = '';
       osa.stderr.on('data', (data) => {
-        stderr += data.toString();
+        const output = data.toString();
+        stderr += output;
+        console.error(`[APPLESCRIPT STDERR] ${output.trim()}`);
       });
 
-      osa.on('close', (code) => {
+      osa.stdout.on('data', (data) => {
+        const output = data.toString();
+        console.error(`[APPLESCRIPT STDOUT] ${output.trim()}`);
+      });
+
+      osa.on('close', async (code) => {
+        const urlCompleteTime = `[TIMING] openURL completed in ${Date.now() - urlStartTimeMs}ms\n`;
+        console.error(urlCompleteTime);
+        await fs.appendFile('/tmp/mcp-timing.log', urlCompleteTime).catch(() => {});
         if (code === 0) {
           resolve();
         } else {

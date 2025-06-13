@@ -8,6 +8,19 @@
 import Foundation
 import AVFoundation
 
+extension Data {
+    func append(to url: URL) throws {
+        if FileManager.default.fileExists(atPath: url.path) {
+            let fileHandle = try FileHandle(forWritingTo: url)
+            defer { fileHandle.closeFile() }
+            fileHandle.seekToEndOfFile()
+            fileHandle.write(self)
+        } else {
+            try write(to: url)
+        }
+    }
+}
+
 class AudioManager: ObservableObject {
     private var audioEngine = AVAudioEngine()
     private var sampler = AVAudioUnitSampler()
@@ -74,6 +87,17 @@ class AudioManager: ObservableObject {
     }
     
     func playSequenceFromJSON(_ jsonString: String) {
+        let startTime = Date()
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss"
+        let timeString = formatter.string(from: startTime) + ".\(Int(startTime.timeIntervalSince1970.truncatingRemainder(dividingBy: 1) * 10))"
+        let timingMsg = "[TIMING] AudioManager.playSequenceFromJSON started at \(timeString)\n"
+        print(timingMsg)
+        if let data = timingMsg.data(using: .utf8) {
+            let fileURL = URL(fileURLWithPath: "/tmp/mcp-timing.log")
+            try? data.append(to: fileURL)
+        }
+        
         let cleanedJSON = cleanJSON(from: jsonString)
         
         guard let data = cleanedJSON.data(using: .utf8) else {
@@ -83,6 +107,13 @@ class AudioManager: ObservableObject {
         
         do {
             let sequence = try JSONDecoder().decode(MusicSequence.self, from: data)
+            let decodeTime = Date().timeIntervalSince(startTime) * 1000
+            let decodeMsg = "[TIMING] JSON decoded in \(decodeTime)ms, calling scheduleSequence\n"
+            print(decodeMsg)
+            if let data = decodeMsg.data(using: .utf8) {
+                let fileURL = URL(fileURLWithPath: "/tmp/mcp-timing.log")
+                try? data.append(to: fileURL)
+            }
             scheduleSequence(sequence)
         } catch {
             print("Failed to decode JSON sequence: \(error)")
