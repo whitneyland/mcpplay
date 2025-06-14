@@ -25,9 +25,10 @@ class AudioManager: ObservableObject {
     // MARK: - Private Properties
     private var audioEngine: AVAudioEngine
     private var sampler: AVAudioUnitSampler
-    private var sequencer: AVAudioSequencer?
     private var sequenceLength: TimeInterval = 0.0
     private var progressUpdateTask: Task<Void, Never>?
+    private var scheduledTasks: [Task<Void, Never>] = []
+    private var playbackStartTime: Date?
 
     init() {
         audioEngine = AVAudioEngine()
@@ -41,8 +42,22 @@ class AudioManager: ObservableObject {
 
         do {
             try audioEngine.start()
+            loadSoundFont()
         } catch {
             lastError = "Failed to start audio engine: \(error.localizedDescription)"
+        }
+    }
+    
+    private func loadSoundFont() {
+        guard let soundFontURL = Bundle.main.url(forResource: "90_sNutz_GM", withExtension: "sf2") else {
+            lastError = "Could not find soundfont file"
+            return
+        }
+        
+        do {
+            try sampler.loadSoundBankInstrument(at: soundFontURL, program: 0, bankMSB: 0x79, bankLSB: 0)
+        } catch {
+            lastError = "Failed to load soundfont: \(error.localizedDescription)"
         }
     }
 
@@ -59,22 +74,23 @@ class AudioManager: ObservableObject {
                 }
 
                 let sequenceData = try JSONDecoder().decode(MusicSequence.self, from: data)
-                self.sequencer = AVAudioSequencer(audioEngine: self.audioEngine)
-
-                guard let sequencer = self.sequencer else { return }
-
-                try sequencer.load(from: data, options: [])
-                sequencer.prepareToPlay()
-                try sequencer.start()
-
-                self.sequenceLength = sequencer.tracks.map { $0.lengthInSeconds }.max() ?? 0.0
+                
+                // Calculate duration and update UI
+                let beatDuration = 60.0 / sequenceData.tempo
+                let maxEnd = sequenceData.tracks
+                    .flatMap { $0.events.map { $0.time + $0.duration } }
+                    .max() ?? 0
+                self.sequenceLength = maxEnd * beatDuration
                 self.totalDuration = self.sequenceLength
 
-                // Now, update the UI properties. Because this method is on a @MainActor,
-                // this code is guaranteed to execute on the main thread.
+                // Update UI properties on main thread
                 self.isPlaying = true
                 self.currentlyPlayingTitle = sequenceData.title ?? "Untitled Sequence"
                 self.currentlyPlayingInstrument = sequenceData.tracks.first?.instrument
+                
+                // Set playback start time and schedule the sequence
+                self.playbackStartTime = Date()
+                await self.scheduleSequence(sequenceData)
                 self.startProgressUpdates()
 
             } catch {
@@ -84,14 +100,78 @@ class AudioManager: ObservableObject {
             }
         }
     }
+    
+    private func scheduleSequence(_ sequence: MusicSequence) async {
+        let beatDuration = 60.0 / sequence.tempo
+        
+        // Clear any existing scheduled tasks
+        scheduledTasks.removeAll()
+        
+        // Schedule note events for each track
+        for track in sequence.tracks {
+            for event in track.events {
+                let startTime = event.time * beatDuration
+                let duration = event.duration * beatDuration
+                let velocity = UInt8(event.velocity ?? 100)
+                
+                for pitch in event.pitches {
+                    let midiNote = UInt8(pitch.midiValue)
+                    
+                    // Schedule note start
+                    let startTask = Task {
+                        try? await Task.sleep(for: .seconds(startTime))
+                        if self.isPlaying {
+                            await MainActor.run {
+                                self.sampler.startNote(midiNote, withVelocity: velocity, onChannel: 0)
+                            }
+                        }
+                    }
+                    scheduledTasks.append(startTask)
+                    
+                    // Schedule note stop
+                    let stopTask = Task {
+                        try? await Task.sleep(for: .seconds(startTime + duration))
+                        if self.isPlaying {
+                            await MainActor.run {
+                                self.sampler.stopNote(midiNote, onChannel: 0)
+                            }
+                        }
+                    }
+                    scheduledTasks.append(stopTask)
+                }
+            }
+        }
+        
+        // Schedule sequence end
+        let endTask = Task {
+            try? await Task.sleep(for: .seconds(sequenceLength))
+            await MainActor.run {
+                if self.isPlaying {
+                    self.stopSequence()
+                }
+            }
+        }
+        scheduledTasks.append(endTask)
+    }
 
     func stopSequence() {
-        sequencer?.stop()
         isPlaying = false
         progress = 0.0
         elapsedTime = 0.0
         currentlyPlayingTitle = nil
         currentlyPlayingInstrument = nil
+        
+        // Cancel all scheduled tasks
+        for task in scheduledTasks {
+            task.cancel()
+        }
+        scheduledTasks.removeAll()
+        
+        // Stop all currently playing notes
+        for note in 0...127 {
+            sampler.stopNote(UInt8(note), onChannel: 0)
+        }
+        
         stopProgressUpdates()
     }
 
@@ -154,16 +234,16 @@ class AudioManager: ObservableObject {
     }
 
     private func updateProgress() {
-        guard let sequencer = sequencer, isPlaying, sequenceLength > 0 else {
+        guard let startTime = playbackStartTime, isPlaying, sequenceLength > 0 else {
             return
         }
 
-        let currentPosition = sequencer.currentPositionInSeconds
-        elapsedTime = currentPosition
-        progress = currentPosition / sequenceLength
+        let elapsed = Date().timeIntervalSince(startTime)
+        elapsedTime = elapsed
+        progress = min(elapsed / sequenceLength, 1.0)
 
         if progress >= 1.0 {
-            // Call stopSequence to clean up everything correctly.
+            // Sequence should end naturally, but make sure it stops
             stopSequence()
         }
     }

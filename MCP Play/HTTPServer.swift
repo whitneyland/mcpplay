@@ -121,7 +121,7 @@ struct PlayNoteResponse: Codable, Sendable { let status: String; let pitch: Stri
 @MainActor
 class HTTPServer: ObservableObject {
     private var listener: NWListener?
-    private let port: UInt16 = 27272
+    private let port: UInt16 = 3001
     private let host = "127.0.0.1"
     private let audioManager: AudioManager
 
