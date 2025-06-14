@@ -48,13 +48,9 @@ struct MCP_PlayApp: App {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm:ss"
         let timeString = formatter.string(from: startTime) + ".\(Int(startTime.timeIntervalSince1970.truncatingRemainder(dividingBy: 1) * 10))"
-        let timingMsg = "================================================================\n[TIMING] handleURL started at \(timeString)\n"
-        print(timingMsg)
-        if let data = timingMsg.data(using: .utf8) {
-            let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-            let fileURL = documentsPath.appendingPathComponent("mcp-timing.log")
-            try? data.append(to: fileURL)
-        }
+        logTiming("================================================================")
+        logTiming("handleURL started at \(timeString)")
+        
         print("🔗 handleURL called with: \(url)")
         guard url.scheme == "mcpplay" else {
             print("❌ Invalid scheme: \(url.scheme ?? "nil")")
@@ -84,7 +80,7 @@ struct MCP_PlayApp: App {
                     return
                 }
                 print("🎵 Final JSON ready to parse -> \(tidyJSON)")
-                print("[TIMING] About to call playSequenceFromJSON at \(Date().timeIntervalSince(startTime) * 1000)ms")
+                logTiming("About to call playSequenceFromJSON at \(Date().timeIntervalSince(startTime) * 1000)ms")
                 audioManager.playSequenceFromJSON(tidyJSON)
             } else {
                 print("❌ No valid JSON parameter found")
@@ -94,6 +90,16 @@ struct MCP_PlayApp: App {
             audioManager.stopSequence()
         default:
             print("❌ Unknown command: \(command)")
+        }
+    }
+    
+    private func logTiming(_ message: String) {
+        let msg = "[TIMING] \(message)\n"
+        print(msg)
+        if let data = msg.data(using: .utf8) {
+            let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+            let fileURL = documentsPath.appendingPathComponent("mcp-timing.log")
+            try? data.append(to: fileURL)
         }
     }
 }
