@@ -38,7 +38,11 @@ class AudioManager: ObservableObject {
     }
     
     private func logTiming(_ message: String) {
-        let msg = "[TIMING] \(message)\n"
+        let now = Date()
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss"
+        let timeString = formatter.string(from: now) + ".\(Int(now.timeIntervalSince1970.truncatingRemainder(dividingBy: 1) * 10))"
+        let msg = "[TIMING] \(timeString) - \(message)\n"
         print(msg)
         if let data = msg.data(using: .utf8) {
             let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
@@ -74,10 +78,7 @@ class AudioManager: ObservableObject {
 
     func playSequenceFromJSON(_ jsonString: String) {
         let startTime = Date()
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm:ss"
-        let timeString = formatter.string(from: startTime) + ".\(Int(startTime.timeIntervalSince1970.truncatingRemainder(dividingBy: 1) * 10))"
-        logTiming("AudioManager.playSequenceFromJSON started at \(timeString)")
+        logTiming("AudioManager.playSequenceFromJSON started")
         
         // This method is now on the Main Actor. We can safely stop the current sequence.
         stopSequence()
@@ -122,8 +123,7 @@ class AudioManager: ObservableObject {
     
     private func scheduleSequence(_ sequence: MusicSequence) async {
         let beatDuration = 60.0 / sequence.tempo
-        let sequenceStartTime = Date().timeIntervalSince1970
-        logTiming("Sequence scheduling started at \(sequenceStartTime), beatDuration=\(beatDuration)")
+        logTiming("Sequence scheduling started, beatDuration=\(beatDuration)")
         
         // Clear any existing scheduled tasks and track samplers
         scheduledTasks.removeAll()
@@ -172,9 +172,8 @@ class AudioManager: ObservableObject {
                     let startTask = Task {
                         try? await Task.sleep(for: .seconds(startTime))
                         if self.isPlaying {
-                            let actualTime = Date().timeIntervalSince1970
                             await MainActor.run {
-                                self.logTiming("Note \(midiNote) START at \(actualTime) (scheduled for \(startTime)s)")
+                                self.logTiming("Note \(midiNote) START (scheduled for \(startTime)s)")
                                 trackSampler.startNote(midiNote, withVelocity: velocity, onChannel: 0)
                             }
                         }
@@ -185,9 +184,8 @@ class AudioManager: ObservableObject {
                     let stopTask = Task {
                         try? await Task.sleep(for: .seconds(startTime + duration))
                         if self.isPlaying {
-                            let actualTime = Date().timeIntervalSince1970
                             await MainActor.run {
-                                self.logTiming("Note \(midiNote) STOP at \(actualTime) (scheduled for \(startTime + duration)s)")
+                                self.logTiming("Note \(midiNote) STOP (scheduled for \(startTime + duration)s)")
                                 trackSampler.stopNote(midiNote, onChannel: 0)
                             }
                         }

@@ -45,11 +45,8 @@ struct MCP_PlayApp: App {
 
     private func handleURL(_ url: URL) {
         let startTime = Date()
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm:ss"
-        let timeString = formatter.string(from: startTime) + ".\(Int(startTime.timeIntervalSince1970.truncatingRemainder(dividingBy: 1) * 10))"
         logTiming("================================================================")
-        logTiming("handleURL started at \(timeString)")
+        logTiming("handleURL started")
         
         print("🔗 handleURL called with: \(url)")
         guard url.scheme == "mcpplay" else {
@@ -94,7 +91,11 @@ struct MCP_PlayApp: App {
     }
     
     private func logTiming(_ message: String) {
-        let msg = "[TIMING] \(message)\n"
+        let now = Date()
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss"
+        let timeString = formatter.string(from: now) + ".\(Int(now.timeIntervalSince1970.truncatingRemainder(dividingBy: 1) * 10))"
+        let msg = "[TIMING] \(timeString) - \(message)\n"
         print(msg)
         if let data = msg.data(using: .utf8) {
             let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
