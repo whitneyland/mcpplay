@@ -36,20 +36,6 @@ class AudioManager: ObservableObject {
         sampler = AVAudioUnitSampler()
         setupAudioEngine()
     }
-    
-    private func logTiming(_ message: String) {
-        let now = Date()
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm:ss"
-        let timeString = formatter.string(from: now) + ".\(Int(now.timeIntervalSince1970.truncatingRemainder(dividingBy: 1) * 10))"
-        let msg = "[TIMING] \(timeString) - \(message)\n"
-        print(msg)
-        if let data = msg.data(using: .utf8) {
-            let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-            let fileURL = documentsPath.appendingPathComponent("mcp-timing.log")
-            try? data.append(to: fileURL)
-        }
-    }
 
     private func setupAudioEngine() {
         audioEngine.attach(sampler)
@@ -78,8 +64,8 @@ class AudioManager: ObservableObject {
 
     func playSequenceFromJSON(_ jsonString: String) {
         let startTime = Date()
-        logTiming("AudioManager.playSequenceFromJSON started")
-        
+        Util.logTiming("AudioManager.playSequenceFromJSON started")
+
         // This method is now on the Main Actor. We can safely stop the current sequence.
         stopSequence()
 
@@ -93,7 +79,7 @@ class AudioManager: ObservableObject {
 
                 let sequenceData = try JSONDecoder().decode(MusicSequence.self, from: data)
                 let decodeTime = Date().timeIntervalSince(startTime) * 1000
-                logTiming("JSON decoded in \(decodeTime)ms, calling scheduleSequence")
+                Util.logTiming("JSON decoded in \(decodeTime)ms, calling scheduleSequence")
                 
                 // Calculate duration and update UI
                 let beatDuration = 60.0 / sequenceData.tempo
@@ -123,8 +109,8 @@ class AudioManager: ObservableObject {
     
     private func scheduleSequence(_ sequence: MusicSequence) async {
         let beatDuration = 60.0 / sequence.tempo
-        logTiming("Sequence scheduling started, beatDuration=\(beatDuration)")
-        
+        Util.logTiming("Sequence scheduling started, beatDuration=\(beatDuration)")
+
         // Clear any existing scheduled work items and track samplers
         scheduledWorkItems.removeAll()
         
@@ -139,9 +125,10 @@ class AudioManager: ObservableObject {
             lastError = "Could not find soundfont file for tracks"
             return
         }
-        
+
         let instrumentPrograms = getInstrumentPrograms()
-        
+
+        Util.logTiming("Loading instruments")
         for track in sequence.tracks {
             let trackSampler = AVAudioUnitSampler()
             audioEngine.attach(trackSampler)
@@ -157,7 +144,10 @@ class AudioManager: ObservableObject {
         }
         
         // Schedule note events for each track
+        Util.logTiming("Begin scheduling")
         for (trackIndex, track) in sequence.tracks.enumerated() {
+            Util.logTiming("Scheduling track \(trackIndex)")
+
             let trackSampler = trackSamplers[trackIndex]
             
             for event in track.events {
@@ -188,14 +178,22 @@ class AudioManager: ObservableObject {
         }
         
         // Schedule sequence end
+        Util.logTiming("Scheduling sequence end")
         let endWorkItem = DispatchWorkItem { [weak self] in
-            Task { @MainActor in
+            Util.logTiming("Sequence end triggered")
+            DispatchQueue.main.async {
                 guard let self = self, self.isPlaying else { return }
+                Util.logTiming("Calling stopSequence from end trigger")
                 self.stopSequence()
             }
         }
+
+        Util.logTiming("DispatchQueue.global")
         DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + sequenceLength, execute: endWorkItem)
+        Util.logTiming("scheduledWorkItems.append(endWorkItem)")
         scheduledWorkItems.append(endWorkItem)
+
+        Util.logTiming("Scheduling complete")
     }
 
     func stopSequence() {

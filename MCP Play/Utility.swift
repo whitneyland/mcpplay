@@ -13,8 +13,9 @@ struct Util {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm:ss"
         let timeString = formatter.string(from: now) + ".\(Int(now.timeIntervalSince1970.truncatingRemainder(dividingBy: 1) * 10))"
-        let msg = "[TIMING] \(timeString) - \(message)\n"
+        var msg = "[TIMING] \(timeString) - \(message)"
         print(msg)
+        msg += "\n"
         if let data = msg.data(using: .utf8) {
             let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
             let fileURL = documentsPath.appendingPathComponent("mcp-timing.log")
