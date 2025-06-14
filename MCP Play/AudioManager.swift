@@ -28,13 +28,53 @@ class AudioManager: ObservableObject {
     private var trackSamplers: [AVAudioUnitSampler] = []
     private var sequenceLength: TimeInterval = 0.0
     private var progressUpdateTask: Task<Void, Never>?
-    private var scheduledTimers: [DispatchSourceTimer] = []
+    private var isSchedulingActive = false
     private var playbackStartTime: Date?
+    private var testTimers: [DispatchSourceTimer] = []
+    private var noteTimers: [DispatchSourceTimer] = []
 
     init() {
         audioEngine = AVAudioEngine()
         sampler = AVAudioUnitSampler()
         setupAudioEngine()
+        
+        // Immediate test
+        Util.logTiming("AudioManager init completed")
+        testSingleNote()
+    }
+    
+    private func testSingleNote() {
+        Util.logTiming("Stage 3: Testing multiple DispatchSourceTimer precision")
+        
+        // Test multiple timers to simulate real MIDI scheduling
+        let delays: [Double] = [0.1, 0.2, 0.35, 0.5, 0.7, 1.0, 1.25, 1.5]
+        let scheduleStart = CFAbsoluteTimeGetCurrent()
+        var timers: [DispatchSourceTimer] = []
+        
+        for (index, delay) in delays.enumerated() {
+            let timer = DispatchSource.makeTimerSource(queue: .main)
+            timer.schedule(deadline: .now() + delay)
+            timer.setEventHandler { [weak self] in
+                let actualDelay = CFAbsoluteTimeGetCurrent() - scheduleStart
+                let diff = actualDelay - delay
+                
+                // Play a different note for each timer to hear the timing
+                let midiNote = UInt8(60 + index * 2) // C, D, E, F#, G#, A#, C, D
+                self?.sampler.startNote(midiNote, withVelocity: 80, onChannel: 0)
+                
+                // Stop the note after 100ms
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    self?.sampler.stopNote(midiNote, onChannel: 0)
+                }
+                
+                timer.cancel()
+            }
+            timer.resume()
+            timers.append(timer)
+        }
+        
+        testTimers = timers // Keep strong references
+        Util.logTiming("Multiple precision timers started: \(delays.count) timers")
     }
 
     private func setupAudioEngine() {
@@ -111,13 +151,14 @@ class AudioManager: ObservableObject {
         let beatDuration = 60.0 / sequence.tempo
         Util.logTiming("Sequence scheduling started, beatDuration=\(beatDuration)")
 
-        // Clear any existing scheduled timers and track samplers  
-        await MainActor.run {
-            for timer in scheduledTimers {
-                timer.cancel()
-            }
-            scheduledTimers.removeAll()
+        // Clear any existing scheduling and track samplers  
+        isSchedulingActive = false
+        
+        // Cancel and clear all note timers
+        for timer in noteTimers {
+            timer.cancel()
         }
+        noteTimers.removeAll()
         
         // Detach previous track samplers
         for ts in trackSamplers {
@@ -149,6 +190,7 @@ class AudioManager: ObservableObject {
         }
         
         // Schedule note events for each track
+        isSchedulingActive = true
         Util.logTiming("Begin scheduling")
         for (trackIndex, track) in sequence.tracks.enumerated() {
 //            Util.logTiming("Scheduling track \(trackIndex)")
@@ -168,49 +210,38 @@ class AudioManager: ObservableObject {
                     let midiNote = UInt8(pitch.midiValue)
 //                    Util.logTiming("MIDI note: \(midiNote)")
                     
-                    // Schedule note start using DispatchSourceTimer for nanosecond precision
+                    // Use DispatchSourceTimer for precise timing
                     let scheduledTime = startTime
                     let scheduleStart = CFAbsoluteTimeGetCurrent()
                     
-                    let startTimer = DispatchSource.makeTimerSource(queue: .global(qos: .userInitiated))
-                    let startTimeNanos = Int(startTime * 1_000_000_000)
-                    startTimer.schedule(deadline: .now() + .nanoseconds(startTimeNanos))
+                    // Note start timer
+                    let startTimer = DispatchSource.makeTimerSource(queue: .main)
+                    startTimer.schedule(deadline: .now() + .milliseconds(Int(startTime * 1000)))
                     startTimer.setEventHandler { [weak self] in
                         let actualDelay = CFAbsoluteTimeGetCurrent() - scheduleStart
                         Util.logTiming("Note \(midiNote) START: scheduled=\(scheduledTime)s, actual=\(String(format: "%.3f", actualDelay))s, diff=\(String(format: "%.3f", actualDelay - scheduledTime))s")
-                        guard let self = self else { return }
-                        Task { @MainActor in
-                            guard self.isPlaying else { return }
-                            trackSampler.startNote(midiNote, withVelocity: velocity, onChannel: 0)
-                        }
+                        guard let self = self, self.isPlaying, self.isSchedulingActive else { return }
+                        trackSampler.startNote(midiNote, withVelocity: velocity, onChannel: 0)
                         startTimer.cancel()
                     }
                     startTimer.resume()
-                    await MainActor.run {
-                        scheduledTimers.append(startTimer)
-                    }
+                    noteTimers.append(startTimer)
                     
-                    // Schedule note stop
+                    // Note stop timer
                     let scheduledStopTime = startTime + duration
                     let stopScheduleStart = CFAbsoluteTimeGetCurrent()
                     
-                    let stopTimer = DispatchSource.makeTimerSource(queue: .global(qos: .userInitiated))
-                    let stopTimeNanos = Int((startTime + duration) * 1_000_000_000)
-                    stopTimer.schedule(deadline: .now() + .nanoseconds(stopTimeNanos))
+                    let stopTimer = DispatchSource.makeTimerSource(queue: .main)
+                    stopTimer.schedule(deadline: .now() + .milliseconds(Int((startTime + duration) * 1000)))
                     stopTimer.setEventHandler { [weak self] in
                         let actualDelay = CFAbsoluteTimeGetCurrent() - stopScheduleStart
-                        Util.logTiming("Note \(midiNote) STOP: scheduled=\(scheduledStopTime)s, actual=\(String(format: "%.3f", actualDelay))s, diff=\(String(format: "%.3f", actualDelay - scheduledStopTime))s")
-                        guard let self = self else { return }
-                        Task { @MainActor in
-                            guard self.isPlaying else { return }
-                            trackSampler.stopNote(midiNote, onChannel: 0)
-                        }
+//                        Util.logTiming("Note \(midiNote) STOP: scheduled=\(scheduledStopTime)s, actual=\(String(format: "%.3f", actualDelay))s, diff=\(String(format: "%.3f", actualDelay - scheduledStopTime))s")
+                        guard let self = self, self.isPlaying, self.isSchedulingActive else { return }
+                        trackSampler.stopNote(midiNote, onChannel: 0)
                         stopTimer.cancel()
                     }
                     stopTimer.resume()
-                    await MainActor.run {
-                        scheduledTimers.append(stopTimer)
-                    }
+                    noteTimers.append(stopTimer)
 //                    Util.logTiming("Completed pitch \(pitchIndex)")
                 }
 //                Util.logTiming("Completed event \(eventIndex)")
@@ -218,23 +249,16 @@ class AudioManager: ObservableObject {
         }
         
         // Schedule sequence end
-        let endTimer = DispatchSource.makeTimerSource(queue: .global(qos: .userInitiated))
-        let endTimeNanos = Int(sequenceLength * 1_000_000_000)
-        endTimer.schedule(deadline: .now() + .nanoseconds(endTimeNanos))
+        let endTimer = DispatchSource.makeTimerSource(queue: .main)
+        endTimer.schedule(deadline: .now() + .milliseconds(Int(sequenceLength * 1000)))
         endTimer.setEventHandler { [weak self] in
-            guard let self = self else { return }
-            Task { @MainActor in
-                if self.isPlaying {
-                    Util.logTiming("Calling stopSequence from end trigger")
-                    self.stopSequence()
-                }
-            }
+            guard let self = self, self.isPlaying, self.isSchedulingActive else { return }
+            Util.logTiming("Calling stopSequence from end trigger")
+            self.stopSequence()
             endTimer.cancel()
         }
         endTimer.resume()
-        await MainActor.run {
-            scheduledTimers.append(endTimer)
-        }
+        noteTimers.append(endTimer)
 
         Util.logTiming("Scheduling complete")
     }
@@ -246,11 +270,14 @@ class AudioManager: ObservableObject {
         currentlyPlayingTitle = nil
         currentlyPlayingInstrument = nil
         
-        // Cancel all scheduled timers
-        for timer in scheduledTimers {
+        // Stop all scheduling
+        isSchedulingActive = false
+        
+        // Cancel all note timers
+        for timer in noteTimers {
             timer.cancel()
         }
-        scheduledTimers.removeAll()
+        noteTimers.removeAll()
         
         // Stop all currently playing notes
         for note in 0...127 {
