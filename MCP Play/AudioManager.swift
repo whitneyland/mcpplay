@@ -25,6 +25,7 @@ class AudioManager: ObservableObject {
     // MARK: - Private Properties
     private var audioEngine: AVAudioEngine
     private var sampler: AVAudioUnitSampler
+    private var trackSamplers: [AVAudioUnitSampler] = []
     private var sequenceLength: TimeInterval = 0.0
     private var progressUpdateTask: Task<Void, Never>?
     private var scheduledTasks: [Task<Void, Never>] = []
@@ -104,11 +105,41 @@ class AudioManager: ObservableObject {
     private func scheduleSequence(_ sequence: MusicSequence) async {
         let beatDuration = 60.0 / sequence.tempo
         
-        // Clear any existing scheduled tasks
+        // Clear any existing scheduled tasks and track samplers
         scheduledTasks.removeAll()
         
-        // Schedule note events for each track
+        // Detach previous track samplers
+        for ts in trackSamplers {
+            audioEngine.detach(ts)
+        }
+        trackSamplers.removeAll()
+        
+        // Create and setup samplers for each track
+        guard let soundFontURL = Bundle.main.url(forResource: "90_sNutz_GM", withExtension: "sf2") else {
+            lastError = "Could not find soundfont file for tracks"
+            return
+        }
+        
+        let instrumentPrograms = getInstrumentPrograms()
+        
         for track in sequence.tracks {
+            let trackSampler = AVAudioUnitSampler()
+            audioEngine.attach(trackSampler)
+            audioEngine.connect(trackSampler, to: audioEngine.mainMixerNode, format: nil)
+            
+            let program = instrumentPrograms[track.instrument] ?? 0
+            do {
+                try trackSampler.loadSoundBankInstrument(at: soundFontURL, program: program, bankMSB: 0x79, bankLSB: 0)
+            } catch {
+                print("Failed to load instrument \(track.instrument): \(error)")
+            }
+            trackSamplers.append(trackSampler)
+        }
+        
+        // Schedule note events for each track
+        for (trackIndex, track) in sequence.tracks.enumerated() {
+            let trackSampler = trackSamplers[trackIndex]
+            
             for event in track.events {
                 let startTime = event.time * beatDuration
                 let duration = event.duration * beatDuration
@@ -122,7 +153,7 @@ class AudioManager: ObservableObject {
                         try? await Task.sleep(for: .seconds(startTime))
                         if self.isPlaying {
                             await MainActor.run {
-                                self.sampler.startNote(midiNote, withVelocity: velocity, onChannel: 0)
+                                trackSampler.startNote(midiNote, withVelocity: velocity, onChannel: 0)
                             }
                         }
                     }
@@ -133,7 +164,7 @@ class AudioManager: ObservableObject {
                         try? await Task.sleep(for: .seconds(startTime + duration))
                         if self.isPlaying {
                             await MainActor.run {
-                                self.sampler.stopNote(midiNote, onChannel: 0)
+                                trackSampler.stopNote(midiNote, onChannel: 0)
                             }
                         }
                     }
@@ -170,6 +201,12 @@ class AudioManager: ObservableObject {
         // Stop all currently playing notes
         for note in 0...127 {
             sampler.stopNote(UInt8(note), onChannel: 0)
+        }
+        // Stop track sampler notes
+        for ts in trackSamplers {
+            for note in 0...127 {
+                ts.stopNote(UInt8(note), onChannel: 0)
+            }
         }
         
         stopProgressUpdates()
@@ -252,5 +289,107 @@ class AudioManager: ObservableObject {
         progressUpdateTask?.cancel()
         progressUpdateTask = nil
         progress = 0.0
+    }
+    
+    private func getInstrumentPrograms() -> [String: UInt8] {
+        return [
+            // Piano
+            "acoustic_grand_piano": 0,
+            "bright_acoustic_piano": 1,
+            "electric_grand_piano": 2,
+            "honky_tonk_piano": 3,
+            "electric_piano_1": 4,
+            "electric_piano_2": 5,
+            "harpsichord": 6,
+            "clavinet": 7,
+            
+            // Percussion
+            "celesta": 8,
+            "glockenspiel": 9,
+            "music_box": 10,
+            "vibraphone": 11,
+            "marimba": 12,
+            "xylophone": 13,
+            "tubular_bells": 14,
+            "dulcimer": 15,
+            
+            // Organ
+            "drawbar_organ": 16,
+            "percussive_organ": 17,
+            "rock_organ": 18,
+            "church_organ": 19,
+            "reed_organ": 20,
+            "accordion": 21,
+            "harmonica": 22,
+            "tango_accordion": 23,
+            
+            // Guitar
+            "acoustic_guitar_nylon": 24,
+            "acoustic_guitar_steel": 25,
+            "electric_guitar_jazz": 26,
+            "electric_guitar_clean": 27,
+            "electric_guitar_muted": 28,
+            "overdriven_guitar": 29,
+            "distortion_guitar": 30,
+            "guitar_harmonics": 31,
+            
+            // Bass
+            "acoustic_bass": 32,
+            "electric_bass_finger": 33,
+            "electric_bass_pick": 34,
+            "fretless_bass": 35,
+            "slap_bass_1": 36,
+            "slap_bass_2": 37,
+            "synth_bass_1": 38,
+            "synth_bass_2": 39,
+            
+            // Strings
+            "violin": 40,
+            "viola": 41,
+            "cello": 42,
+            "contrabass": 43,
+            "tremolo_strings": 44,
+            "pizzicato_strings": 45,
+            "orchestral_harp": 46,
+            "timpani": 47,
+            "string_ensemble_1": 48,
+            "string_ensemble_2": 49,
+            "synth_strings_1": 50,
+            "synth_strings_2": 51,
+            
+            // Choir
+            "choir_aahs": 52,
+            "voice_oohs": 53,
+            "synth_voice": 54,
+            "orchestra_hit": 55,
+            
+            // Brass
+            "trumpet": 56,
+            "trombone": 57,
+            "tuba": 58,
+            "muted_trumpet": 59,
+            "french_horn": 60,
+            "brass_section": 61,
+            "synth_brass_1": 62,
+            "synth_brass_2": 63,
+            
+            // Woodwinds
+            "soprano_sax": 64,
+            "alto_sax": 65,
+            "tenor_sax": 66,
+            "baritone_sax": 67,
+            "oboe": 68,
+            "english_horn": 69,
+            "bassoon": 70,
+            "clarinet": 71,
+            "piccolo": 72,
+            "flute": 73,
+            "recorder": 74,
+            "pan_flute": 75,
+            "blown_bottle": 76,
+            "shakuhachi": 77,
+            "whistle": 78,
+            "ocarina": 79
+        ]
     }
 }
