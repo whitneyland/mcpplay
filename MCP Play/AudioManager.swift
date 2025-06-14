@@ -112,7 +112,9 @@ class AudioManager: ObservableObject {
         Util.logTiming("Sequence scheduling started, beatDuration=\(beatDuration)")
 
         // Clear any existing scheduled work items and track samplers
-        scheduledWorkItems.removeAll()
+        await MainActor.run {
+            scheduledWorkItems.removeAll()
+        }
         
         // Detach previous track samplers
         for ts in trackSamplers {
@@ -150,30 +152,47 @@ class AudioManager: ObservableObject {
 
             let trackSampler = trackSamplers[trackIndex]
             
-            for event in track.events {
+            for (eventIndex, event) in track.events.enumerated() {
+                Util.logTiming("Processing event \(eventIndex)")
                 let startTime = event.time * beatDuration
                 let duration = event.duration * beatDuration
                 let velocity = UInt8(event.velocity ?? 100)
                 
-                for pitch in event.pitches {
+                Util.logTiming("Event timing: start=\(startTime), duration=\(duration)")
+                
+                for (pitchIndex, pitch) in event.pitches.enumerated() {
+                    Util.logTiming("Processing pitch \(pitchIndex): \(pitch)")
                     let midiNote = UInt8(pitch.midiValue)
+                    Util.logTiming("MIDI note: \(midiNote)")
                     
                     // Schedule note start using DispatchQueue for better precision
+                    Util.logTiming("Creating start work item")
                     let startWorkItem = DispatchWorkItem { [weak self, trackSampler] in
                         guard let self = self, self.isPlaying else { return }
                         trackSampler.startNote(midiNote, withVelocity: velocity, onChannel: 0)
                     }
+                    Util.logTiming("Scheduling start work item")
                     DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + startTime, execute: startWorkItem)
-                    scheduledWorkItems.append(startWorkItem)
+                    Util.logTiming("Appending start work item")
+                    await MainActor.run {
+                        scheduledWorkItems.append(startWorkItem)
+                    }
                     
                     // Schedule note stop
+                    Util.logTiming("Creating stop work item")
                     let stopWorkItem = DispatchWorkItem { [weak self, trackSampler] in
                         guard let self = self, self.isPlaying else { return }
                         trackSampler.stopNote(midiNote, onChannel: 0)
                     }
+                    Util.logTiming("Scheduling stop work item")
                     DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + startTime + duration, execute: stopWorkItem)
-                    scheduledWorkItems.append(stopWorkItem)
+                    Util.logTiming("Appending stop work item")
+                    await MainActor.run {
+                        scheduledWorkItems.append(stopWorkItem)
+                    }
+                    Util.logTiming("Completed pitch \(pitchIndex)")
                 }
+                Util.logTiming("Completed event \(eventIndex)")
             }
         }
         
@@ -191,7 +210,9 @@ class AudioManager: ObservableObject {
         Util.logTiming("DispatchQueue.global")
         DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + sequenceLength, execute: endWorkItem)
         Util.logTiming("scheduledWorkItems.append(endWorkItem)")
-        scheduledWorkItems.append(endWorkItem)
+        await MainActor.run {
+            scheduledWorkItems.append(endWorkItem)
+        }
 
         Util.logTiming("Scheduling complete")
     }

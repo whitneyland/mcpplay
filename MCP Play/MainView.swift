@@ -10,12 +10,13 @@ import SwiftUI
 
 struct MainView: View {
     @EnvironmentObject var audioManager: AudioManager
-    @State private var selectedSequence = "sonnet_4_multi"
+    @State private var selectedSequence = "one_note"
     @State private var jsonInput = ""
 
     // Piano keyboard view extracted to PianoView
     
     let availableSequences = [
+        ("one_note", "One Note"),
         ("sonnet_4_multi", "Sonnet 4 Multi"),
         ("moonlight_sonata", "Moonlight Sonata"),
         ("gemini_1", "Gemini 1"),
