@@ -51,7 +51,8 @@ struct MCP_PlayApp: App {
         let timingMsg = "================================================================\n[TIMING] handleURL started at \(timeString)\n"
         print(timingMsg)
         if let data = timingMsg.data(using: .utf8) {
-            let fileURL = URL(fileURLWithPath: "/tmp/mcp-timing.log")
+            let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+            let fileURL = documentsPath.appendingPathComponent("mcp-timing.log")
             try? data.append(to: fileURL)
         }
         print("🔗 handleURL called with: \(url)")
@@ -85,12 +86,8 @@ struct MCP_PlayApp: App {
                 print("🎵 Final JSON ready to parse -> \(tidyJSON)")
                 print("[TIMING] About to call playSequenceFromJSON at \(Date().timeIntervalSince(startTime) * 1000)ms")
                 audioManager.playSequenceFromJSON(tidyJSON)
-            } else if let sequenceName = components?.queryItems?.first(where: { $0.name == "sequence" })?.value {
-                print("🎵 Playing sequence: \(sequenceName)")
-                print("[TIMING] About to call playSequence(named:) at \(Date().timeIntervalSince(startTime) * 1000)ms")
-                audioManager.playSequence(named: sequenceName)
             } else {
-                print("❌ No valid play parameters found")
+                print("❌ No valid JSON parameter found")
             }
         case "stop":
             print("⏹️ Stopping playback")
