@@ -1,14 +1,11 @@
-# MCP Piano Server
+# MCP Play Server
 
-This MCP server allows Claude Desktop to control your piano app and manage music sequences.
+This MCP server allows Claude Desktop to control your music app and manage music sequences.
 
 ## Setup Instructions
 
-1. **Install dependencies:**
-   ```bash
-   cd /Users/lee/mcpplay/mcp-server
-   npm install
-   ```
+1. **Start MCP Play app:**
+   Launch the MCP Play.app from Applications or Xcode. The HTTP server starts automatically on port 27272.
 
 2. **Add to Claude Desktop configuration:**
    Add this to your Claude Desktop app configuration file:
@@ -18,20 +15,20 @@ This MCP server allows Claude Desktop to control your piano app and manage music
    ```json
    {
      "mcpServers": {
-       "mcp-piano": {
-         "command": "node",
-         "args": ["/Users/lee/mcpplay/mcp-server/index.js"],
-         "env": {}
+       "mcp-play": {
+         "command": "npx",
+         "args": ["mcp-remote", "http://localhost:27272"]
        }
      }
    }
    ```
 
-3. **Restart Claude Desktop** after adding the configuration.
+3. **Restart Claude Desktop** to activate the configuration.
 
 ## Available Commands
 
 - `play_sequence` - Play music directly from JSON sequence data
+- `list_instruments` - Show all 70 available instruments by category
 - `stop` - Stop any currently playing music
 
 ## Usage Examples
@@ -41,11 +38,12 @@ Once configured, you can ask Claude Desktop:
 - "Play a simple C major scale"
 - "Play Twinkle Twinkle Little Star"
 - "Create and play a chord progression"
+- "Show me all available instruments"
 - "Stop the music"
 
 ## JSON Format
 
-Music sequences now support multi-track JSON:
+Music sequences support multi-track JSON with comprehensive instrument support:
 
 ```json
 {
@@ -78,8 +76,9 @@ Music sequences now support multi-track JSON:
 - **duration**: How long to play (1.0 = quarter note)
 - **velocity**: Volume 0-127 (optional, defaults to 100)
 
-## Notes
+## Architecture
 
-- The MCP server communicates with your piano app using URL schemes  
-- Make sure the MCP Play app is running when using playback commands
-- Claude sends music data directly - no need to manage files
+- HTTP server embedded in MCP Play app using Swift Foundation
+- JSON-RPC 2.0 protocol for all communication
+- Real-time audio synthesis with 70 General MIDI instruments
+- Multi-track support with independent instrument assignment

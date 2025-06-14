@@ -101,6 +101,9 @@ yarn-error.log*
 # Claude Desktop configuration
 claude_desktop_config.json
 
+# Claude Code configuration
+CLAUDE.md
+
 # Temporary files
 *.tmp
 temp_sequence_*.json

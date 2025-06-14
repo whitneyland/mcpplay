@@ -26,11 +26,11 @@ struct MusicSequence: Decodable {
         if let decodedTracks = try? container.decode([Track].self, forKey: .tracks) {
             tracks = decodedTracks
         } else {
-            // Fallback for version 1 format
+            // Fallback for single-track format
             let instrument = try container.decodeIfPresent(String.self, forKey: .instrument) ?? "acoustic_grand_piano"
             let events = try container.decode([SequenceEvent].self, forKey: .events)
-            let legacyTrack = Track(instrument: instrument, name: nil, events: events)
-            tracks = [legacyTrack]
+            let singleTrack = Track(instrument: instrument, name: nil, events: events)
+            tracks = [singleTrack]
         }
     }
 }
@@ -52,7 +52,7 @@ struct Track: Decodable {
         events = try container.decode([SequenceEvent].self, forKey: .events)
     }
     
-    // Manual initializer for legacy track creation
+    // Manual initializer for track creation
     init(instrument: String, name: String?, events: [SequenceEvent]) {
         self.instrument = instrument
         self.name = name

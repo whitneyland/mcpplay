@@ -12,14 +12,34 @@ import Foundation
 @main
 struct MCP_PlayApp: App {
     @StateObject private var audioManager = AudioManager()
+    @StateObject private var httpServer: HTTPServer
+    
+    init() {
+        let manager = AudioManager()
+        let server = HTTPServer(audioManager: manager)
+        _audioManager = StateObject(wrappedValue: manager)
+        _httpServer = StateObject(wrappedValue: server)
+    }
 
     var body: some Scene {
         WindowGroup {
             MainView()
                 .environmentObject(audioManager)
+                .environmentObject(httpServer)
                 .onOpenURL { url in
                     handleURL(url)
                 }
+                .task {
+                    await startHTTPServer()
+                }
+        }
+    }
+    
+    private func startHTTPServer() async {
+        do {
+            try await httpServer.start()
+        } catch {
+            print("❌ Failed to start HTTP server: \(error)")
         }
     }
 
