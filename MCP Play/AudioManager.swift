@@ -169,19 +169,17 @@ class AudioManager: ObservableObject {
                     let midiNote = UInt8(pitch.midiValue)
                     
                     // Schedule note start using DispatchQueue for better precision
-                    let startWorkItem = DispatchWorkItem {
-                        if self.isPlaying {
-                            trackSampler.startNote(midiNote, withVelocity: velocity, onChannel: 0)
-                        }
+                    let startWorkItem = DispatchWorkItem { [weak self] in
+                        guard let self = self, self.isPlaying else { return }
+                        trackSampler.startNote(midiNote, withVelocity: velocity, onChannel: 0)
                     }
                     DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + startTime, execute: startWorkItem)
                     scheduledWorkItems.append(startWorkItem)
                     
                     // Schedule note stop
-                    let stopWorkItem = DispatchWorkItem {
-                        if self.isPlaying {
-                            trackSampler.stopNote(midiNote, onChannel: 0)
-                        }
+                    let stopWorkItem = DispatchWorkItem { [weak self] in
+                        guard let self = self, self.isPlaying else { return }
+                        trackSampler.stopNote(midiNote, onChannel: 0)
                     }
                     DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + startTime + duration, execute: stopWorkItem)
                     scheduledWorkItems.append(stopWorkItem)
@@ -190,11 +188,10 @@ class AudioManager: ObservableObject {
         }
         
         // Schedule sequence end
-        let endWorkItem = DispatchWorkItem {
+        let endWorkItem = DispatchWorkItem { [weak self] in
             Task { @MainActor in
-                if self.isPlaying {
-                    self.stopSequence()
-                }
+                guard let self = self, self.isPlaying else { return }
+                self.stopSequence()
             }
         }
         DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + sequenceLength, execute: endWorkItem)
