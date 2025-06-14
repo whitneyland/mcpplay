@@ -169,7 +169,7 @@ class AudioManager: ObservableObject {
                     let midiNote = UInt8(pitch.midiValue)
                     
                     // Schedule note start using DispatchQueue for better precision
-                    let startWorkItem = DispatchWorkItem { [weak self] in
+                    let startWorkItem = DispatchWorkItem { [weak self, trackSampler] in
                         guard let self = self, self.isPlaying else { return }
                         trackSampler.startNote(midiNote, withVelocity: velocity, onChannel: 0)
                     }
@@ -177,7 +177,7 @@ class AudioManager: ObservableObject {
                     scheduledWorkItems.append(startWorkItem)
                     
                     // Schedule note stop
-                    let stopWorkItem = DispatchWorkItem { [weak self] in
+                    let stopWorkItem = DispatchWorkItem { [weak self, trackSampler] in
                         guard let self = self, self.isPlaying else { return }
                         trackSampler.stopNote(midiNote, onChannel: 0)
                     }
