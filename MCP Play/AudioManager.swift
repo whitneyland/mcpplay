@@ -28,7 +28,7 @@ class AudioManager: ObservableObject {
     private var trackSamplers: [AVAudioUnitSampler] = []
     private var sequenceLength: TimeInterval = 0.0
     private var progressUpdateTask: Task<Void, Never>?
-    private var scheduledTasks: [Task<Void, Never>] = []
+    private var scheduledWorkItems: [DispatchWorkItem] = []
     private var playbackStartTime: Date?
 
     init() {
@@ -125,8 +125,8 @@ class AudioManager: ObservableObject {
         let beatDuration = 60.0 / sequence.tempo
         logTiming("Sequence scheduling started, beatDuration=\(beatDuration)")
         
-        // Clear any existing scheduled tasks and track samplers
-        scheduledTasks.removeAll()
+        // Clear any existing scheduled work items and track samplers
+        scheduledWorkItems.removeAll()
         
         // Detach previous track samplers
         for ts in trackSamplers {
@@ -168,43 +168,37 @@ class AudioManager: ObservableObject {
                 for pitch in event.pitches {
                     let midiNote = UInt8(pitch.midiValue)
                     
-                    // Schedule note start
-                    let startTask = Task {
-                        try? await Task.sleep(for: .seconds(startTime))
+                    // Schedule note start using DispatchQueue for better precision
+                    let startWorkItem = DispatchWorkItem {
                         if self.isPlaying {
-                            await MainActor.run {
-                                self.logTiming("Note \(midiNote) START (scheduled for \(startTime)s)")
-                                trackSampler.startNote(midiNote, withVelocity: velocity, onChannel: 0)
-                            }
+                            trackSampler.startNote(midiNote, withVelocity: velocity, onChannel: 0)
                         }
                     }
-                    scheduledTasks.append(startTask)
+                    DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + startTime, execute: startWorkItem)
+                    scheduledWorkItems.append(startWorkItem)
                     
                     // Schedule note stop
-                    let stopTask = Task {
-                        try? await Task.sleep(for: .seconds(startTime + duration))
+                    let stopWorkItem = DispatchWorkItem {
                         if self.isPlaying {
-                            await MainActor.run {
-                                self.logTiming("Note \(midiNote) STOP (scheduled for \(startTime + duration)s)")
-                                trackSampler.stopNote(midiNote, onChannel: 0)
-                            }
+                            trackSampler.stopNote(midiNote, onChannel: 0)
                         }
                     }
-                    scheduledTasks.append(stopTask)
+                    DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + startTime + duration, execute: stopWorkItem)
+                    scheduledWorkItems.append(stopWorkItem)
                 }
             }
         }
         
         // Schedule sequence end
-        let endTask = Task {
-            try? await Task.sleep(for: .seconds(sequenceLength))
-            await MainActor.run {
+        let endWorkItem = DispatchWorkItem {
+            Task { @MainActor in
                 if self.isPlaying {
                     self.stopSequence()
                 }
             }
         }
-        scheduledTasks.append(endTask)
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + sequenceLength, execute: endWorkItem)
+        scheduledWorkItems.append(endWorkItem)
     }
 
     func stopSequence() {
@@ -214,11 +208,11 @@ class AudioManager: ObservableObject {
         currentlyPlayingTitle = nil
         currentlyPlayingInstrument = nil
         
-        // Cancel all scheduled tasks
-        for task in scheduledTasks {
-            task.cancel()
+        // Cancel all scheduled work items
+        for workItem in scheduledWorkItems {
+            workItem.cancel()
         }
-        scheduledTasks.removeAll()
+        scheduledWorkItems.removeAll()
         
         // Stop all currently playing notes
         for note in 0...127 {
@@ -286,8 +280,8 @@ class AudioManager: ObservableObject {
                 // If updateProgress determined playback is over, exit the loop.
                 if !self.isPlaying { break }
 
-                // Asynchronously wait for 100ms without blocking the main thread.
-                try? await Task.sleep(for: .milliseconds(100))
+                // Asynchronously wait for 200ms without blocking the main thread.
+                try? await Task.sleep(for: .milliseconds(200))
             }
         }
     }
