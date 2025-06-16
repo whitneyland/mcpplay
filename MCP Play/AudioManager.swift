@@ -37,44 +37,7 @@ class AudioManager: ObservableObject {
         audioEngine = AVAudioEngine()
         sampler = AVAudioUnitSampler()
         setupAudioEngine()
-        
-        // Immediate test
         Util.logTiming("AudioManager init completed")
-        testSingleNote()
-    }
-    
-    private func testSingleNote() {
-        Util.logTiming("Stage 3: Testing multiple DispatchSourceTimer precision")
-        
-        // Test multiple timers to simulate real MIDI scheduling
-        let delays: [Double] = [0.1, 0.2, 0.35, 0.5, 0.7, 1.0, 1.25, 1.5]
-        let scheduleStart = CFAbsoluteTimeGetCurrent()
-        var timers: [DispatchSourceTimer] = []
-        
-        for (index, delay) in delays.enumerated() {
-            let timer = DispatchSource.makeTimerSource(queue: .main)
-            timer.schedule(deadline: .now() + delay)
-            timer.setEventHandler { [weak self] in
-                let actualDelay = CFAbsoluteTimeGetCurrent() - scheduleStart
-                let diff = actualDelay - delay
-                
-                // Play a different note for each timer to hear the timing
-                let midiNote = UInt8(60 + index * 2) // C, D, E, F#, G#, A#, C, D
-                self?.sampler.startNote(midiNote, withVelocity: 80, onChannel: 0)
-                
-                // Stop the note after 100ms
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    self?.sampler.stopNote(midiNote, onChannel: 0)
-                }
-                
-                timer.cancel()
-            }
-            timer.resume()
-            timers.append(timer)
-        }
-        
-        testTimers = timers // Keep strong references
-        Util.logTiming("Multiple precision timers started: \(delays.count) timers")
     }
 
     private func setupAudioEngine() {
@@ -109,11 +72,13 @@ class AudioManager: ObservableObject {
         // This method is now on the Main Actor. We can safely stop the current sequence.
         stopSequence()
 
+        let cleanedJSON = Util.cleanJSON(from: jsonString)
+
         // Use a background Task to perform the heavy lifting of parsing and setup
         // without blocking the UI.
         Task {
             do {
-                guard let data = jsonString.data(using: .utf8) else {
+                guard let data = cleanedJSON.data(using: .utf8) else {
                     throw NSError(domain: "AudioManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid JSON string"])
                 }
 
@@ -172,7 +137,7 @@ class AudioManager: ObservableObject {
             return
         }
 
-        let instrumentPrograms = getInstrumentPrograms()
+        let instrumentPrograms = Instruments.getInstrumentPrograms()
 
         Util.logTiming("Loading instruments")
         for track in sequence.tracks {
@@ -193,19 +158,17 @@ class AudioManager: ObservableObject {
         isSchedulingActive = true
         Util.logTiming("Begin scheduling")
         for (trackIndex, track) in sequence.tracks.enumerated() {
-//            Util.logTiming("Scheduling track \(trackIndex)")
 
             let trackSampler = trackSamplers[trackIndex]
             
-            for (eventIndex, event) in track.events.enumerated() {
-//                Util.logTiming("Processing event \(eventIndex)")
+            for event in track.events {
                 let startTime = event.time * beatDuration
                 let duration = event.duration * beatDuration
                 let velocity = UInt8(event.velocity ?? 100)
                 
 //                Util.logTiming("Event timing: start=\(startTime), duration=\(duration)")
                 
-                for (pitchIndex, pitch) in event.pitches.enumerated() {
+                for pitch in event.pitches {
 //                    Util.logTiming("Processing pitch \(pitchIndex): \(pitch)")
                     let midiNote = UInt8(pitch.midiValue)
 //                    Util.logTiming("MIDI note: \(midiNote)")
@@ -228,13 +191,13 @@ class AudioManager: ObservableObject {
                     noteTimers.append(startTimer)
                     
                     // Note stop timer
-                    let scheduledStopTime = startTime + duration
-                    let stopScheduleStart = CFAbsoluteTimeGetCurrent()
+//                    let scheduledStopTime = startTime + duration
+//                    let stopScheduleStart = CFAbsoluteTimeGetCurrent()
                     
                     let stopTimer = DispatchSource.makeTimerSource(queue: .main)
                     stopTimer.schedule(deadline: .now() + .milliseconds(Int((startTime + duration) * 1000)))
                     stopTimer.setEventHandler { [weak self] in
-                        let actualDelay = CFAbsoluteTimeGetCurrent() - stopScheduleStart
+//                        let actualDelay = CFAbsoluteTimeGetCurrent() - stopScheduleStart
 //                        Util.logTiming("Note \(midiNote) STOP: scheduled=\(scheduledStopTime)s, actual=\(String(format: "%.3f", actualDelay))s, diff=\(String(format: "%.3f", actualDelay - scheduledStopTime))s")
                         guard let self = self, self.isPlaying, self.isSchedulingActive else { return }
                         trackSampler.stopNote(midiNote, onChannel: 0)
@@ -242,9 +205,7 @@ class AudioManager: ObservableObject {
                     }
                     stopTimer.resume()
                     noteTimers.append(stopTimer)
-//                    Util.logTiming("Completed pitch \(pitchIndex)")
                 }
-//                Util.logTiming("Completed event \(eventIndex)")
             }
         }
         
@@ -253,14 +214,11 @@ class AudioManager: ObservableObject {
         endTimer.schedule(deadline: .now() + .milliseconds(Int(sequenceLength * 1000)))
         endTimer.setEventHandler { [weak self] in
             guard let self = self, self.isPlaying, self.isSchedulingActive else { return }
-            Util.logTiming("Calling stopSequence from end trigger")
             self.stopSequence()
             endTimer.cancel()
         }
         endTimer.resume()
         noteTimers.append(endTimer)
-
-        Util.logTiming("Scheduling complete")
     }
 
     func stopSequence() {
@@ -306,9 +264,11 @@ class AudioManager: ObservableObject {
     // MARK: - Duration Calculation
     
     func calculateDurationFromJSON(_ jsonString: String) {
+        let cleanedJSON = Util.cleanJSON(from: jsonString)
+
         // Calculate duration for UI display without playing
         do {
-            guard let data = jsonString.data(using: .utf8) else { return }
+            guard let data = cleanedJSON.data(using: .utf8) else { return }
             let sequence = try JSONDecoder().decode(MusicSequence.self, from: data)
             let beatDuration = 60.0 / sequence.tempo
             
@@ -370,107 +330,5 @@ class AudioManager: ObservableObject {
         progressUpdateTask?.cancel()
         progressUpdateTask = nil
         progress = 0.0
-    }
-    
-    private func getInstrumentPrograms() -> [String: UInt8] {
-        return [
-            // Piano
-            "acoustic_grand_piano": 0,
-            "bright_acoustic_piano": 1,
-            "electric_grand_piano": 2,
-            "honky_tonk_piano": 3,
-            "electric_piano_1": 4,
-            "electric_piano_2": 5,
-            "harpsichord": 6,
-            "clavinet": 7,
-            
-            // Percussion
-            "celesta": 8,
-            "glockenspiel": 9,
-            "music_box": 10,
-            "vibraphone": 11,
-            "marimba": 12,
-            "xylophone": 13,
-            "tubular_bells": 14,
-            "dulcimer": 15,
-            
-            // Organ
-            "drawbar_organ": 16,
-            "percussive_organ": 17,
-            "rock_organ": 18,
-            "church_organ": 19,
-            "reed_organ": 20,
-            "accordion": 21,
-            "harmonica": 22,
-            "tango_accordion": 23,
-            
-            // Guitar
-            "acoustic_guitar_nylon": 24,
-            "acoustic_guitar_steel": 25,
-            "electric_guitar_jazz": 26,
-            "electric_guitar_clean": 27,
-            "electric_guitar_muted": 28,
-            "overdriven_guitar": 29,
-            "distortion_guitar": 30,
-            "guitar_harmonics": 31,
-            
-            // Bass
-            "acoustic_bass": 32,
-            "electric_bass_finger": 33,
-            "electric_bass_pick": 34,
-            "fretless_bass": 35,
-            "slap_bass_1": 36,
-            "slap_bass_2": 37,
-            "synth_bass_1": 38,
-            "synth_bass_2": 39,
-            
-            // Strings
-            "violin": 40,
-            "viola": 41,
-            "cello": 42,
-            "contrabass": 43,
-            "tremolo_strings": 44,
-            "pizzicato_strings": 45,
-            "orchestral_harp": 46,
-            "timpani": 47,
-            "string_ensemble_1": 48,
-            "string_ensemble_2": 49,
-            "synth_strings_1": 50,
-            "synth_strings_2": 51,
-            
-            // Choir
-            "choir_aahs": 52,
-            "voice_oohs": 53,
-            "synth_voice": 54,
-            "orchestra_hit": 55,
-            
-            // Brass
-            "trumpet": 56,
-            "trombone": 57,
-            "tuba": 58,
-            "muted_trumpet": 59,
-            "french_horn": 60,
-            "brass_section": 61,
-            "synth_brass_1": 62,
-            "synth_brass_2": 63,
-            
-            // Woodwinds
-            "soprano_sax": 64,
-            "alto_sax": 65,
-            "tenor_sax": 66,
-            "baritone_sax": 67,
-            "oboe": 68,
-            "english_horn": 69,
-            "bassoon": 70,
-            "clarinet": 71,
-            "piccolo": 72,
-            "flute": 73,
-            "recorder": 74,
-            "pan_flute": 75,
-            "blown_bottle": 76,
-            "shakuhachi": 77,
-            "whistle": 78,
-            "ocarina": 79
-        ]
-    }
+    }    
 }

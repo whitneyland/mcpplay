@@ -298,7 +298,7 @@ class HTTPServer: ObservableObject {
     // MARK: - Tool Implementations
 
     private func handlePlaySequence(sequence: MusicSequence) async throws -> MCPResult {
-        let validInstruments = getValidInstrumentNames()
+        let validInstruments = Instruments.getInstrumentNames()
         for track in sequence.tracks where !validInstruments.contains(track.instrument) {
             throw JSONRPCError.serverError("Invalid instrument \"\(track.instrument)\". Use list_instruments for options.")
         }
@@ -309,7 +309,7 @@ class HTTPServer: ObservableObject {
         sequenceDict["tempo"] = sequence.tempo
 
         sequenceDict["tracks"] = sequence.tracks.map { track -> [String: Any] in
-            var trackDict: [String: Any] = ["instrument": track.instrument, "name": track.name]
+            var trackDict: [String: Any] = ["instrument": track.instrument, "name": track.name ?? ""]
             trackDict["events"] = track.events.map { event -> [String: Any] in
                 return [
                     "time": event.time,
@@ -333,10 +333,12 @@ class HTTPServer: ObservableObject {
     }
 
     private func handleListInstruments() -> MCPResult {
-        let instruments = getInstrumentsData()
+        let instruments = Instruments.getInstruments()
         var output = "Available Instruments:\n\n"
         let categories = instruments.map { category, list in
-            "**\(category):**\n" + list.map { "- \($0.name) (\($0.display))" }.joined(separator: "\n")
+            "**\(category):**\n" +
+            list.map { "- \($0.name) (\($0.display))" }
+                .joined(separator: "\n")
         }.joined(separator: "\n\n")
         output += categories
         output += "\n\nUse the instrument 'name' (left side) in your track definitions."
@@ -494,23 +496,5 @@ class HTTPServer: ObservableObject {
                 inputSchema: ["type": .string("object"), "properties": .object([:])]
             )
         ]
-    }
-
-    private func getInstrumentsData() -> [String: [(name: String, display: String)]] {
-        return [
-            "Piano": [("acoustic_grand_piano", "Acoustic Grand Piano"), ("bright_acoustic_piano", "Bright Acoustic Piano"), ("electric_grand_piano", "Electric Grand Piano"), ("honky_tonk_piano", "Honky Tonk Piano"), ("electric_piano_1", "Electric Piano 1"), ("electric_piano_2", "Electric Piano 2"), ("harpsichord", "Harpsichord"), ("clavinet", "Clavinet")],
-            "Percussion": [("celesta", "Celesta"), ("glockenspiel", "Glockenspiel"), ("music_box", "Music Box"), ("vibraphone", "Vibraphone"), ("marimba", "Marimba"), ("xylophone", "Xylophone"), ("tubular_bells", "Tubular Bells"), ("dulcimer", "Dulcimer")],
-            "Organ": [("drawbar_organ", "Drawbar Organ"), ("percussive_organ", "Percussive Organ"), ("rock_organ", "Rock Organ"), ("church_organ", "Church Organ"), ("reed_organ", "Reed Organ"), ("accordion", "Accordion"), ("harmonica", "Harmonica"), ("tango_accordion", "Tango Accordion")],
-            "Guitar": [("acoustic_guitar_nylon", "Acoustic Guitar (Nylon)"), ("acoustic_guitar_steel", "Acoustic Guitar (Steel)"), ("electric_guitar_jazz", "Electric Guitar (Jazz)"), ("electric_guitar_clean", "Electric Guitar (Clean)"), ("electric_guitar_muted", "Electric Guitar (Muted)"), ("overdriven_guitar", "Overdriven Guitar"), ("distortion_guitar", "Distortion Guitar"), ("guitar_harmonics", "Guitar Harmonics")],
-            "Bass": [("acoustic_bass", "Acoustic Bass"), ("electric_bass_finger", "Electric Bass (Finger)"), ("electric_bass_pick", "Electric Bass (Pick)"), ("fretless_bass", "Fretless Bass"), ("slap_bass_1", "Slap Bass 1"), ("slap_bass_2", "Slap Bass 2"), ("synth_bass_1", "Synth Bass 1"), ("synth_bass_2", "Synth Bass 2")],
-            "Strings": [("violin", "Violin"), ("viola", "Viola"), ("cello", "Cello"), ("contrabass", "Contrabass"), ("tremolo_strings", "Tremolo Strings"), ("pizzicato_strings", "Pizzicato Strings"), ("orchestral_harp", "Orchestral Harp"), ("timpani", "Timpani"), ("string_ensemble_1", "String Ensemble 1"), ("string_ensemble_2", "String Ensemble 2"), ("synth_strings_1", "Synth Strings 1"), ("synth_strings_2", "Synth Strings 2")],
-            "Brass": [("trumpet", "Trumpet"), ("trombone", "Trombone"), ("tuba", "Tuba"), ("muted_trumpet", "Muted Trumpet"), ("french_horn", "French Horn"), ("brass_section", "Brass Section"), ("synth_brass_1", "Synth Brass 1"), ("synth_brass_2", "Synth Brass 2")],
-            "Woodwinds": [("soprano_sax", "Soprano Sax"), ("alto_sax", "Alto Sax"), ("tenor_sax", "Tenor Sax"), ("baritone_sax", "Baritone Sax"), ("oboe", "Oboe"), ("english_horn", "English Horn"), ("bassoon", "Bassoon"), ("clarinet", "Clarinet"), ("piccolo", "Piccolo"), ("flute", "Flute"), ("recorder", "Recorder"), ("pan_flute", "Pan Flute"), ("blown_bottle", "Blown Bottle"), ("shakuhachi", "Shakuhachi"), ("whistle", "Whistle"), ("ocarina", "Ocarina")],
-            "Choir": [("choir_aahs", "Choir Aahs"), ("voice_oohs", "Voice Oohs"), ("synth_voice", "Synth Voice"), ("orchestra_hit", "Orchestra Hit")]
-        ]
-    }
-
-    private func getValidInstrumentNames() -> [String] {
-        return getInstrumentsData().values.flatMap { category in category.map { $0.name } }
     }
 }
