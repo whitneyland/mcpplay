@@ -12,9 +12,8 @@ struct MainView: View {
     @EnvironmentObject var audioManager: AudioManager
     @State private var selectedSequence = "scale"
     @State private var jsonInput = ""
-
-    // Piano keyboard view extracted to PianoView
-    
+    @State private var animatedElapsedTime: Double = 0.0
+   
     let availableSequences = [
         ("scale", "Scale"),
         ("moonlight_sonata", "Moonlight Sonata"),
@@ -42,11 +41,28 @@ struct MainView: View {
                 loadSequenceToInput()
             }
             HStack {
-                ProgressView(value: audioManager.isPlaying ? audioManager.progress : 0.0)
+                AnimatedProgressBar(
+                    progress: animatedElapsedTime,
+                    total: audioManager.totalDuration
+                )
+                
                 Text("\(formatTime(audioManager.elapsedTime)) / \(formatTime(audioManager.totalDuration))")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .frame(width: 80, alignment: .trailing)
+            }
+            .onChange(of: audioManager.playbackState) { _, state in
+                switch state {
+                case .playing:
+                    animatedElapsedTime = 0.0
+                    withAnimation(.linear(duration: audioManager.totalDuration)) {
+                        animatedElapsedTime = audioManager.totalDuration
+                    }
+                case .stopped, .idle:
+                    animatedElapsedTime = 0.0
+                case .loading:
+                    break
+                }
             }
             .padding(.top)
             .padding(.bottom)

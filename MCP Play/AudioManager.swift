@@ -8,19 +8,29 @@
 import AVFoundation
 import Foundation
 
+enum PlaybackState {
+    case idle
+    case loading
+    case playing
+    case stopped
+}
+
 // By annotating the entire class with @MainActor, we guarantee that all of its
 // properties and methods are accessed on the main thread. This makes the class
 // safe to use in a concurrent environment.
 @MainActor
 class AudioManager: ObservableObject {
     // MARK: - Published Properties
-    @Published var isPlaying = false
+    @Published var playbackState: PlaybackState = .idle
     @Published var progress: Double = 0.0
     @Published var elapsedTime: Double = 0.0
     @Published var totalDuration: Double = 0.0
     @Published var currentlyPlayingTitle: String?
     @Published var currentlyPlayingInstrument: String?
     @Published var lastError: String?
+    
+    // Computed property for backward compatibility
+    var isPlaying: Bool { playbackState == .playing }
 
     // MARK: - Private Properties
     private var audioEngine: AVAudioEngine
@@ -71,6 +81,9 @@ class AudioManager: ObservableObject {
 
         // This method is now on the Main Actor. We can safely stop the current sequence.
         stopSequence()
+        
+        // Set loading state immediately
+        playbackState = .loading
 
         let cleanedJSON = Util.cleanJSON(from: jsonString)
 
@@ -93,21 +106,25 @@ class AudioManager: ObservableObject {
                     .max() ?? 0
                 self.sequenceLength = maxEnd * beatDuration
                 self.totalDuration = self.sequenceLength
+                print("🎵 AudioManager: totalDuration set to \(self.totalDuration) seconds")
 
                 // Update UI properties on main thread
-                self.isPlaying = true
                 self.currentlyPlayingTitle = sequenceData.title ?? "Untitled Sequence"
                 self.currentlyPlayingInstrument = sequenceData.tracks.first?.instrument
                 
                 // Set playback start time and schedule the sequence
                 self.playbackStartTime = Date()
                 await self.scheduleSequence(sequenceData)
-                self.startProgressUpdates()
+                self.startElapsedTimeUpdates()
+                
+                // CLEAN START EVENT: Everything is ready, start playback
+                print("🎵 AudioManager: Setting playbackState to .playing with totalDuration=\(self.totalDuration)")
+                self.playbackState = .playing
 
             } catch {
                 // Also update the UI with the error on the main thread.
                 self.lastError = "Failed to play sequence: \(error.localizedDescription)"
-                self.isPlaying = false
+                self.playbackState = .idle
             }
         }
     }
@@ -222,7 +239,7 @@ class AudioManager: ObservableObject {
     }
 
     func stopSequence() {
-        isPlaying = false
+        playbackState = .stopped
         progress = 0.0
         elapsedTime = 0.0
         currentlyPlayingTitle = nil
@@ -248,7 +265,7 @@ class AudioManager: ObservableObject {
             }
         }
         
-        stopProgressUpdates()
+        stopElapsedTimeUpdates()
     }
 
     // MARK: - Simple Note Playback
@@ -290,45 +307,43 @@ class AudioManager: ObservableObject {
         }
     }
 
-    // MARK: - Progress Updates (Modern Approach)
+    // MARK: - Elapsed Time Updates (Progress bar handled by SwiftUI animation)
 
-    private func startProgressUpdates() {
+    private func startElapsedTimeUpdates() {
         // Cancel any existing task to ensure we only have one running.
-        stopProgressUpdates()
+        stopElapsedTimeUpdates()
 
         progressUpdateTask = Task {
             // This Task automatically inherits the MainActor context from this function.
             while !Task.isCancelled {
-                // Calling updateProgress() is now safe and warning-free.
-                updateProgress()
+                // Update elapsed time for display
+                updateElapsedTime()
 
-                // If updateProgress determined playback is over, exit the loop.
+                // If sequence ended, exit the loop
                 if !self.isPlaying { break }
 
-                // Asynchronously wait for 200ms without blocking the main thread.
-                try? await Task.sleep(for: .milliseconds(200))
+                // Update every 100ms for smooth time display
+                try? await Task.sleep(for: .milliseconds(100))
             }
         }
     }
 
-    private func updateProgress() {
+    private func updateElapsedTime() {
         guard let startTime = playbackStartTime, isPlaying, sequenceLength > 0 else {
             return
         }
 
         let elapsed = Date().timeIntervalSince(startTime)
         elapsedTime = elapsed
-        progress = min(elapsed / sequenceLength, 1.0)
-
-        if progress >= 1.0 {
-            // Sequence should end naturally, but make sure it stops
+        
+        // Stop sequence when we've exceeded the total duration
+        if elapsed >= sequenceLength {
             stopSequence()
         }
     }
 
-    private func stopProgressUpdates() {
+    private func stopElapsedTimeUpdates() {
         progressUpdateTask?.cancel()
         progressUpdateTask = nil
-        progress = 0.0
     }    
 }
