@@ -45,9 +45,8 @@ struct MCP_PlayApp: App {
 
     private func handleURL(_ url: URL) {
         let startTime = Date()
-        Util.logTiming("================================================================")
-        Util.logTiming("handleURL started")
-        
+        Util.logTiming("---- handleURL started")
+
         print("🔗 handleURL called with: \(url)")
         guard url.scheme == "mcpplay" else {
             print("❌ Invalid scheme: \(url.scheme ?? "nil")")

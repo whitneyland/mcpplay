@@ -25,91 +25,66 @@ struct MainView: View {
 
     var body: some View {
         VStack {
-//            Text("Temu Piano")
-//                .font(.title)
-//                .padding()
-            
-            VStack {
-//                Text("JSON Sequence")
-//                    .font(.headline)
-//                    .padding(.top)
-                
-                TextEditor(text: $jsonInput)
-                    .frame(height: 120)
-                    .border(Color.gray, width: 1)
-                    .padding(.horizontal)
-                    .onChange(of: jsonInput) {
-                        audioManager.calculateDurationFromJSON(jsonInput)
-                    }
-                
-                Picker("Select Sequence", selection: $selectedSequence) {
-                    ForEach(availableSequences, id: \.0) { sequence in
-                        Text(sequence.1).tag(sequence.0)
-                    }
+            TextEditor(text: $jsonInput)
+                .border(Color.gray, width: 1)
+                .onChange(of: jsonInput) {
+                    audioManager.calculateDurationFromJSON(jsonInput)
                 }
-                .pickerStyle(SegmentedPickerStyle())
-                .padding()
-                .onChange(of: selectedSequence) {
-                    loadSequenceToInput()
-                }
-                
-                HStack {
-                    ProgressView(value: audioManager.isPlaying ? audioManager.progress : 0.0)
-                    Text("\(formatTime(audioManager.elapsedTime)) / \(formatTime(audioManager.totalDuration))")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .frame(width: 80, alignment: .trailing)
-                }
-                .padding(.horizontal)
-                
-                HStack(spacing: 20) {
-                    Button(action: {
-                        audioManager.playSequenceFromJSON(jsonInput)
-                    }) {
-                        HStack {
-                            Image(systemName: "play.fill")
-                            Text("Play Sequence")
-                        }
-                        .padding()
-                        .background(audioManager.isPlaying ? Color.gray : Color.gray30)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
-                    }
-                    .disabled(audioManager.isPlaying || jsonInput.isEmpty)
-                    
-                    Button(action: {
-                        audioManager.stopSequence()
-                    }) {
-                        HStack {
-                            Image(systemName: "stop.fill")
-                            Text("Stop")
-                        }
-                        .padding()
-                        .background(Color.gray30)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
-                    }
-                    .disabled(!audioManager.isPlaying)
-                    
-                    Button(action: {
-                        testURLScheme()
-                    }) {
-                        HStack {
-                            Image(systemName: "link")
-                            Text("Test URL")
-                        }
-                        .padding()
-                        .background(Color.gray30)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
-                    }
+
+            Picker("Presets", selection: $selectedSequence) {
+                ForEach(availableSequences, id: \.0) { sequence in
+                    Text(sequence.1).tag(sequence.0)
                 }
             }
-            .padding()
+            .padding(.top)
+            .pickerStyle(SegmentedPickerStyle())
+            .onChange(of: selectedSequence) {
+                loadSequenceToInput()
+            }
+            HStack {
+                ProgressView(value: audioManager.isPlaying ? audioManager.progress : 0.0)
+                Text("\(formatTime(audioManager.elapsedTime)) / \(formatTime(audioManager.totalDuration))")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(width: 80, alignment: .trailing)
+            }
+            .padding(.top)
+            .padding(.bottom)
 
-            PianoView()
-                .padding()
+            HStack(spacing: 20) {
+                Button(action: {
+                    audioManager.playSequenceFromJSON(jsonInput)
+                }) {
+                    HStack {
+                        Image(systemName: "play.fill")
+                        Text("Play")
+                    }
+                    .foregroundColor(.white)
+                    .padding()
+                }
+                .background(Color.gray30)
+                .cornerRadius(8)
+                .disabled(audioManager.isPlaying || jsonInput.isEmpty)
+
+                Button(action: {
+                    audioManager.stopSequence()
+                }) {
+                    HStack {
+                        Image(systemName: "stop.fill")
+                        Text("Stop")
+                    }
+                    .foregroundColor(.white)
+                    .padding()
+                }
+                .background(Color.gray30)
+                .cornerRadius(8)
+                .disabled(!audioManager.isPlaying)
+            }
+
+//            PianoView()
+//                .padding()
         }
+        .padding()
         .onAppear {
             loadSequenceToInput()
         }
