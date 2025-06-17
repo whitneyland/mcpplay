@@ -270,6 +270,7 @@ class HTTPServer: ObservableObject {
         do {
             let result: MCPResult
             let arguments = params.objectValue?["arguments"] ?? .object([:])
+            
             let data = try JSONEncoder().encode(arguments)
             let decoder = JSONDecoder()
 
@@ -315,7 +316,7 @@ class HTTPServer: ObservableObject {
                     "time": event.time,
                     "duration": event.duration,
                     "velocity": event.velocity ?? 100,
-                    "pitches": event.pitches.map { String($0.midiValue) }
+                    "pitches": event.pitches.map { $0.midiValue }
                 ]
             }
             return trackDict
@@ -442,59 +443,30 @@ class HTTPServer: ObservableObject {
     // MARK: - Tool Definitions & Instruments Data
 
     private func getToolDefinitions() -> [MCPTool] {
-        return [
-            MCPTool(
-                name: "play_sequence",
-                description: "Play a music sequence from JSON data",
-                inputSchema: [
-                    "type": .string("object"),
-                    "properties": .object([
-                        "tempo": .object([
-                            "type": .string("number"),
-                            "description": .string("BPM (beats per minute)")
-                        ]),
-                        "tracks": .object([
-                            "type": .string("array"),
-                            "description": .string("Array of track objects"),
-                            "items": .object([
-                                "type": .string("object"),
-                                "properties": .object([
-                                    "instrument": .object([
-                                        "type": .string("string"),
-                                        "description": .string("Instrument name (e.g., 'acoustic_grand_piano')")
-                                    ]),
-                                    "events": .object([
-                                        "type": .string("array"),
-                                        "description": .string("Array of musical events"),
-                                        "items": .object([
-                                            "type": .string("object"),
-                                            "properties": .object([
-                                                "time": .object(["type": .string("number")]),
-                                                "pitches": .object(["type": .string("array"), "items": .object(["oneOf": .array([.object(["type": .string("number")]), .object(["type": .string("string")])])])]),
-                                                "duration": .object(["type": .string("number")]),
-                                                "velocity": .object(["type": .string("number")])
-                                            ]),
-                                            "required": .array([.string("time"), .string("pitches"), .string("duration")])
-                                        ])
-                                    ])
-                                ]),
-                                "required": .array([.string("events")])
-                            ])
-                        ])
-                    ]),
-                    "required": .array([.string("tempo"), .string("tracks")])
-                ]
-            ),
-            MCPTool(
-                name: "list_instruments",
-                description: "List all available instruments",
-                inputSchema: ["type": .string("object"), "properties": .object([:])]
-            ),
-            MCPTool(
-                name: "stop",
-                description: "Stop any currently playing music",
-                inputSchema: ["type": .string("object"), "properties": .object([:])]
-            )
-        ]
+        // Load tool definitions from clean JSON file instead of ugly Swift code
+        guard let toolsURL = Bundle.main.url(forResource: "tools", withExtension: "json"),
+              let toolsData = try? Data(contentsOf: toolsURL),
+              let toolsArray = try? JSONSerialization.jsonObject(with: toolsData) as? [[String: Any]] else {
+            print("❌ Failed to load tools.json, falling back to empty array")
+            return []
+        }
+        
+        return toolsArray.compactMap { toolDict in
+            guard let name = toolDict["name"] as? String,
+                  let description = toolDict["description"] as? String,
+                  let inputSchema = toolDict["inputSchema"] as? [String: Any] else {
+                return nil
+            }
+            
+            // Convert the inputSchema dictionary to JSONValue
+            do {
+                let schemaData = try JSONSerialization.data(withJSONObject: inputSchema)
+                let jsonValue = try JSONDecoder().decode(JSONValue.self, from: schemaData)
+                return MCPTool(name: name, description: description, inputSchema: jsonValue.objectValue ?? [:])
+            } catch {
+                print("❌ Failed to parse inputSchema for tool \(name): \(error)")
+                return nil
+            }
+        }
     }
 }

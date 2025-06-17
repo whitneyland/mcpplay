@@ -1,0 +1,80 @@
+[
+  {
+    "name": "play_sequence",
+    "description": "Play a music sequence from JSON data",
+    "inputSchema": {
+      "type": "object",
+      "required": ["tempo", "tracks"],
+      "properties": {
+        "tempo": {
+          "type": "number",
+          "description": "BPM (beats per minute)"
+        },
+        "tracks": {
+          "type": "array",
+          "description": "Array of track objects",
+          "items": {
+            "type": "object",
+            "required": ["events"],
+            "properties": {
+              "instrument": {
+                "type": "string",
+                "description": "Instrument name (e.g., 'acoustic_grand_piano')"
+              },
+              "events": {
+                "type": "array",
+                "description": "Array of musical events",
+                "items": {
+                  "type": "object",
+                  "required": ["time", "pitches", "duration"],
+                  "properties": {
+                    "time": {
+                      "type": "number",
+                      "description": "When to play (in beats from start of sequence)"
+                    },
+                    "pitches": {
+                      "type": "array",
+                      "description": "Note names like 'C4' or MIDI numbers like 60",
+                      "items": {
+                        "oneOf": [
+                          {"type": "number", "description": "MIDI note number (0-127)"},
+                          {"type": "string", "description": "Note name like 'C4', 'F#3'"}
+                        ]
+                      }
+                    },
+                    "duration": {
+                      "type": "number",
+                      "description": "How long to play in beats (1.0 = quarter note at current tempo)"
+                    },
+                    "velocity": {
+                      "type": "integer",
+                      "description": "Volume/intensity 0-127 (optional, defaults to 100)",
+                      "minimum": 0,
+                      "maximum": 127
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "list_instruments",
+    "description": "List all available instruments",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "stop",
+    "description": "Stop any currently playing music",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  }
+]

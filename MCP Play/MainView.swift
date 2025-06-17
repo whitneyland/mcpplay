@@ -13,7 +13,7 @@ struct MainView: View {
     @State private var selectedSequence = "scale"
     @State private var jsonInput = ""
     @State private var animatedElapsedTime: Double = 0.0
-   
+
     let availableSequences = [
         ("scale", "Scale"),
         ("moonlight_sonata", "Moonlight Sonata"),
@@ -104,6 +104,11 @@ struct MainView: View {
         .onAppear {
             loadSequenceToInput()
         }
+        .onReceive(audioManager.$receivedJSON) { newJSON in
+            if !newJSON.isEmpty {
+                jsonInput = newJSON
+            }
+        }
     }
 
     
@@ -127,23 +132,7 @@ struct MainView: View {
         } catch {
             print("Failed to load sequence: \(error)")
         }
-    }
-    
-    private func testURLScheme() {
-        let rawJSON = """
-        {"version":1,"tempo":120,"instrument":"acoustic_grand_piano","events":[{"time":0,"pitches":[60],"duration":1,"velocity":100}]}
-        """
-        
-        var components = URLComponents()
-        components.scheme = "mcpplay"
-        components.host = "play"
-        components.queryItems = [URLQueryItem(name: "json", value: rawJSON)]
-        
-        if let url = components.url {
-            // This should trigger the actual URL handling mechanism
-            NSWorkspace.shared.open(url)
-        }
-    }
+    }    
 }
 #Preview {
     MainView()

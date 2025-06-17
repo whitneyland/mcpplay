@@ -28,6 +28,7 @@ class AudioManager: ObservableObject {
     @Published var currentlyPlayingTitle: String?
     @Published var currentlyPlayingInstrument: String?
     @Published var lastError: String?
+    @Published var receivedJSON: String = ""
     
     // Computed property for backward compatibility
     var isPlaying: Bool { playbackState == .playing }
@@ -81,6 +82,9 @@ class AudioManager: ObservableObject {
 
         // This method is now on the Main Actor. We can safely stop the current sequence.
         stopSequence()
+        
+        // Store the received JSON for UI display (pretty printed if possible)
+        receivedJSON = prettyPrintJSON(jsonString)
         
         // Set loading state immediately
         playbackState = .loading
@@ -186,9 +190,7 @@ class AudioManager: ObservableObject {
 //                Util.logTiming("Event timing: start=\(startTime), duration=\(duration)")
                 
                 for pitch in event.pitches {
-//                    Util.logTiming("Processing pitch \(pitchIndex): \(pitch)")
                     let midiNote = UInt8(pitch.midiValue)
-//                    Util.logTiming("MIDI note: \(midiNote)")
                     
                     // Use DispatchSourceTimer for precise timing
                     let scheduledTime = startTime
@@ -345,5 +347,18 @@ class AudioManager: ObservableObject {
     private func stopElapsedTimeUpdates() {
         progressUpdateTask?.cancel()
         progressUpdateTask = nil
+    }
+    
+    // MARK: - JSON Formatting
+    
+    private func prettyPrintJSON(_ jsonString: String) -> String {
+        guard let data = jsonString.data(using: .utf8),
+              let jsonObject = try? JSONSerialization.jsonObject(with: data),
+              let prettyData = try? JSONSerialization.data(withJSONObject: jsonObject, options: [.prettyPrinted, .sortedKeys]),
+              let prettyString = String(data: prettyData, encoding: .utf8) else {
+            // If pretty printing fails, return original
+            return jsonString
+        }
+        return prettyString
     }    
 }
