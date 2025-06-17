@@ -83,25 +83,17 @@ class AudioManager: ObservableObject {
         // This method is now on the Main Actor. We can safely stop the current sequence.
         stopSequence()
         
-        // Store the received JSON for UI display (pretty printed if possible)
-        receivedJSON = prettyPrintJSON(jsonString)
-        
         // Set loading state immediately
         playbackState = .loading
-
-        let cleanedJSON = Util.cleanJSON(from: jsonString)
 
         // Use a background Task to perform the heavy lifting of parsing and setup
         // without blocking the UI.
         Task {
             do {
-                guard let data = cleanedJSON.data(using: .utf8) else {
-                    throw NSError(domain: "AudioManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid JSON string"])
-                }
-
-                let sequenceData = try JSONDecoder().decode(MusicSequence.self, from: data)
+                // Single pipeline: clean, decode, validate, re-encode for display
+                let sequenceData = try processJSONSequence(jsonString)
                 let decodeTime = Date().timeIntervalSince(startTime) * 1000
-                Util.logTiming("JSON decoded in \(decodeTime)ms, calling scheduleSequence")
+                Util.logTiming("JSON processed in \(decodeTime)ms, calling scheduleSequence")
                 
                 // Calculate duration and update UI
                 let beatDuration = 60.0 / sequenceData.tempo
@@ -283,12 +275,9 @@ class AudioManager: ObservableObject {
     // MARK: - Duration Calculation
     
     func calculateDurationFromJSON(_ jsonString: String) {
-        let cleanedJSON = Util.cleanJSON(from: jsonString)
-
-        // Calculate duration for UI display without playing
+        // Use the same pipeline for consistency
         do {
-            guard let data = cleanedJSON.data(using: .utf8) else { return }
-            let sequence = try JSONDecoder().decode(MusicSequence.self, from: data)
+            let sequence = try processJSONSequence(jsonString)
             let beatDuration = 60.0 / sequence.tempo
             
             // Find the maximum end time across all tracks
@@ -349,16 +338,28 @@ class AudioManager: ObservableObject {
         progressUpdateTask = nil
     }
     
-    // MARK: - JSON Formatting
+    // MARK: - JSON Processing Pipeline
     
-    private func prettyPrintJSON(_ jsonString: String) -> String {
-        guard let data = jsonString.data(using: .utf8),
-              let jsonObject = try? JSONSerialization.jsonObject(with: data),
-              let prettyData = try? JSONSerialization.data(withJSONObject: jsonObject, options: [.prettyPrinted, .sortedKeys]),
-              let prettyString = String(data: prettyData, encoding: .utf8) else {
-            // If pretty printing fails, return original
-            return jsonString
+    private func processJSONSequence(_ jsonString: String) throws -> MusicSequence {
+        // Step 1: Clean the JSON
+        let cleanedJSON = Util.cleanJSON(from: jsonString)
+        
+        // Step 2: Decode with validation and rounding
+        guard let data = cleanedJSON.data(using: .utf8) else {
+            throw NSError(domain: "AudioManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid JSON string"])
         }
-        return prettyString
+        
+        let sequenceData = try JSONDecoder().decode(MusicSequence.self, from: data)
+        
+        // Step 3: Re-encode for clean display (this will use our custom encoder with rounding)
+        let cleanEncodedData = try JSONEncoder().encode(sequenceData)
+        let prettyData = try JSONSerialization.jsonObject(with: cleanEncodedData)
+        let prettyJSONData = try JSONSerialization.data(withJSONObject: prettyData, options: [.prettyPrinted, .sortedKeys])
+        
+        if let prettyJSONString = String(data: prettyJSONData, encoding: .utf8) {
+            self.receivedJSON = prettyJSONString
+        }
+        
+        return sequenceData
     }    
 }

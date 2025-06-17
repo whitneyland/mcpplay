@@ -99,6 +99,36 @@ struct SequenceEvent: Codable, Sendable {
     let pitches: [Pitch]
     let duration: Double
     let velocity: Int?
+    
+    enum CodingKeys: String, CodingKey {
+        case time, pitches, duration, velocity
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        // Round to avoid floating-point precision issues
+        let rawTime = try container.decode(Double.self, forKey: .time)
+        let rawDuration = try container.decode(Double.self, forKey: .duration)
+        
+        self.time = (rawTime * 1000).rounded() / 1000  // Round to 3 decimal places
+        self.duration = (rawDuration * 1000).rounded() / 1000
+        self.pitches = try container.decode([Pitch].self, forKey: .pitches)
+        self.velocity = try container.decodeIfPresent(Int.self, forKey: .velocity)
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        // Round values when encoding to avoid floating-point display issues
+        let roundedTime = (time * 1000).rounded() / 1000
+        let roundedDuration = (duration * 1000).rounded() / 1000
+        
+        try container.encode(roundedTime, forKey: .time)
+        try container.encode(pitches, forKey: .pitches)
+        try container.encode(roundedDuration, forKey: .duration)
+        try container.encodeIfPresent(velocity, forKey: .velocity)
+    }
 }
 
 /// Represents a musical pitch, which can be an integer (MIDI value) or a string (note name).

@@ -115,8 +115,14 @@ struct MainView: View {
 
     
     private func formatTime(_ seconds: Double) -> String {
-        let minutes = Int(seconds) / 60
-        let remainingSeconds = Int(seconds) % 60
+        // Handle invalid input scenarios
+        guard seconds.isFinite && seconds >= 0 else {
+            return "0:00"
+        }
+        
+        let totalSeconds = Int(seconds.rounded())
+        let minutes = totalSeconds / 60
+        let remainingSeconds = totalSeconds % 60
         return String(format: "%d:%02d", minutes, remainingSeconds)
     }
     
