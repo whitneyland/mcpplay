@@ -10,17 +10,10 @@ import SwiftUI
 
 struct MainView: View {
     @EnvironmentObject var audioManager: AudioManager
-    @State private var selectedSequence = "scale"
+    @StateObject private var presetManager = PresetManager()
+    @State private var selectedPresetId: String = ""
     @State private var jsonInput = ""
     @State private var animatedElapsedTime: Double = 0.0
-
-    let availableSequences = [
-        ("scale", "Scale"),
-        ("moonlight_sonata", "Moonlight Sonata"),
-        ("sonnet_4_multi", "Sonnet 4"),
-        ("gemini_1", "Gemini"),
-        ("claude_opus_1", "Opus 4")
-    ]
 
     var body: some View {
         VStack {
@@ -30,15 +23,21 @@ struct MainView: View {
                     audioManager.calculateDurationFromJSON(jsonInput)
                 }
 
-            Picker("Presets", selection: $selectedSequence) {
-                ForEach(availableSequences, id: \.0) { sequence in
-                    Text(sequence.1).tag(sequence.0)
+            if !presetManager.presets.isEmpty {
+                Picker("Presets", selection: $selectedPresetId) {
+                    ForEach(presetManager.presets, id: \.id) { preset in
+                        Text(preset.displayName).tag(preset.id)
+                    }
                 }
-            }
-            .padding(.top)
-            .pickerStyle(SegmentedPickerStyle())
-            .onChange(of: selectedSequence) {
-                loadSequenceToInput()
+                .padding(.top)
+                .pickerStyle(SegmentedPickerStyle())
+                .onChange(of: selectedPresetId) {
+                    loadPresetToInput()
+                }
+            } else {
+                Text("No presets available")
+                    .foregroundColor(.secondary)
+                    .padding(.top)
             }
             HStack {
                 AnimatedProgressBar(
@@ -102,7 +101,10 @@ struct MainView: View {
         }
         .padding()
         .onAppear {
-            loadSequenceToInput()
+            if !presetManager.presets.isEmpty && selectedPresetId.isEmpty {
+                selectedPresetId = presetManager.presets.first?.id ?? ""
+                loadPresetToInput()
+            }
         }
         .onReceive(audioManager.$receivedJSON) { newJSON in
             if !newJSON.isEmpty {
@@ -118,20 +120,14 @@ struct MainView: View {
         return String(format: "%d:%02d", minutes, remainingSeconds)
     }
     
-    private func loadSequenceToInput() {
-        guard let sequenceURL = Bundle.main.url(forResource: selectedSequence, withExtension: "json") else {
-            print("Could not find \(selectedSequence).json")
+    private func loadPresetToInput() {
+        guard let preset = presetManager.getPreset(by: selectedPresetId) else {
+            print("Could not find preset with id: \(selectedPresetId)")
             return
         }
         
-        do {
-            let data = try Data(contentsOf: sequenceURL)
-            let jsonString = String(data: data, encoding: .utf8) ?? ""
-            jsonInput = jsonString
-            audioManager.calculateDurationFromJSON(jsonString)
-        } catch {
-            print("Failed to load sequence: \(error)")
-        }
+        jsonInput = preset.content
+        audioManager.calculateDurationFromJSON(preset.content)
     }    
 }
 #Preview {

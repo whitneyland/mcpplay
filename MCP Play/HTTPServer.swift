@@ -278,8 +278,6 @@ class HTTPServer: ObservableObject {
             case "play_sequence":
                 let sequence = try decoder.decode(MusicSequence.self, from: data)
                 result = try await handlePlaySequence(sequence: sequence)
-            case "list_instruments":
-                result = handleListInstruments()
             case "stop":
                 result = handleStop()
             default:
@@ -301,7 +299,7 @@ class HTTPServer: ObservableObject {
     private func handlePlaySequence(sequence: MusicSequence) async throws -> MCPResult {
         let validInstruments = Instruments.getInstrumentNames()
         for track in sequence.tracks where !validInstruments.contains(track.instrument) {
-            throw JSONRPCError.serverError("Invalid instrument \"\(track.instrument)\". Use list_instruments for options.")
+            throw JSONRPCError.serverError("Invalid instrument \"\(track.instrument)\". Check the instrument enum in the schema for valid options.")
         }
 
         var sequenceDict: [String: Any] = [:]
@@ -333,18 +331,6 @@ class HTTPServer: ObservableObject {
         return MCPResult(content: [MCPContentItem(type: "text", text: summary)])
     }
 
-    private func handleListInstruments() -> MCPResult {
-        let instruments = Instruments.getInstruments()
-        var output = "Available Instruments:\n\n"
-        let categories = instruments.map { category, list in
-            "**\(category):**\n" +
-            list.map { "- \($0.name) (\($0.display))" }
-                .joined(separator: "\n")
-        }.joined(separator: "\n\n")
-        output += categories
-        output += "\n\nUse the instrument 'name' (left side) in your track definitions."
-        return MCPResult(content: [MCPContentItem(type: "text", text: output)])
-    }
 
     private func handleStop() -> MCPResult {
         audioManager.stopSequence()
