@@ -1,11 +1,15 @@
 [
   {
     "name": "play_sequence",
-    "description": "Play a music sequence from JSON data",
+    "description": "Play a multi-track, multi-instrument music sequence with precise timing and 70+ available instruments including piano, strings, brass, woodwinds, and more",
     "inputSchema": {
       "type": "object",
       "required": ["tempo", "tracks"],
       "properties": {
+        "title": {
+          "type": "string",
+          "description": "Descriptive title for the music sequence (optional but recommended for better organization)"
+        },
         "tempo": {
           "type": "number",
           "description": "BPM (beats per minute)"
