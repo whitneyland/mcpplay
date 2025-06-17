@@ -120,13 +120,13 @@ struct SequenceEvent: Codable, Sendable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         
-        // Round values when encoding to avoid floating-point display issues
-        let roundedTime = (time * 1000).rounded() / 1000
-        let roundedDuration = (duration * 1000).rounded() / 1000
+        // Format values to avoid floating-point display issues
+        let formattedTime = Double(String(format: "%.3f", time))!
+        let formattedDuration = Double(String(format: "%.3f", duration))!
         
-        try container.encode(roundedTime, forKey: .time)
+        try container.encode(formattedTime, forKey: .time)
         try container.encode(pitches, forKey: .pitches)
-        try container.encode(roundedDuration, forKey: .duration)
+        try container.encode(formattedDuration, forKey: .duration)
         try container.encodeIfPresent(velocity, forKey: .velocity)
     }
 }

@@ -46,9 +46,9 @@ struct MainView: View {
                 )
                 
                 Text("\(formatTime(audioManager.elapsedTime)) / \(formatTime(audioManager.totalDuration))")
-                    .font(.caption)
+                    .font(.caption.monospaced())
                     .foregroundColor(.secondary)
-                    .frame(width: 80, alignment: .trailing)
+                    .frame(width: 100, alignment: .trailing)
             }
             .onChange(of: audioManager.playbackState) { _, state in
                 switch state {
@@ -66,35 +66,23 @@ struct MainView: View {
             .padding(.top)
             .padding(.bottom)
 
-            HStack(spacing: 20) {
-                Button(action: {
-                    audioManager.playSequenceFromJSON(jsonInput)
-                }) {
-                    HStack {
-                        Image(systemName: "play.fill")
-                        Text("Play")
-                    }
-                    .foregroundColor(.white)
-                    .padding()
-                }
-                .background(Color.gray30)
-                .cornerRadius(8)
-                .disabled(audioManager.isPlaying || jsonInput.isEmpty)
-
-                Button(action: {
+            Button(action: {
+                if audioManager.isPlaying {
                     audioManager.stopSequence()
-                }) {
-                    HStack {
-                        Image(systemName: "stop.fill")
-                        Text("Stop")
-                    }
-                    .foregroundColor(.white)
-                    .padding()
+                } else {
+                    audioManager.playSequenceFromJSON(jsonInput)
                 }
-                .background(Color.gray30)
-                .cornerRadius(8)
-                .disabled(!audioManager.isPlaying)
+            }) {
+                HStack {
+                    Image(systemName: audioManager.isPlaying ? "stop.fill" : "play.fill")
+                    Text(audioManager.isPlaying ? "Stop" : "Play")
+                }
+                .foregroundColor(.white)
+                .padding()
             }
+            .background(Color.gray30)
+            .cornerRadius(8)
+            .disabled(jsonInput.isEmpty)
 
 //            PianoView()
 //                .padding()
@@ -117,13 +105,12 @@ struct MainView: View {
     private func formatTime(_ seconds: Double) -> String {
         // Handle invalid input scenarios
         guard seconds.isFinite && seconds >= 0 else {
-            return "0:00"
+            return "0:00.0"
         }
         
-        let totalSeconds = Int(seconds.rounded())
-        let minutes = totalSeconds / 60
-        let remainingSeconds = totalSeconds % 60
-        return String(format: "%d:%02d", minutes, remainingSeconds)
+        let minutes = Int(seconds) / 60
+        let remainingSeconds = seconds.truncatingRemainder(dividingBy: 60.0)
+        return String(format: "%d:%04.1f", minutes, remainingSeconds)
     }
     
     private func loadPresetToInput() {

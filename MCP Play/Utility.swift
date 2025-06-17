@@ -66,6 +66,7 @@ struct Util {
             let range = NSRange(location: 0, length: cleanedString.utf16.count)
             cleanedString = trailingCommaRegex.stringByReplacingMatches(in: cleanedString, options: [], range: range, withTemplate: "")
         }
+        
         return cleanedString
     }
 }

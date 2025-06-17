@@ -275,9 +275,12 @@ class AudioManager: ObservableObject {
     // MARK: - Duration Calculation
     
     func calculateDurationFromJSON(_ jsonString: String) {
-        // Use the same pipeline for consistency
+        // Parse JSON for duration calculation only, don't update display
         do {
-            let sequence = try processJSONSequence(jsonString)
+            let cleanedJSON = Util.cleanJSON(from: jsonString)
+            guard let data = cleanedJSON.data(using: .utf8) else { return }
+            
+            let sequence = try JSONDecoder().decode(MusicSequence.self, from: data)
             let beatDuration = 60.0 / sequence.tempo
             
             // Find the maximum end time across all tracks
@@ -352,11 +355,11 @@ class AudioManager: ObservableObject {
         let sequenceData = try JSONDecoder().decode(MusicSequence.self, from: data)
         
         // Step 3: Re-encode for clean display (this will use our custom encoder with rounding)
-        let cleanEncodedData = try JSONEncoder().encode(sequenceData)
-        let prettyData = try JSONSerialization.jsonObject(with: cleanEncodedData)
-        let prettyJSONData = try JSONSerialization.data(withJSONObject: prettyData, options: [.prettyPrinted, .sortedKeys])
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let cleanEncodedData = try encoder.encode(sequenceData)
         
-        if let prettyJSONString = String(data: prettyJSONData, encoding: .utf8) {
+        if let prettyJSONString = String(data: cleanEncodedData, encoding: .utf8) {
             self.receivedJSON = prettyJSONString
         }
         
