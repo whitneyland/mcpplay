@@ -18,7 +18,7 @@ struct MainView: View {
 
     var body: some View {
         VSplitView {
-            // Top section with controls
+            // Top section
             VStack {
                 TextEditor(text: $jsonInput)
                     .border(Color.gray, width: 1)
@@ -60,38 +60,17 @@ struct MainView: View {
                     
                     Spacer()
                     
-                    Text("\(formatTime(audioManager.elapsedTime)) / \(formatTime(audioManager.totalDuration))")
+                    Text("\(Util.formatTime(audioManager.elapsedTime)) / \(Util.formatTime(audioManager.totalDuration))")
                         .font(.caption.monospaced())
                         .foregroundColor(.secondary)
                 }
                 .padding(.top,5)
                 .padding(.bottom,5)
-//                PianoView()
-//                    .padding()
-                AnimatedProgressBar(
-                    progress: animatedElapsedTime,
-                    total: audioManager.totalDuration
-                )
-                .onChange(of: audioManager.playbackState) { _, state in
-                    switch state {
-                    case .playing:
-                        animatedElapsedTime = 0.0
-                        withAnimation(.linear(duration: audioManager.totalDuration)) {
-                            animatedElapsedTime = audioManager.totalDuration
-                        }
-                    case .stopped, .idle:
-                        animatedElapsedTime = 0.0
-                    case .loading:
-                        break
-                    }
-                }
             }
             .padding()
 
+            // Bottom section with Piano Roll
             VStack {
-                // Bottom section with Piano Roll
-
-
                 PianoRoll(
                     sequence: currentSequence,
                     animatedElapsedTime: animatedElapsedTime,
@@ -117,18 +96,19 @@ struct MainView: View {
             audioManager.calculateDurationFromJSON(jsonInput)
             updateCurrentSequence()
         }
-    }
-
-    
-    private func formatTime(_ seconds: Double) -> String {
-        // Handle invalid input scenarios
-        guard seconds.isFinite && seconds >= 0 else {
-            return "0:00.0"
+        .onChange(of: audioManager.playbackState) { _, state in
+            switch state {
+            case .playing:
+                animatedElapsedTime = 0.0
+                withAnimation(.linear(duration: audioManager.totalDuration)) {
+                    animatedElapsedTime = audioManager.totalDuration
+                }
+            case .stopped, .idle:
+                animatedElapsedTime = 0.0
+            case .loading:
+                break
+            }
         }
-        
-        let minutes = Int(seconds) / 60
-        let remainingSeconds = seconds.truncatingRemainder(dividingBy: 60.0)
-        return String(format: "%d:%04.1f", minutes, remainingSeconds)
     }
     
     private func loadPresetToInput() {

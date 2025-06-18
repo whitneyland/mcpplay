@@ -8,6 +8,15 @@
 import Foundation
 
 struct Util {
+    static func formatTime(_ seconds: Double) -> String {
+        guard seconds.isFinite && seconds >= 0 else {
+            return "0:00.0"
+        }
+        let minutes = Int(seconds) / 60
+        let remainingSeconds = seconds.truncatingRemainder(dividingBy: 60.0)
+        return String(format: "%d:%04.1f", minutes, remainingSeconds)
+    }
+
     static func logTiming(_ message: String) {
         let now = Date()
         let formatter = DateFormatter()
