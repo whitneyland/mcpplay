@@ -1,0 +1,75 @@
+{
+  "title": "Dying Light (G25)",
+  "tempo": 72,
+  "tracks": [
+    {
+      "instrument": "acoustic_grand_piano",
+      "events": [
+        { "time": 0.0, "pitches": ["C3"], "duration": 4.0, "velocity": 65 },
+        { "time": 4.0, "pitches": ["G3"], "duration": 4.0, "velocity": 68 },
+        { "time": 8.0, "pitches": ["Eb3"], "duration": 2.0, "velocity": 70 },
+        { "time": 10.0, "pitches": ["F3"], "duration": 2.0, "velocity": 72 },
+        { "time": 12.0, "pitches": ["G3"], "duration": 4.0, "velocity": 75 },
+        { "time": 16.0, "pitches": ["C4", "Eb4"], "duration": 1.0, "velocity": 80 },
+        { "time": 17.0, "pitches": ["G4"], "duration": 0.5, "velocity": 82 },
+        { "time": 17.5, "pitches": ["C5"], "duration": 0.5, "velocity": 85 },
+        { "time": 18.0, "pitches": ["Eb5"], "duration": 1.0, "velocity": 88 },
+        { "time": 19.0, "pitches": ["D5"], "duration": 1.0, "velocity": 90 },
+        { "time": 20.0, "pitches": ["C5", "G4", "Eb4"], "duration": 2.0, "velocity": 95 },
+        { "time": 22.0, "pitches": ["Bb4", "F4", "D4"], "duration": 2.0, "velocity": 98 },
+        { "time": 24.0, "pitches": ["C5", "Eb5", "G5"], "duration": 1.5, "velocity": 105 },
+        { "time": 25.5, "pitches": ["D5", "F5", "Ab5"], "duration": 1.5, "velocity": 110 },
+        { "time": 27.0, "pitches": ["Eb5", "G5", "C6"], "duration": 1.0, "velocity": 115 },
+        { "time": 28.0, "pitches": ["G4", "B4", "D5", "G5"], "duration": 4.0, "velocity": 120 },
+        { "time": 32.0, "pitches": ["C4", "G4", "C5", "Eb5"], "duration": 2.0, "velocity": 127 },
+        { "time": 34.0, "pitches": ["F4", "Ab4", "C5", "F5"], "duration": 2.0, "velocity": 127 },
+        { "time": 36.0, "pitches": ["G4", "B4", "D5", "G5"], "duration": 2.0, "velocity": 127 },
+        { "time": 38.0, "pitches": ["C5", "G5", "C6"], "duration": 2.0, "velocity": 127 },
+        { "time": 40.0, "pitches": ["C4", "G4", "C5", "Eb5"], "duration": 8.0, "velocity": 125 },
+        { "time": 48.0, "pitches": ["C3"], "duration": 4.0, "velocity": 50 },
+        { "time": 52.0, "pitches": ["G2"], "duration": 4.0, "velocity": 40 }
+      ]
+    },
+    {
+      "instrument": "string_ensemble_1",
+      "events": [
+        { "time": 0.0, "pitches": ["C3", "G3"], "duration": 8.0, "velocity": 60 },
+        { "time": 8.0, "pitches": ["C3", "G3", "Eb4"], "duration": 8.0, "velocity": 65 },
+        { "time": 16.0, "pitches": ["C4", "G4", "C5"], "duration": 4.0, "velocity": 75 },
+        { "time": 20.0, "pitches": ["F3", "Ab3", "F4"], "duration": 4.0, "velocity": 85 },
+        { "time": 24.0, "pitches": ["G3", "D4", "G4", "B4"], "duration": 8.0, "velocity": 95 },
+        { "time": 32.0, "pitches": ["C4", "G4", "Eb5", "G5", "C6"], "duration": 16.0, "velocity": 110 }
+      ]
+    },
+    {
+      "instrument": "cello",
+      "events": [
+        { "time": 12.0, "pitches": ["C3"], "duration": 4.0, "velocity": 70 },
+        { "time": 16.0, "pitches": ["G3"], "duration": 4.0, "velocity": 80 },
+        { "time": 20.0, "pitches": ["Ab3"], "duration": 4.0, "velocity": 90 },
+        { "time": 24.0, "pitches": ["G3"], "duration": 2.0, "velocity": 95 },
+        { "time": 26.0, "pitches": ["B3"], "duration": 2.0, "velocity": 100 },
+        { "time": 28.0, "pitches": ["C4"], "duration": 4.0, "velocity": 110 },
+        { "time": 32.0, "pitches": ["G4"], "duration": 8.0, "velocity": 120 },
+        { "time": 40.0, "pitches": ["F4"], "duration": 4.0, "velocity": 100 },
+        { "time": 44.0, "pitches": ["Eb4"], "duration": 4.0, "velocity": 80 }
+      ]
+    },
+    {
+      "instrument": "church_organ",
+      "events": [
+        { "time": 28.0, "pitches": ["G2", "G3"], "duration": 4.0, "velocity": 90 },
+        { "time": 32.0, "pitches": ["C2", "C3", "G3", "C4", "Eb4", "G4"], "duration": 16.0, "velocity": 127 }
+      ]
+    },
+    {
+      "instrument": "tubular_bells",
+      "events": [
+        { "time": 32.0, "pitches": ["C5"], "duration": 2.0, "velocity": 90 },
+        { "time": 36.0, "pitches": ["G5"], "duration": 2.0, "velocity": 95 },
+        { "time": 40.0, "pitches": ["C6"], "duration": 8.0, "velocity": 110 },
+        { "time": 48.0, "pitches": ["C5"], "duration": 8.0, "velocity": 70 }
+      ]
+    }
+  ]
+}

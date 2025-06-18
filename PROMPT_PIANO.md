@@ -1,10 +1,10 @@
 Using the .json format below -
 
-Generate an original, impressive piano composition in this format. Total of 30 seconds or more in duration. Really show me what you can do.
+Create an original, impressive piano composition. Total of 30 seconds or more in duration. Really show me what you can do.
 
---------------------------------------
 
-## JSON Instructions
+---
+## Instructions
 
 Use this JSON format for your music compositions:
 

@@ -1,10 +1,10 @@
 Using the .json format below -
 
-Compose a multi-track music sequence. 
+Create an original, impressive multi-track composition. Total of 30 seconds or more in duration. Really show me what you can do.
 
--------------------
 
-## JSON Instructions
+---
+## Instructions
 
 Use this JSON format for your music compositions:
 
