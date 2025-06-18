@@ -5,7 +5,7 @@ This MCP server allows Claude Desktop to control your music app and manage music
 ## Setup Instructions
 
 1. **Start RiffMCP app:**
-   Launch the RiffMCP.app from Applications or Xcode. The HTTP server starts automatically on port 27272.
+   Launch the RiffMCP.app from Applications or Xcode. The HTTP server starts automatically on port 3001.
 
 2. **Add to Claude Desktop configuration:**
    Add this to your Claude Desktop app configuration file:
@@ -17,7 +17,7 @@ This MCP server allows Claude Desktop to control your music app and manage music
      "mcpServers": {
        "riffmcp": {
          "command": "npx",
-         "args": ["mcp-remote", "http://localhost:27272"]
+         "args": ["mcp-remote", "http://localhost:3001"]
        }
      }
    }

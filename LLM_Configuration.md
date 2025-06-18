@@ -18,7 +18,7 @@ The MCP configuration should be placed in Claude Desktop's configuration file:
   "mcpServers": {
     "riffmcp": {
       "command": "npx",
-      "args": ["mcp-remote", "http://localhost:27272"]
+      "args": ["mcp-remote", "http://localhost:3001"]
     }
   }
 }
@@ -34,7 +34,7 @@ The MCP configuration should be placed in Claude Desktop's configuration file:
       "args": [
         "-y",
         "@modelcontextprotocol/server-fetch@latest",
-        "http://localhost:27272"
+        "http://localhost:3001"
       ]
     }
   }
@@ -46,13 +46,13 @@ The MCP configuration should be placed in Claude Desktop's configuration file:
 ### 1. Start the RiffMCP App
 Launch the RiffMCP app:
 1. Open the RiffMCP app from Applications or Xcode
-2. The HTTP server will start automatically on port 27272
+2. The HTTP server will start automatically on port 3001
 3. Check server status: `cat "~/Library/Application Support/RiffMCP/server.json"`
 
 ### 2. Verify Connection
 Test the connection with curl:
 ```bash
-curl -X POST http://localhost:27272/ \
+curl -X POST http://localhost:3001/ \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
 ```
@@ -96,7 +96,7 @@ The HTTP server provides three comprehensive music tools:
 
 1. **App Launch**: App must be running for LLM requests
 2. **Localhost Only**: Server only accepts connections from 127.0.0.1
-3. **Fixed Port**: Port 27272 must be available
+3. **Fixed Port**: Port 3001 must be available
 4. **Foundation Network**: Uses modern Swift concurrency
 
 ## Troubleshooting
@@ -110,12 +110,12 @@ ps aux | grep "RiffMCP"
 cat "~/Library/Application Support/RiffMCP/server.json"
 
 # Test direct connection
-curl -X POST http://localhost:27272/ -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
+curl -X POST http://localhost:3001/ -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
 ```
 
 ### Port Already in Use
-If port 27272 is occupied:
-1. Find the process: `lsof -i :27272`
+If port 3001 is occupied:
+1. Find the process: `lsof -i :3001`
 2. Kill it: `kill -9 <PID>`
 3. Or restart RiffMCP app
 

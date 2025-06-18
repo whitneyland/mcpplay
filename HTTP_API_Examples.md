@@ -6,7 +6,7 @@ This document provides curl examples for testing the RiffMCP HTTP server directl
 
 The HTTP server runs on:
 - **Host**: `127.0.0.1` (localhost only)
-- **Port**: `27272`
+- **Port**: `3001`
 - **Protocol**: HTTP (JSON-RPC 2.0)
 
 Server configuration is written to: `~/Library/Application Support/RiffMCP/server.json`
@@ -30,7 +30,7 @@ All requests use JSON-RPC 2.0 format:
 Get the list of available MCP tools:
 
 ```bash
-curl -X POST http://localhost:27272/ \
+curl -X POST http://localhost:3001/ \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -44,7 +44,7 @@ curl -X POST http://localhost:27272/ \
 Get all available instruments organized by category:
 
 ```bash
-curl -X POST http://localhost:27272/ \
+curl -X POST http://localhost:3001/ \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -62,7 +62,7 @@ curl -X POST http://localhost:27272/ \
 Play a simple melody:
 
 ```bash
-curl -X POST http://localhost:27272/ \
+curl -X POST http://localhost:3001/ \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -94,7 +94,7 @@ curl -X POST http://localhost:27272/ \
 Play a sequence with multiple instruments:
 
 ```bash
-curl -X POST http://localhost:27272/ \
+curl -X POST http://localhost:3001/ \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -135,7 +135,7 @@ curl -X POST http://localhost:27272/ \
 Stop any currently playing music:
 
 ```bash
-curl -X POST http://localhost:27272/ \
+curl -X POST http://localhost:3001/ \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -153,7 +153,7 @@ curl -X POST http://localhost:27272/ \
 For quick testing, there's a simplified endpoint that plays a single note:
 
 ```bash
-curl -X POST http://localhost:27272/play_note \
+curl -X POST http://localhost:3001/play_note \
   -H "Content-Type: application/json" \
   -d '{
     "pitch": "C4",
@@ -170,13 +170,13 @@ curl -X POST http://localhost:27272/play_note \
 **Examples:**
 ```bash
 # Play middle C for 1 second
-curl -X POST http://localhost:27272/play_note -H "Content-Type: application/json" -d '{"pitch":"C4"}'
+curl -X POST http://localhost:3001/play_note -H "Content-Type: application/json" -d '{"pitch":"C4"}'
 
 # Play F# above middle C for 2 seconds at half volume
-curl -X POST http://localhost:27272/play_note -H "Content-Type: application/json" -d '{"pitch":"F#4","duration":2.0,"velocity":64}'
+curl -X POST http://localhost:3001/play_note -H "Content-Type: application/json" -d '{"pitch":"F#4","duration":2.0,"velocity":64}'
 
 # Play low A for 0.5 seconds
-curl -X POST http://localhost:27272/play_note -H "Content-Type: application/json" -d '{"pitch":"A2","duration":0.5}'
+curl -X POST http://localhost:3001/play_note -H "Content-Type: application/json" -d '{"pitch":"A2","duration":0.5}'
 ```
 
 ## Common Note Names
