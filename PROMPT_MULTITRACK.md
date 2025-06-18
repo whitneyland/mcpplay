@@ -1,5 +1,8 @@
-Compose a song using the .json format below.
+Using the .json format below -
 
+Compose a multi-track music sequence. 
+
+-------------------
 
 ## JSON Instructions
 
@@ -42,7 +45,6 @@ Use this JSON format for your music compositions:
 - Note names use octave numbers (C4 = middle C, C5 = octave above)
 - MIDI numbers: 60 = C4, 61 = C#4, 72 = C5
 
-**Important**: Do NOT wrap your response in tool call format. Provide only the raw JSON as shown in the example above.
 
 ## Example Song
 
