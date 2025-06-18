@@ -1,6 +1,6 @@
 //
 //  Instruments.swift
-//  MCP Play
+//  RiffMCP
 //
 //  Created by Lee Whitney on 6/16/25.
 //

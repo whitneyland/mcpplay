@@ -1,6 +1,6 @@
 //
 //  HTTPServer.swift
-//  MCP Play
+//  RiffMCP
 //
 //  Modern Foundation-based HTTP server with Swift 6.0 concurrency
 //
@@ -235,7 +235,7 @@ class HTTPServer: ObservableObject {
             let response: JSONRPCResponse
             switch request.method {
             case "initialize":
-                let initResult = MCPInitializeResult(protocolVersion: "2024-11-05", capabilities: MCPCapabilities(tools: [:]), serverInfo: MCPServerInfo(name: "mcp-play-http", version: "1.0.0"))
+                let initResult = MCPInitializeResult(protocolVersion: "2024-11-05", capabilities: MCPCapabilities(tools: [:]), serverInfo: MCPServerInfo(name: "riffmcp-http", version: "1.0.0"))
                 response = JSONRPCResponse(result: try encodeToJSONValue(initResult), id: request.id)
             case "notifications/initialized":
                 await sendHTTPResponse(connection: connection, statusCode: 200, body: "")

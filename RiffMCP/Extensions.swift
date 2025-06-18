@@ -1,6 +1,6 @@
 //
 //  Extensions.swift
-//  MCP Play
+//  RiffMCP
 //
 //  Created by Lee Whitney on 6/14/25.
 //

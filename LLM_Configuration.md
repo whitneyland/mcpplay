@@ -16,7 +16,7 @@ The MCP configuration should be placed in Claude Desktop's configuration file:
 ```json
 {
   "mcpServers": {
-    "mcp-play": {
+    "riffmcp": {
       "command": "npx",
       "args": ["mcp-remote", "http://localhost:27272"]
     }
@@ -29,7 +29,7 @@ The MCP configuration should be placed in Claude Desktop's configuration file:
 ```json
 {
   "mcpServers": {
-    "mcp-play": {
+    "riffmcp": {
       "command": "npx",
       "args": [
         "-y",
@@ -43,11 +43,11 @@ The MCP configuration should be placed in Claude Desktop's configuration file:
 
 ## Usage Instructions
 
-### 1. Start the MCP Play App
-Launch the MCP Play app:
-1. Open the MCP Play app from Applications or Xcode
+### 1. Start the RiffMCP App
+Launch the RiffMCP app:
+1. Open the RiffMCP app from Applications or Xcode
 2. The HTTP server will start automatically on port 27272
-3. Check server status: `cat "~/Library/Application Support/MCP Play/server.json"`
+3. Check server status: `cat "~/Library/Application Support/RiffMCP/server.json"`
 
 ### 2. Verify Connection
 Test the connection with curl:
@@ -104,10 +104,10 @@ The HTTP server provides three comprehensive music tools:
 ### Server Not Responding
 ```bash
 # Check if app is running
-ps aux | grep "MCP Play"
+ps aux | grep "RiffMCP"
 
 # Check server config
-cat "~/Library/Application Support/MCP Play/server.json"
+cat "~/Library/Application Support/RiffMCP/server.json"
 
 # Test direct connection
 curl -X POST http://localhost:27272/ -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
@@ -117,7 +117,7 @@ curl -X POST http://localhost:27272/ -d '{"jsonrpc":"2.0","method":"tools/list",
 If port 27272 is occupied:
 1. Find the process: `lsof -i :27272`
 2. Kill it: `kill -9 <PID>`
-3. Or restart MCP Play app
+3. Or restart RiffMCP app
 
 ### Configuration Issues
 1. Verify JSON-RPC 2.0 format in requests

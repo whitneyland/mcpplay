@@ -1,10 +1,10 @@
-# MCP Play
+# RiffMCP
 
 A MacOS music playback system with MCP (Model Context Protocol) server integration.
 
 ## Overview
 
-**MacOS App** (`MCP Play`) - A Swift-based piano/music app for playback. Uses a JSON music sequence format that supports multi-track compositions with 70 different General MIDI instruments.
+**MacOS App** (`RiffMCP`) - A Swift-based piano/music app for playback. Uses a JSON music sequence format that supports multi-track compositions with 70 different General MIDI instruments.
 
 ## Features
 

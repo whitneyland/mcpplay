@@ -1,6 +1,6 @@
 //
-//  MCP_PlayApp.swift
-//  MCP Play
+//  RiffMCPApp.swift
+//  RiffMCP
 //
 //  Created by Lee Whitney on 6/7/25.
 //
@@ -10,7 +10,7 @@ import Foundation
 
 
 @main
-struct MCP_PlayApp: App {
+struct RiffMCPApp: App {
     @StateObject private var audioManager = AudioManager()
     @StateObject private var httpServer: HTTPServer
     
@@ -48,7 +48,7 @@ struct MCP_PlayApp: App {
         Util.logTiming("---- handleURL started")
 
         print("🔗 handleURL called with: \(url)")
-        guard url.scheme == "mcpplay" else {
+        guard url.scheme == "riffmcp" else {
             print("❌ Invalid scheme: \(url.scheme ?? "nil")")
             return
         }

@@ -1,6 +1,6 @@
 //
 //  AnimatedProgressBar.swift
-//  MCP Play
+//  RiffMCP
 //
 //  Custom progress bar implementation that supports smooth animations.
 //

@@ -1,6 +1,6 @@
 //
 //  PresetManager.swift
-//  MCP Play
+//  RiffMCP
 //
 //  Dynamic preset loader from examples folder
 //

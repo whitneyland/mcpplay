@@ -1,11 +1,11 @@
-# MCP Play Server
+# RiffMCP Server
 
 This MCP server allows Claude Desktop to control your music app and manage music sequences.
 
 ## Setup Instructions
 
-1. **Start MCP Play app:**
-   Launch the MCP Play.app from Applications or Xcode. The HTTP server starts automatically on port 27272.
+1. **Start RiffMCP app:**
+   Launch the RiffMCP.app from Applications or Xcode. The HTTP server starts automatically on port 27272.
 
 2. **Add to Claude Desktop configuration:**
    Add this to your Claude Desktop app configuration file:
@@ -15,7 +15,7 @@ This MCP server allows Claude Desktop to control your music app and manage music
    ```json
    {
      "mcpServers": {
-       "mcp-play": {
+       "riffmcp": {
          "command": "npx",
          "args": ["mcp-remote", "http://localhost:27272"]
        }
@@ -77,7 +77,7 @@ Music sequences support multi-track JSON with comprehensive instrument support:
 
 ## Architecture
 
-- HTTP server embedded in MCP Play app using Swift Foundation
+- HTTP server embedded in RiffMCP app using Swift Foundation
 - JSON-RPC 2.0 protocol for all communication
 - Real-time audio synthesis with 70 General MIDI instruments
 - Multi-track support with independent instrument assignment

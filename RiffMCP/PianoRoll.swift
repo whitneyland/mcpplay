@@ -1,6 +1,6 @@
 //
 //  PianoRoll.swift
-//  MCP Play
+//  RiffMCP
 //
 //  Created by Lee Whitney on 6/18/25.
 //

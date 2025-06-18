@@ -1,7 +1,7 @@
-# MCP Play JSON Sequence Format
+# RiffMCP JSON Sequence Format
 
 ## Overview
-The MCP Play app accepts musical sequences in JSON format. Each sequence defines a musical piece with timing, notes, and playback parameters.
+The RiffMCP app accepts musical sequences in JSON format. Each sequence defines a musical piece with timing, notes, and playback parameters.
 
 ## Root Structure
 ```json

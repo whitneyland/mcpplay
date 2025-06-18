@@ -1,6 +1,6 @@
 # HTTP API Examples
 
-This document provides curl examples for testing the MCP Play HTTP server directly.
+This document provides curl examples for testing the RiffMCP HTTP server directly.
 
 ## Server Configuration
 
@@ -9,7 +9,7 @@ The HTTP server runs on:
 - **Port**: `27272`
 - **Protocol**: HTTP (JSON-RPC 2.0)
 
-Server configuration is written to: `~/Library/Application Support/MCP Play/server.json`
+Server configuration is written to: `~/Library/Application Support/RiffMCP/server.json`
 
 ## JSON-RPC 2.0 Format
 
@@ -225,8 +225,8 @@ All JSON-RPC responses follow this format:
 ## Troubleshooting
 
 **Server not responding?**
-1. Check if MCP Play app is running
-2. Verify server config: `cat "~/Library/Application Support/MCP Play/server.json"`
+1. Check if RiffMCP app is running
+2. Verify server config: `cat "~/Library/Application Support/RiffMCP/server.json"`
 3. Check app logs for startup errors
 
 **Invalid instrument error?**

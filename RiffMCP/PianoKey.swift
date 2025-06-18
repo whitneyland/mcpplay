@@ -1,6 +1,6 @@
 //
 //  PianoKey.swift
-//  MCP Play
+//  RiffMCP
 //
 //  Created by Lee Whitney on 6/7/25.
 //
