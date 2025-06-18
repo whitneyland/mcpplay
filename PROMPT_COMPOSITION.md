@@ -1,8 +1,11 @@
 Using the .json format below -
 
-Generate an original, impressive piano composition in this format. Total of 30 seconds or more in duration. Really show me what you can do.
+Generate an original, impressive composition in this format. Total of 30 seconds or less in duration. Really show me what you can do.
 
---------------------------------------
+
+
+
+-------------------
 
 ## JSON Instructions
 
@@ -14,7 +17,7 @@ Use this JSON format for your music compositions:
 - `tracks` (required): Array of track objects
 
 ### Track Object
-- `instrument` (optional): (defaults to "acoustic_grand_piano")
+- `instrument` (optional): Choose from 70+ available instruments (defaults to "acoustic_grand_piano")
 - `events` (required): Array of musical events
 
 ### Event Object
