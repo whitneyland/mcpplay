@@ -9,7 +9,7 @@ import SwiftUI
 
 struct PianoRoll: View {
     let sequence: MusicSequence?
-    let currentTime: Double
+    let animatedElapsedTime: Double
     let totalDuration: Double
     
     private let noteHeight: CGFloat = 8
@@ -35,11 +35,11 @@ struct PianoRoll: View {
                     
                     // Playback cursor
                     if totalDuration > 0 {
-                        let cursorX = (currentTime / totalDuration) * geometry.size.width
+                        let cursorX = (animatedElapsedTime / totalDuration) * geometry.size.width
                         Rectangle()
                             .fill(Color.red)
-                            .frame(width: 2)
-                            .offset(x: cursorX)
+                            .frame(width: 2, height: rollHeight)
+                            .position(x: cursorX + 1, y: rollHeight / 2)
                     }
                 }
             } else {
@@ -56,15 +56,15 @@ struct PianoRoll: View {
     }
     
     private func gridLines(geometry: GeometryProxy, sequence: MusicSequence, noteRange: (min: Int, max: Int), rollHeight: CGFloat) -> some View {
-        ZStack {
+        ZStack(alignment: .topLeading) {
             // Horizontal pitch lines
             ForEach(noteRange.min...noteRange.max, id: \.self) { midiNote in
                 let y = CGFloat(noteRange.max - midiNote) * noteHeight
                 let isSharp = isSharpNote(midiNote)
                 Rectangle()
                     .fill(isSharp ? Color.gray.opacity(0.3) : Color.gray.opacity(0.1))
-                    .frame(height: 1)
-                    .offset(y: y)
+                    .frame(width: geometry.size.width, height: 1)
+                    .position(x: geometry.size.width / 2, y: y + noteHeight / 2)
             }
             
             // Vertical beat lines
@@ -77,8 +77,8 @@ struct PianoRoll: View {
                 let isMeasureLine = beat % beatsPerMeasure == 0
                 Rectangle()
                     .fill(isMeasureLine ? Color.gray.opacity(0.6) : Color.gray.opacity(0.3))
-                    .frame(width: isMeasureLine ? 2 : 1)
-                    .offset(x: x)
+                    .frame(width: isMeasureLine ? 2 : 1, height: rollHeight)
+                    .position(x: x + (isMeasureLine ? 1 : 0.5), y: rollHeight / 2)
             }
         }
     }
@@ -190,6 +190,6 @@ struct PianoRoll: View {
         ]
     )
     
-    PianoRoll(sequence: sampleSequence, currentTime: 1.5, totalDuration: 4.0)
+    PianoRoll(sequence: sampleSequence, animatedElapsedTime: 1.5, totalDuration: 4.0)
         .frame(height: 300)
 }

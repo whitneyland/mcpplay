@@ -22,6 +22,7 @@ struct MainView: View {
             VStack {
                 TextEditor(text: $jsonInput)
                     .border(Color.gray, width: 1)
+                    .padding(.bottom, 5)
 
                 if !presetManager.presets.isEmpty {
                     Picker("Presets", selection: $selectedPresetId) {
@@ -29,7 +30,6 @@ struct MainView: View {
                             Text(preset.displayName).tag(preset.id)
                         }
                     }
-                    .padding(.top)
                     .pickerStyle(SegmentedPickerStyle())
                     .onChange(of: selectedPresetId) {
                         loadPresetToInput()
@@ -37,7 +37,6 @@ struct MainView: View {
                 } else {
                     Text("No presets available")
                         .foregroundColor(.secondary)
-                        .padding(.top)
                 }
                 HStack {
                     Button(action: {
@@ -59,16 +58,20 @@ struct MainView: View {
                     .cornerRadius(6)
                     .disabled(jsonInput.isEmpty)
                     
-                    AnimatedProgressBar(
-                        progress: animatedElapsedTime,
-                        total: audioManager.totalDuration
-                    )
+                    Spacer()
                     
                     Text("\(formatTime(audioManager.elapsedTime)) / \(formatTime(audioManager.totalDuration))")
                         .font(.caption.monospaced())
                         .foregroundColor(.secondary)
-                        .frame(width: 100, alignment: .trailing)
                 }
+                .padding(.top,5)
+                .padding(.bottom,5)
+//                PianoView()
+//                    .padding()
+                AnimatedProgressBar(
+                    progress: animatedElapsedTime,
+                    total: audioManager.totalDuration
+                )
                 .onChange(of: audioManager.playbackState) { _, state in
                     switch state {
                     case .playing:
@@ -82,21 +85,21 @@ struct MainView: View {
                         break
                     }
                 }
-                .padding(.top)
-                .padding(.bottom)
-
-//                PianoView()
-//                    .padding()
             }
             .padding()
-            
-            // Bottom section with Piano Roll
-            PianoRoll(
-                sequence: currentSequence,
-                currentTime: audioManager.elapsedTime,
-                totalDuration: audioManager.totalDuration
-            )
-            .frame(minHeight: 200)
+
+            VStack {
+                // Bottom section with Piano Roll
+
+
+                PianoRoll(
+                    sequence: currentSequence,
+                    animatedElapsedTime: animatedElapsedTime,
+                    totalDuration: audioManager.totalDuration
+                )
+                .frame(minHeight: 100)
+            }
+            .padding()
         }
         .onAppear {
             if !presetManager.presets.isEmpty && selectedPresetId.isEmpty {
