@@ -117,13 +117,13 @@ struct PianoRoll: View {
                     if midiNote >= noteRange.min && midiNote <= noteRange.max {
                         let beatDuration = 60.0 / sequence.tempo
                         let startTime = event.time * beatDuration
-                        let duration = event.duration * beatDuration
+                        let duration = event.dur * beatDuration
                         
                         let x = (startTime / totalDuration) * geometry.size.width
                         let width = max(2, (duration / totalDuration) * geometry.size.width)
                         let y = CGFloat(noteRange.max - midiNote) * noteHeight
                         
-                        let velocity = event.velocity ?? 100
+                        let velocity = event.vel ?? 100
                         let alpha = Double(velocity) / 127.0 * 0.8 + 0.2
                         
                         noteRects.append(NoteRect(
@@ -145,6 +145,7 @@ struct PianoRoll: View {
     private func calculateNoteRange(sequence: MusicSequence) -> (min: Int, max: Int) {
         var minNote = 127
         var maxNote = 0
+        var hasNotes = false
         
         for track in sequence.tracks {
             for event in track.events {
@@ -152,13 +153,24 @@ struct PianoRoll: View {
                     let midiNote = pitch.midiValue
                     minNote = min(minNote, midiNote)
                     maxNote = max(maxNote, midiNote)
+                    hasNotes = true
                 }
             }
+        }
+        
+        // If no notes found, return a default range
+        if !hasNotes {
+            return (min: 60, max: 72) // C4 to C5 default range
         }
         
         // Add some padding
         minNote = max(0, minNote - 2)
         maxNote = min(127, maxNote + 2)
+        
+        // Ensure valid range
+        if minNote > maxNote {
+            return (min: 60, max: 72) // Fallback to default range
+        }
         
         return (min: minNote, max: maxNote)
     }
@@ -178,14 +190,13 @@ struct PianoRoll: View {
 
 #Preview {
     let sampleSequence = MusicSequence(
-        version: 1,
         title: "Sample",
         tempo: 120,
         tracks: [
             Track(instrument: "acoustic_grand_piano", name: nil, events: [
-                SequenceEvent(time: 0.0, pitches: [Pitch.int(60)], duration: 1.0, velocity: 100),
-                SequenceEvent(time: 1.0, pitches: [Pitch.int(64)], duration: 1.0, velocity: 80),
-                SequenceEvent(time: 2.0, pitches: [Pitch.int(67)], duration: 1.0, velocity: 90)
+                SequenceEvent(time: 0.0, pitches: [Pitch.int(60)], dur: 1.0, vel: 100),
+                SequenceEvent(time: 1.0, pitches: [Pitch.int(64)], dur: 1.0, vel: 80),
+                SequenceEvent(time: 2.0, pitches: [Pitch.int(67)], dur: 1.0, vel: 90)
             ])
         ]
     )

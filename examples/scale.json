@@ -1,20 +1,19 @@
 {
   "tempo": 100,
   "title": "Musical Scale",
-  "version": 1,
   "tracks": [
     {
       "name": "3. G Major Scale",
       "instrument": "acoustic_grand_piano",
       "events": [
-        {"time": 0.0, "pitches": ["G4"], "duration": 0.4, "velocity": 90},
-        {"time": 0.4, "pitches": ["A4"], "duration": 0.4, "velocity": 90},
-        {"time": 0.8, "pitches": ["B4"], "duration": 0.4, "velocity": 90},
-        {"time": 1.2, "pitches": ["C5"], "duration": 0.4, "velocity": 90},
-        {"time": 1.6, "pitches": ["D5"], "duration": 0.4, "velocity": 90},
-        {"time": 2.0, "pitches": ["E5"], "duration": 0.4, "velocity": 90},
-        {"time": 2.4, "pitches": ["F#5"], "duration": 0.4, "velocity": 90},
-        {"time": 2.8, "pitches": ["G5"], "duration": 0.8, "velocity": 90}
+        {"time": 0.0, "pitches": ["G4"], "dur": 0.4, "vel": 90},
+        {"time": 0.4, "pitches": ["A4"], "dur": 0.4, "vel": 90},
+        {"time": 0.8, "pitches": ["B4"], "dur": 0.4, "vel": 90},
+        {"time": 1.2, "pitches": ["C5"], "dur": 0.4, "vel": 90},
+        {"time": 1.6, "pitches": ["D5"], "dur": 0.4, "vel": 90},
+        {"time": 2.0, "pitches": ["E5"], "dur": 0.4, "vel": 90},
+        {"time": 2.4, "pitches": ["F#5"], "dur": 0.4, "vel": 90},
+        {"time": 2.8, "pitches": ["G5"], "dur": 0.8, "vel": 90}
       ]
     }
   ]

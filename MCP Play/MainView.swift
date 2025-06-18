@@ -65,7 +65,6 @@ struct MainView: View {
                         .foregroundColor(.secondary)
                 }
                 .padding(.top,5)
-                .padding(.bottom,5)
             }
             .padding()
 

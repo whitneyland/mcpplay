@@ -76,10 +76,10 @@ curl -X POST http://localhost:27272/ \
             "instrument": "acoustic_grand_piano",
             "name": "Simple Melody",
             "events": [
-              {"time": 0.0, "pitches": ["C4"], "duration": 1.0, "velocity": 100},
-              {"time": 1.0, "pitches": ["E4"], "duration": 1.0, "velocity": 100},
-              {"time": 2.0, "pitches": ["G4"], "duration": 1.0, "velocity": 100},
-              {"time": 3.0, "pitches": ["C5"], "duration": 2.0, "velocity": 100}
+              {"time": 0.0, "pitches": ["C4"], "dur": 1.0, "vel": 100},
+              {"time": 1.0, "pitches": ["E4"], "dur": 1.0, "vel": 100},
+              {"time": 2.0, "pitches": ["G4"], "dur": 1.0, "vel": 100},
+              {"time": 3.0, "pitches": ["C5"], "dur": 2.0, "vel": 100}
             ]
           }
         ]
@@ -102,7 +102,6 @@ curl -X POST http://localhost:27272/ \
     "params": {
       "name": "play_sequence",
       "arguments": {
-        "version": 1,
         "title": "Multi-Track Example",
         "tempo": 120,
         "tracks": [
@@ -110,18 +109,18 @@ curl -X POST http://localhost:27272/ \
             "instrument": "acoustic_grand_piano",
             "name": "Piano",
             "events": [
-              {"time": 0.0, "pitches": ["C4", "E4", "G4"], "duration": 2.0, "velocity": 80},
-              {"time": 2.0, "pitches": ["F4", "A4", "C5"], "duration": 2.0, "velocity": 80}
+              {"time": 0.0, "pitches": ["C4", "E4", "G4"], "dur": 2.0, "vel": 80},
+              {"time": 2.0, "pitches": ["F4", "A4", "C5"], "dur": 2.0, "vel": 80}
             ]
           },
           {
             "instrument": "acoustic_bass",
             "name": "Bass",
             "events": [
-              {"time": 0.0, "pitches": ["C2"], "duration": 1.0, "velocity": 100},
-              {"time": 1.0, "pitches": ["C2"], "duration": 1.0, "velocity": 100},
-              {"time": 2.0, "pitches": ["F2"], "duration": 1.0, "velocity": 100},
-              {"time": 3.0, "pitches": ["F2"], "duration": 1.0, "velocity": 100}
+              {"time": 0.0, "pitches": ["C2"], "dur": 1.0, "vel": 100},
+              {"time": 1.0, "pitches": ["C2"], "dur": 1.0, "vel": 100},
+              {"time": 2.0, "pitches": ["F2"], "dur": 1.0, "vel": 100},
+              {"time": 3.0, "pitches": ["F2"], "dur": 1.0, "vel": 100}
             ]
           }
         ]

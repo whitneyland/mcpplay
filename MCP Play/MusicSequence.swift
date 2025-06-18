@@ -10,17 +10,15 @@ import Foundation
 /// Represents a musical sequence, possibly containing multiple tracks.
 /// Conforms to Codable for JSON serialization and Sendable for safe concurrent use.
 struct MusicSequence: Codable, Sendable {
-    let version: Int
     let title: String?
     let tempo: Double
     let tracks: [Track]
 
     enum CodingKeys: String, CodingKey {
-        case version, title, tempo, tracks
+        case title, tempo, tracks
     }
     
-    init(version: Int = 1, title: String?, tempo: Double, tracks: [Track]) {
-        self.version = version
+    init(title: String?, tempo: Double, tracks: [Track]) {
         self.title = title
         self.tempo = tempo
         self.tracks = tracks
@@ -37,7 +35,6 @@ struct MusicSequence: Codable, Sendable {
     // Custom decoder to support both multi-track and single-track (legacy) formats.
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 1
         title = try container.decodeIfPresent(String.self, forKey: .title)
         tempo = try container.decode(Double.self, forKey: .tempo)
 
@@ -58,7 +55,6 @@ struct MusicSequence: Codable, Sendable {
     // We always encode to the modern, standard format.
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(version, forKey: .version)
         try container.encodeIfPresent(title, forKey: .title)
         try container.encode(tempo, forKey: .tempo)
         try container.encode(tracks, forKey: .tracks)
@@ -94,8 +90,8 @@ struct Track: Codable, Sendable {
     // Because we provide a custom init(from:), we must also provide encode(to:).
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(name, forKey: .name)
         try container.encode(instrument, forKey: .instrument)
-        try container.encodeIfPresent(name, forKey: .name)
         try container.encode(events, forKey: .events)
     }
 }
@@ -104,18 +100,18 @@ struct Track: Codable, Sendable {
 struct SequenceEvent: Codable, Sendable {
     let time: Double
     let pitches: [Pitch]
-    let duration: Double
-    let velocity: Int?
+    let dur: Double
+    let vel: Int?
     
     enum CodingKeys: String, CodingKey {
-        case time, pitches, duration, velocity
+        case time, pitches, dur, vel
     }
     
-    init(time: Double, pitches: [Pitch], duration: Double, velocity: Int? = nil) {
+    init(time: Double, pitches: [Pitch], dur: Double, vel: Int? = nil) {
         self.time = time
         self.pitches = pitches
-        self.duration = duration
-        self.velocity = velocity
+        self.dur = dur
+        self.vel = vel
     }
     
     init(from decoder: Decoder) throws {
@@ -123,12 +119,12 @@ struct SequenceEvent: Codable, Sendable {
         
         // Round to avoid floating-point precision issues
         let rawTime = try container.decode(Double.self, forKey: .time)
-        let rawDuration = try container.decode(Double.self, forKey: .duration)
+        let rawDur = try container.decode(Double.self, forKey: .dur)
         
         self.time = (rawTime * 1000).rounded() / 1000  // Round to 3 decimal places
-        self.duration = (rawDuration * 1000).rounded() / 1000
+        self.dur = (rawDur * 1000).rounded() / 1000
         self.pitches = try container.decode([Pitch].self, forKey: .pitches)
-        self.velocity = try container.decodeIfPresent(Int.self, forKey: .velocity)
+        self.vel = try container.decodeIfPresent(Int.self, forKey: .vel)
     }
     
     func encode(to encoder: Encoder) throws {
@@ -136,12 +132,12 @@ struct SequenceEvent: Codable, Sendable {
         
         // Format values to avoid floating-point display issues
         let formattedTime = Double(String(format: "%.3f", time))!
-        let formattedDuration = Double(String(format: "%.3f", duration))!
+        let formattedDur = Double(String(format: "%.3f", dur))!
         
         try container.encode(formattedTime, forKey: .time)
         try container.encode(pitches, forKey: .pitches)
-        try container.encode(formattedDuration, forKey: .duration)
-        try container.encodeIfPresent(velocity, forKey: .velocity)
+        try container.encode(formattedDur, forKey: .dur)
+        try container.encodeIfPresent(vel, forKey: .vel)
     }
 }
 

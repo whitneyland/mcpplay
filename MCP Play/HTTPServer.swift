@@ -113,8 +113,8 @@ struct MCPToolsResult: Codable, Sendable { let tools: [MCPTool] }
 struct MCPInitializeResult: Codable, Sendable { let protocolVersion: String; let capabilities: MCPCapabilities; let serverInfo: MCPServerInfo }
 struct MCPCapabilities: Codable, Sendable { let tools: [String: JSONValue] }
 struct MCPServerInfo: Codable, Sendable { let name: String; let version: String }
-struct PlayNoteRequest: Codable, Sendable { let pitch: String; let duration: Double?; let velocity: Int? }
-struct PlayNoteResponse: Codable, Sendable { let status: String; let pitch: String; let duration: Double; let velocity: Int }
+struct PlayNoteRequest: Codable, Sendable { let pitch: String; let dur: Double?; let vel: Int? }
+struct PlayNoteResponse: Codable, Sendable { let status: String; let pitch: String; let dur: Double; let vel: Int }
 
 // MARK: - HTTP Server
 
@@ -302,25 +302,9 @@ class HTTPServer: ObservableObject {
             throw JSONRPCError.serverError("Invalid instrument \"\(track.instrument)\". Check the instrument enum in the schema for valid options.")
         }
 
-        var sequenceDict: [String: Any] = [:]
-        sequenceDict["version"] = sequence.version
-        sequenceDict["title"] = sequence.title
-        sequenceDict["tempo"] = sequence.tempo
-
-        sequenceDict["tracks"] = sequence.tracks.map { track -> [String: Any] in
-            var trackDict: [String: Any] = ["instrument": track.instrument, "name": track.name ?? ""]
-            trackDict["events"] = track.events.map { event -> [String: Any] in
-                return [
-                    "time": event.time,
-                    "duration": event.duration,
-                    "velocity": event.velocity ?? 100,
-                    "pitches": event.pitches.map { $0.midiValue }
-                ]
-            }
-            return trackDict
-        }
-
-        let jsonData = try JSONSerialization.data(withJSONObject: sequenceDict)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted]
+        let jsonData = try encoder.encode(sequence)
         guard let jsonString = String(data: jsonData, encoding: .utf8) else {
             throw JSONRPCError.serverError("Failed to serialize sequence for audio manager.")
         }
@@ -343,15 +327,15 @@ class HTTPServer: ObservableObject {
         do {
             guard let bodyData = body.data(using: .utf8) else { throw URLError(.badServerResponse) }
             let noteReq = try JSONDecoder().decode(PlayNoteRequest.self, from: bodyData)
-            let duration = noteReq.duration ?? 1.0
-            let velocity = noteReq.velocity ?? 100
+            let duration = noteReq.dur ?? 1.0
+            let velocity = noteReq.vel ?? 100
             let midiNote = NoteNameConverter.toMIDI(noteReq.pitch)
             audioManager.playNote(midiNote: UInt8(midiNote))
             Task {
                 try? await Task.sleep(for: .seconds(duration))
                 await MainActor.run { audioManager.stopNote(midiNote: UInt8(midiNote)) }
             }
-            let response = PlayNoteResponse(status: "playing", pitch: noteReq.pitch, duration: duration, velocity: velocity)
+            let response = PlayNoteResponse(status: "playing", pitch: noteReq.pitch, dur: duration, vel: velocity)
             let responseData = try JSONEncoder().encode(response)
             let responseBody = String(data: responseData, encoding: .utf8) ?? "{}"
             await sendHTTPResponse(connection: connection, statusCode: 200, headers: ["Content-Type": "application/json"], body: responseBody)
@@ -399,7 +383,9 @@ class HTTPServer: ObservableObject {
     }
 
     private func encodeToJSONValue<T: Codable>(_ value: T) throws -> JSONValue {
-        let data = try JSONEncoder().encode(value)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted]
+        let data = try encoder.encode(value)
         return try JSONDecoder().decode(JSONValue.self, from: data)
     }
 

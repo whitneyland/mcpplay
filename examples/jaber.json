@@ -5,67 +5,67 @@
     {
       "events" : [
         {
-          "duration" : 2,
+          "dur" : 2,
           "pitches" : [
             "E5",
             "A5",
             "C6"
           ],
           "time" : 0,
-          "velocity" : 60
+          "vel" : 60
         },
         {
-          "duration" : 1.5,
+          "dur" : 1.5,
           "pitches" : [
             "D5",
             "G5",
             "B5"
           ],
           "time" : 2.5,
-          "velocity" : 55
+          "vel" : 55
         },
         {
-          "duration" : 2,
+          "dur" : 2,
           "pitches" : [
             "C#5",
             "F#5",
             "A5"
           ],
           "time" : 4,
-          "velocity" : 60
+          "vel" : 60
         },
         {
-          "duration" : 1.5,
+          "dur" : 1.5,
           "pitches" : [
             "G#4",
             "B4",
             "E5"
           ],
           "time" : 6.5,
-          "velocity" : 55
+          "vel" : 55
         },
         {
-          "duration" : 2,
+          "dur" : 2,
           "pitches" : [
             "E5",
             "A5",
             "C6"
           ],
           "time" : 64,
-          "velocity" : 65
+          "vel" : 65
         },
         {
-          "duration" : 1.5,
+          "dur" : 1.5,
           "pitches" : [
             "D5",
             "G5",
             "B5"
           ],
           "time" : 66.5,
-          "velocity" : 60
+          "vel" : 60
         },
         {
-          "duration" : 4,
+          "dur" : 4,
           "pitches" : [
             "C#5",
             "F#5",
@@ -73,7 +73,7 @@
             "E6"
           ],
           "time" : 68,
-          "velocity" : 50
+          "vel" : 50
         }
       ],
       "instrument" : "celesta"
@@ -81,36 +81,36 @@
     {
       "events" : [
         {
-          "duration" : 1.5,
+          "dur" : 1.5,
           "pitches" : [
             "F#3"
           ],
           "time" : 1,
-          "velocity" : 70
+          "vel" : 70
         },
         {
-          "duration" : 1,
+          "dur" : 1,
           "pitches" : [
             "Bb3"
           ],
           "time" : 3,
-          "velocity" : 65
+          "vel" : 65
         },
         {
-          "duration" : 1.5,
+          "dur" : 1.5,
           "pitches" : [
             "C#4"
           ],
           "time" : 5,
-          "velocity" : 70
+          "vel" : 70
         },
         {
-          "duration" : 1,
+          "dur" : 1,
           "pitches" : [
             "G3"
           ],
           "time" : 7,
-          "velocity" : 65
+          "vel" : 65
         }
       ],
       "instrument" : "bassoon"
@@ -118,84 +118,84 @@
     {
       "events" : [
         {
-          "duration" : 2,
+          "dur" : 2,
           "pitches" : [
             "A4"
           ],
           "time" : 8,
-          "velocity" : 80
+          "vel" : 80
         },
         {
-          "duration" : 1,
+          "dur" : 1,
           "pitches" : [
             "G4"
           ],
           "time" : 10,
-          "velocity" : 75
+          "vel" : 75
         },
         {
-          "duration" : 3,
+          "dur" : 3,
           "pitches" : [
             "E4"
           ],
           "time" : 11,
-          "velocity" : 85
+          "vel" : 85
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "A4"
           ],
           "time" : 34,
-          "velocity" : 110
+          "vel" : 110
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "E5"
           ],
           "time" : 35,
-          "velocity" : 110
+          "vel" : 110
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "C5"
           ],
           "time" : 36,
-          "velocity" : 110
+          "vel" : 110
         },
         {
-          "duration" : 1,
+          "dur" : 1,
           "pitches" : [
             "G4"
           ],
           "time" : 39,
-          "velocity" : 115
+          "vel" : 115
         },
         {
-          "duration" : 2,
+          "dur" : 2,
           "pitches" : [
             "E5"
           ],
           "time" : 48,
-          "velocity" : 120
+          "vel" : 120
         },
         {
-          "duration" : 2,
+          "dur" : 2,
           "pitches" : [
             "F#5"
           ],
           "time" : 50,
-          "velocity" : 115
+          "vel" : 115
         },
         {
-          "duration" : 4,
+          "dur" : 4,
           "pitches" : [
             "C#5"
           ],
           "time" : 52,
-          "velocity" : 125
+          "vel" : 125
         }
       ],
       "instrument" : "french_horn"
@@ -203,76 +203,76 @@
     {
       "events" : [
         {
-          "duration" : 1.5,
+          "dur" : 1.5,
           "pitches" : [
             "E4"
           ],
           "time" : 8.5,
-          "velocity" : 75
+          "vel" : 75
         },
         {
-          "duration" : 1.5,
+          "dur" : 1.5,
           "pitches" : [
             "C4"
           ],
           "time" : 10.5,
-          "velocity" : 70
+          "vel" : 70
         },
         {
-          "duration" : 3.5,
+          "dur" : 3.5,
           "pitches" : [
             "A3"
           ],
           "time" : 12.5,
-          "velocity" : 80
+          "vel" : 80
         },
         {
-          "duration" : 2,
+          "dur" : 2,
           "pitches" : [
             "B3"
           ],
           "time" : 16,
-          "velocity" : 60
+          "vel" : 60
         },
         {
-          "duration" : 1,
+          "dur" : 1,
           "pitches" : [
             "C4"
           ],
           "time" : 18,
-          "velocity" : 65
+          "vel" : 65
         },
         {
-          "duration" : 3,
+          "dur" : 3,
           "pitches" : [
             "F#3"
           ],
           "time" : 19,
-          "velocity" : 60
+          "vel" : 60
         },
         {
-          "duration" : 2,
+          "dur" : 2,
           "pitches" : [
             "A4"
           ],
           "time" : 66,
-          "velocity" : 70
+          "vel" : 70
         },
         {
-          "duration" : 1,
+          "dur" : 1,
           "pitches" : [
             "G4"
           ],
           "time" : 68,
-          "velocity" : 65
+          "vel" : 65
         },
         {
-          "duration" : 3,
+          "dur" : 3,
           "pitches" : [
             "E4"
           ],
           "time" : 69,
-          "velocity" : 60
+          "vel" : 60
         }
       ],
       "instrument" : "cello"
@@ -280,172 +280,172 @@
     {
       "events" : [
         {
-          "duration" : 4,
+          "dur" : 4,
           "pitches" : [
             "A1"
           ],
           "time" : 0,
-          "velocity" : 70
+          "vel" : 70
         },
         {
-          "duration" : 4,
+          "dur" : 4,
           "pitches" : [
             "E1"
           ],
           "time" : 4,
-          "velocity" : 70
+          "vel" : 70
         },
         {
-          "duration" : 4,
+          "dur" : 4,
           "pitches" : [
             "A2"
           ],
           "time" : 8,
-          "velocity" : 75
+          "vel" : 75
         },
         {
-          "duration" : 4,
+          "dur" : 4,
           "pitches" : [
             "D2"
           ],
           "time" : 12,
-          "velocity" : 75
+          "vel" : 75
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "E2"
           ],
           "time" : 32,
-          "velocity" : 100
+          "vel" : 100
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "E2"
           ],
           "time" : 32.5,
-          "velocity" : 100
+          "vel" : 100
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "F2"
           ],
           "time" : 33,
-          "velocity" : 100
+          "vel" : 100
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "F2"
           ],
           "time" : 33.5,
-          "velocity" : 100
+          "vel" : 100
         },
         {
-          "duration" : 1,
+          "dur" : 1,
           "pitches" : [
             "A2"
           ],
           "time" : 48,
-          "velocity" : 110
+          "vel" : 110
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "A2"
           ],
           "time" : 49,
-          "velocity" : 90
+          "vel" : 90
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "A2"
           ],
           "time" : 49.5,
-          "velocity" : 90
+          "vel" : 90
         },
         {
-          "duration" : 1,
+          "dur" : 1,
           "pitches" : [
             "E2"
           ],
           "time" : 50,
-          "velocity" : 110
+          "vel" : 110
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "E2"
           ],
           "time" : 51,
-          "velocity" : 90
+          "vel" : 90
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "E2"
           ],
           "time" : 51.5,
-          "velocity" : 90
+          "vel" : 90
         },
         {
-          "duration" : 1,
+          "dur" : 1,
           "pitches" : [
             "A2"
           ],
           "time" : 52,
-          "velocity" : 110
+          "vel" : 110
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "A2"
           ],
           "time" : 53,
-          "velocity" : 90
+          "vel" : 90
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "A2"
           ],
           "time" : 53.5,
-          "velocity" : 90
+          "vel" : 90
         },
         {
-          "duration" : 1,
+          "dur" : 1,
           "pitches" : [
             "D2"
           ],
           "time" : 54,
-          "velocity" : 110
+          "vel" : 110
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "D2"
           ],
           "time" : 55,
-          "velocity" : 90
+          "vel" : 90
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "D2"
           ],
           "time" : 55.5,
-          "velocity" : 90
+          "vel" : 90
         },
         {
-          "duration" : 8,
+          "dur" : 8,
           "pitches" : [
             "A1"
           ],
           "time" : 64,
-          "velocity" : 50
+          "vel" : 50
         }
       ],
       "instrument" : "contrabass"
@@ -453,64 +453,64 @@
     {
       "events" : [
         {
-          "duration" : 2,
+          "dur" : 2,
           "pitches" : [
             36,
             37,
             38
           ],
           "time" : 26,
-          "velocity" : 80
+          "vel" : 80
         },
         {
-          "duration" : 2,
+          "dur" : 2,
           "pitches" : [
             33,
             34,
             35
           ],
           "time" : 28,
-          "velocity" : 90
+          "vel" : 90
         },
         {
-          "duration" : 2,
+          "dur" : 2,
           "pitches" : [
             29,
             30,
             31
           ],
           "time" : 30,
-          "velocity" : 100
+          "vel" : 100
         },
         {
-          "duration" : 1,
+          "dur" : 1,
           "pitches" : [
             41,
             42,
             48
           ],
           "time" : 32,
-          "velocity" : 120
+          "vel" : 120
         },
         {
-          "duration" : 1,
+          "dur" : 1,
           "pitches" : [
             41,
             42,
             48
           ],
           "time" : 34,
-          "velocity" : 120
+          "vel" : 120
         },
         {
-          "duration" : 1,
+          "dur" : 1,
           "pitches" : [
             41,
             42,
             48
           ],
           "time" : 36,
-          "velocity" : 120
+          "vel" : 120
         }
       ],
       "instrument" : "acoustic_grand_piano"
@@ -518,140 +518,140 @@
     {
       "events" : [
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "G#4"
           ],
           "time" : 24,
-          "velocity" : 70
+          "vel" : 70
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "B4"
           ],
           "time" : 24.5,
-          "velocity" : 75
+          "vel" : 75
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "D5"
           ],
           "time" : 25,
-          "velocity" : 80
+          "vel" : 80
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "F5"
           ],
           "time" : 25.5,
-          "velocity" : 85
+          "vel" : 85
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "G#5"
           ],
           "time" : 26,
-          "velocity" : 90
+          "vel" : 90
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "B5"
           ],
           "time" : 26.5,
-          "velocity" : 95
+          "vel" : 95
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "D6"
           ],
           "time" : 27,
-          "velocity" : 100
+          "vel" : 100
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "F6"
           ],
           "time" : 27.5,
-          "velocity" : 105
+          "vel" : 105
         },
         {
-          "duration" : 0.25,
+          "dur" : 0.25,
           "pitches" : [
             "F3"
           ],
           "time" : 32,
-          "velocity" : 110
+          "vel" : 110
         },
         {
-          "duration" : 0.25,
+          "dur" : 0.25,
           "pitches" : [
             "F#3"
           ],
           "time" : 32.25,
-          "velocity" : 110
+          "vel" : 110
         },
         {
-          "duration" : 0.25,
+          "dur" : 0.25,
           "pitches" : [
             "G3"
           ],
           "time" : 32.5,
-          "velocity" : 110
+          "vel" : 110
         },
         {
-          "duration" : 0.25,
+          "dur" : 0.25,
           "pitches" : [
             "G#3"
           ],
           "time" : 32.75,
-          "velocity" : 110
+          "vel" : 110
         },
         {
-          "duration" : 1,
+          "dur" : 1,
           "pitches" : [
             "A4",
             "C#5",
             "E5"
           ],
           "time" : 48,
-          "velocity" : 100
+          "vel" : 100
         },
         {
-          "duration" : 1,
+          "dur" : 1,
           "pitches" : [
             "D4",
             "F#4",
             "A4"
           ],
           "time" : 50,
-          "velocity" : 100
+          "vel" : 100
         },
         {
-          "duration" : 1,
+          "dur" : 1,
           "pitches" : [
             "E4",
             "G#4",
             "B4"
           ],
           "time" : 52,
-          "velocity" : 100
+          "vel" : 100
         },
         {
-          "duration" : 2,
+          "dur" : 2,
           "pitches" : [
             "A4",
             "C#5",
             "E5"
           ],
           "time" : 54,
-          "velocity" : 110
+          "vel" : 110
         }
       ],
       "instrument" : "pizzicato_strings"
@@ -659,47 +659,47 @@
     {
       "events" : [
         {
-          "duration" : 4,
+          "dur" : 4,
           "pitches" : [
             "C3",
             "F#3",
             "C4"
           ],
           "time" : 28,
-          "velocity" : 110
+          "vel" : 110
         },
         {
-          "duration" : 1,
+          "dur" : 1,
           "pitches" : [
             "C3",
             "F#3",
             "G#3"
           ],
           "time" : 33,
-          "velocity" : 125
+          "vel" : 125
         },
         {
-          "duration" : 1,
+          "dur" : 1,
           "pitches" : [
             "C3",
             "F#3",
             "A#3"
           ],
           "time" : 35,
-          "velocity" : 125
+          "vel" : 125
         },
         {
-          "duration" : 2,
+          "dur" : 2,
           "pitches" : [
             "C3",
             "F#3",
             "C4"
           ],
           "time" : 37,
-          "velocity" : 127
+          "vel" : 127
         },
         {
-          "duration" : 4,
+          "dur" : 4,
           "pitches" : [
             "A3",
             "C#4",
@@ -707,10 +707,10 @@
             "A4"
           ],
           "time" : 48,
-          "velocity" : 127
+          "vel" : 127
         },
         {
-          "duration" : 4,
+          "dur" : 4,
           "pitches" : [
             "D3",
             "F#3",
@@ -718,10 +718,10 @@
             "D4"
           ],
           "time" : 52,
-          "velocity" : 127
+          "vel" : 127
         },
         {
-          "duration" : 4,
+          "dur" : 4,
           "pitches" : [
             "E3",
             "G#3",
@@ -729,10 +729,10 @@
             "E4"
           ],
           "time" : 56,
-          "velocity" : 127
+          "vel" : 127
         },
         {
-          "duration" : 4,
+          "dur" : 4,
           "pitches" : [
             "A3",
             "C#4",
@@ -740,7 +740,7 @@
             "A4"
           ],
           "time" : 60,
-          "velocity" : 127
+          "vel" : 127
         }
       ],
       "instrument" : "brass_section"
@@ -748,64 +748,63 @@
     {
       "events" : [
         {
-          "duration" : 0.25,
+          "dur" : 0.25,
           "pitches" : [
             "C7"
           ],
           "time" : 40,
-          "velocity" : 120
+          "vel" : 120
         },
         {
-          "duration" : 0.25,
+          "dur" : 0.25,
           "pitches" : [
             "C#7"
           ],
           "time" : 40.25,
-          "velocity" : 120
+          "vel" : 120
         },
         {
-          "duration" : 0.25,
+          "dur" : 0.25,
           "pitches" : [
             "C7"
           ],
           "time" : 41,
-          "velocity" : 120
+          "vel" : 120
         },
         {
-          "duration" : 0.25,
+          "dur" : 0.25,
           "pitches" : [
             "C#7"
           ],
           "time" : 41.25,
-          "velocity" : 120
+          "vel" : 120
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "G6"
           ],
           "time" : 42,
-          "velocity" : 125
+          "vel" : 125
         },
         {
-          "duration" : 0.5,
+          "dur" : 0.5,
           "pitches" : [
             "G#6"
           ],
           "time" : 42.5,
-          "velocity" : 125
+          "vel" : 125
         },
         {
-          "duration" : 1,
+          "dur" : 1,
           "pitches" : [
             "A6"
           ],
           "time" : 43,
-          "velocity" : 127
+          "vel" : 127
         }
       ],
       "instrument" : "xylophone"
     }
-  ],
-  "version" : 1
+  ]
 }

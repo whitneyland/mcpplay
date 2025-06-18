@@ -22,6 +22,7 @@ struct Util {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm:ss"
         let timeString = formatter.string(from: now) + ".\(Int(now.timeIntervalSince1970.truncatingRemainder(dividingBy: 1) * 10))"
+        
         var msg = "[TIMING] \(timeString) - \(message)"
         print(msg)
         msg += "\n"

@@ -1,0 +1,66 @@
+#!/usr/bin/env zsh
+# scripts/srcclip
+# Combines Swift source files, strips comments, and copies to clipboard
+
+set -euo pipefail
+
+# Configuration
+OUT_DIR="build"
+OUT_FILE="$OUT_DIR/combined.swift"
+SCRIPT_DIR="$(dirname "$0")"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Change to project root
+cd "$PROJECT_ROOT"
+
+# Create output directory
+mkdir -p "$OUT_DIR"
+
+echo "🔍 Finding Swift files..."
+
+# Find and combine Swift files, strip comments
+find . -type f -name '*.swift' \
+    -not -path '*/Pods/*' \
+    -not -path '*/Carthage/*' \
+    -not -path '*/DerivedData/*' \
+    -not -path '*/build/*' \
+    -not -path '*/.build/*' \
+    -print0 \
+| sort -z \
+| xargs -0 cat \
+| sed -E '
+    # Remove single-line comments (// to end of line)
+    s@//.*$@@
+    
+    # Remove multi-line comments /* ... */
+    :a
+    /\/\*/ {
+        /\*\//! {
+            N
+            ba
+        }
+        s@/\*.*\*/@@
+    }
+' \
+| awk '
+    # Only remove completely blank lines
+    /^[[:space:]]*$/ { next }
+    { print }
+' > "$OUT_FILE"
+
+LINE_COUNT=$(wc -l < "$OUT_FILE")
+echo "✅ Combined $(find . -name '*.swift' -not -path '*/Pods/*' -not -path '*/Carthage/*' -not -path '*/DerivedData/*' -not -path '*/build/*' | wc -l) Swift files"
+echo "📄 Wrote $LINE_COUNT lines to $OUT_FILE"
+
+# Copy to clipboard if available
+if command -v pbcopy >/dev/null 2>&1; then
+    cat "$OUT_FILE" | pbcopy
+    echo "📋 Copied to clipboard"
+elif command -v xclip >/dev/null 2>&1; then
+    cat "$OUT_FILE" | xclip -selection clipboard
+    echo "📋 Copied to clipboard"
+else
+    echo "⚠️  Clipboard utility not found (pbcopy/xclip)"
+fi
+
+echo "🎉 Done!"

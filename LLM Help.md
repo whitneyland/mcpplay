@@ -6,7 +6,6 @@ The MCP Play app accepts musical sequences in JSON format. Each sequence defines
 ## Root Structure
 ```json
 {
-  "version": 1,
   "title": "Sequence Title",
   "tempo": 120,
   "tracks": [
@@ -20,7 +19,6 @@ The MCP Play app accepts musical sequences in JSON format. Each sequence defines
 ```
 
 ### Fields:
-- **version** (integer): Format version, currently always `1`
 - **tempo** (number): Beats per minute (e.g., 60, 120, 140)
 - **title** (string, optional): Title of the sequence
 - **instrument** (string): Instrument name (see Available Instruments section below)
@@ -33,16 +31,16 @@ Each event in the `events` array represents notes to play at a specific time:
 {
   "time": 0.0,
   "pitches": [60, 64, 67],
-  "duration": 1.0,
-  "velocity": 100
+  "dur": 1.0,
+  "vel": 100
 }
 ```
 
 ### Fields:
 - **time** (number): When to start playing (in beats from start)
 - **pitches** (array): Notes to play simultaneously
-- **duration** (number): How long to hold the notes (in beats)
-- **velocity** (integer, optional): Volume/intensity (1-127, defaults to 100)
+- **dur** (number): How long to hold the notes (in beats)
+- **vel** (integer, optional): Volume/intensity (1-127, defaults to 100)
 
 ## Pitch Formats
 Pitches can be specified in two ways:
@@ -69,13 +67,12 @@ Pitches can be specified in two ways:
 ### Simple Chord Progression
 ```json
 {
-  "version": 1,
   "tempo": 100,
   "instrument": "acoustic_grand_piano",
   "events": [
-    { "time": 0.0, "pitches": [60, 64, 67], "duration": 1.0 },
-    { "time": 1.0, "pitches": [65, 69, 72], "duration": 1.0 },
-    { "time": 2.0, "pitches": [67, 71, 74], "duration": 1.0 }
+    { "time": 0.0, "pitches": [60, 64, 67], "dur": 1.0 },
+    { "time": 1.0, "pitches": [65, 69, 72], "dur": 1.0 },
+    { "time": 2.0, "pitches": [67, 71, 74], "dur": 1.0 }
   ]
 }
 ```
@@ -83,14 +80,13 @@ Pitches can be specified in two ways:
 ### Melody with Bass
 ```json
 {
-  "version": 1,
   "tempo": 120,
   "instrument": "acoustic_grand_piano",
   "events": [
-    { "time": 0.0, "pitches": ["C2"], "duration": 4.0, "velocity": 60 },
-    { "time": 0.0, "pitches": ["C4"], "duration": 0.5, "velocity": 80 },
-    { "time": 0.5, "pitches": ["D4"], "duration": 0.5, "velocity": 80 },
-    { "time": 1.0, "pitches": ["E4"], "duration": 1.0, "velocity": 80 }
+    { "time": 0.0, "pitches": ["C2"], "dur": 4.0, "vel": 60 },
+    { "time": 0.0, "pitches": ["C4"], "dur": 0.5, "vel": 80 },
+    { "time": 0.5, "pitches": ["D4"], "dur": 0.5, "vel": 80 },
+    { "time": 1.0, "pitches": ["E4"], "dur": 1.0, "vel": 80 }
   ]
 }
 ```
@@ -171,8 +167,8 @@ When using the MCP server, you have access to these tools:
 
 ## Validation Rules
 - All required fields must be present
-- `time` and `duration` must be non-negative numbers
-- `velocity` must be 1-127 if provided
+- `time` and `dur` must be non-negative numbers
+- `vel` must be 1-127 if provided
 - MIDI numbers must be 0-127
 - Note names must follow the format exactly (case-insensitive)
 - Instrument names must match exactly (use `list_instruments` to see valid options)

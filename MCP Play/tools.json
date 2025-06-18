@@ -31,7 +31,7 @@
                 "description": "Array of musical events",
                 "items": {
                   "type": "object",
-                  "required": ["time", "pitches", "duration"],
+                  "required": ["time", "pitches", "dur"],
                   "properties": {
                     "time": {
                       "type": "number",
@@ -47,11 +47,11 @@
                         ]
                       }
                     },
-                    "duration": {
+                    "dur": {
                       "type": "number",
                       "description": "How long to play in beats (1.0 = quarter note at current tempo)"
                     },
-                    "velocity": {
+                    "vel": {
                       "type": "integer",
                       "description": "Volume/intensity 0-127 (optional, defaults to 100)",
                       "minimum": 0,

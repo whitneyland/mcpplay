@@ -93,12 +93,12 @@ class AudioManager: ObservableObject {
                 // Single pipeline: clean, decode, validate, re-encode for display
                 let sequenceData = try processJSONSequence(jsonString)
                 let decodeTime = Date().timeIntervalSince(startTime) * 1000
-                Util.logTiming("JSON processed in \(decodeTime)ms, calling scheduleSequence")
+                Util.logTiming("JSON processed in \(String(format: "%.1f", decodeTime))ms, calling scheduleSequence")
                 
                 // Calculate duration and update UI
                 let beatDuration = 60.0 / sequenceData.tempo
                 let maxEnd = sequenceData.tracks
-                    .flatMap { $0.events.map { $0.time + $0.duration } }
+                    .flatMap { $0.events.map { $0.time + $0.dur } }
                     .max() ?? 0
                 self.sequenceLength = maxEnd * beatDuration
                 self.totalDuration = self.sequenceLength
@@ -176,11 +176,9 @@ class AudioManager: ObservableObject {
             
             for event in track.events {
                 let startTime = event.time * beatDuration
-                let duration = event.duration * beatDuration
-                let velocity = UInt8(event.velocity ?? 100)
-                
-//                Util.logTiming("Event timing: start=\(startTime), duration=\(duration)")
-                
+                let duration = event.dur * beatDuration
+                let velocity = UInt8(event.vel ?? 100)
+
                 for pitch in event.pitches {
                     let midiNote = UInt8(pitch.midiValue)
                     
@@ -208,8 +206,6 @@ class AudioManager: ObservableObject {
                     let stopTimer = DispatchSource.makeTimerSource(queue: .main)
                     stopTimer.schedule(deadline: .now() + .milliseconds(Int((startTime + duration) * 1000)))
                     stopTimer.setEventHandler { [weak self] in
-//                        let actualDelay = CFAbsoluteTimeGetCurrent() - stopScheduleStart
-//                        Util.logTiming("Note \(midiNote) STOP: scheduled=\(scheduledStopTime)s, actual=\(String(format: "%.3f", actualDelay))s, diff=\(String(format: "%.3f", actualDelay - scheduledStopTime))s")
                         guard let self = self, self.isPlaying, self.isSchedulingActive else { return }
                         trackSampler.stopNote(midiNote, onChannel: 0)
                         stopTimer.cancel()
@@ -287,7 +283,7 @@ class AudioManager: ObservableObject {
             var maxEndTime: Double = 0
             for track in sequence.tracks {
                 for event in track.events {
-                    let endTime = event.time + event.duration
+                    let endTime = event.time + event.dur
                     maxEndTime = max(maxEndTime, endTime)
                 }
             }
@@ -356,13 +352,29 @@ class AudioManager: ObservableObject {
         
         // Step 3: Re-encode for clean display (this will use our custom encoder with rounding)
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.outputFormatting = [.prettyPrinted]
         let cleanEncodedData = try encoder.encode(sequenceData)
         
         if let prettyJSONString = String(data: cleanEncodedData, encoding: .utf8) {
-            self.receivedJSON = prettyJSONString
+            self.receivedJSON = compactEventObjects(prettyJSONString)
         }
         
         return sequenceData
-    }    
+    }
+    
+    private func compactEventObjects(_ jsonString: String) -> String {
+        return jsonString
+            .replacing(
+                /"events"\s*:\s*\[(?<body>(?:\s*\{[^}]+\}\s*,?)*)\s*\]/
+            ) { match in
+                let parts = match.body.split(separator: "{", omittingEmptySubsequences: true)
+                let glued = parts
+                    .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } // Skip empty/whitespace parts
+                    .map { "{\($0)".replacing(#/\s+/#, with: " ") }
+                    .joined(separator: "\n        ")
+                
+                return #""events": [\#(glued.isEmpty ? "" : "\n        \(glued)\n      ")]"#
+            }
+    }
+    
 }

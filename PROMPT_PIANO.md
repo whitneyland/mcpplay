@@ -20,8 +20,8 @@ Use this JSON format for your music compositions:
 ### Event Object
 - `time` (required): When to play in beats from start (0.0 = beginning)
 - `pitches` (required): Array of notes - use note names like "C4", "F#3" or MIDI numbers like 60
-- `duration` (required): Length in beats (1.0 = quarter note at current tempo)
-- `velocity` (optional): Volume 0-127 (defaults to 100)
+- `dur` (required): Length in beats (1.0 = quarter note at current tempo)
+- `vel` (optional): Volume 0-127 (defaults to 100)
 
 ### Available Instruments
 **Piano**: acoustic_grand_piano, bright_acoustic_piano, electric_grand_piano, honky_tonk_piano, electric_piano_1, electric_piano_2, harpsichord, clavinet
