@@ -18,6 +18,13 @@ struct MusicSequence: Codable, Sendable {
     enum CodingKeys: String, CodingKey {
         case version, title, tempo, tracks
     }
+    
+    init(version: Int = 1, title: String?, tempo: Double, tracks: [Track]) {
+        self.version = version
+        self.title = title
+        self.tempo = tempo
+        self.tracks = tracks
+    }
 
     // A helper struct for decoding arbitrary string keys, used in our legacy fallback.
     private struct LegacyCodingKeys: CodingKey {
@@ -102,6 +109,13 @@ struct SequenceEvent: Codable, Sendable {
     
     enum CodingKeys: String, CodingKey {
         case time, pitches, duration, velocity
+    }
+    
+    init(time: Double, pitches: [Pitch], duration: Double, velocity: Int? = nil) {
+        self.time = time
+        self.pitches = pitches
+        self.duration = duration
+        self.velocity = velocity
     }
     
     init(from decoder: Decoder) throws {
