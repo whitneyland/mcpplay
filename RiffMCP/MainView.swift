@@ -25,7 +25,7 @@ struct MainView: View {
                     .padding(.bottom, 5)
 
                 if !presetManager.presets.isEmpty {
-                    Picker("Presets", selection: $selectedPresetId) {
+                    Picker("Examples", selection: $selectedPresetId) {
                         ForEach(presetManager.presets, id: \.id) { preset in
                             Text(preset.displayName).tag(preset.id)
                         }

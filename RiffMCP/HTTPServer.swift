@@ -199,6 +199,9 @@ class HTTPServer: ObservableObject {
     }
 
     private func processHTTPRequest(_ data: Data, connection: NWConnection) async {
+        let requestStartTime = Date()
+        Util.logLatency("🌐", "HTTP request received")
+        
         guard let httpString = String(data: data, encoding: .utf8) else {
             await sendHTTPResponse(connection: connection, statusCode: 400, body: "Bad Request")
             return
@@ -215,6 +218,8 @@ class HTTPServer: ObservableObject {
         }
 
         let (method, path, body) = (components[0], components[1], String(httpString[bodyStartIndex...]))
+        
+        Util.logLatency("🚦", "Request routing - \(method) \(path)", since: requestStartTime)
 
         switch (method, path) {
         case ("POST", "/"): await handleJSONRPC(body: body, connection: connection)
@@ -227,10 +232,15 @@ class HTTPServer: ObservableObject {
     // MARK: - JSON-RPC Handler
 
     private func handleJSONRPC(body: String, connection: NWConnection) async {
+        let jsonRpcStartTime = Date()
+        Util.logLatency("📄", "JSON-RPC processing started")
+        
         do {
             guard let bodyData = body.data(using: .utf8) else { throw JSONRPCError.parseError }
             let request = try JSONDecoder().decode(JSONRPCRequest.self, from: bodyData)
             guard request.jsonrpc == "2.0" else { throw JSONRPCError.invalidRequest }
+            
+            Util.logLatency("🔍", "JSON-RPC parsed - method: \(request.method)", since: jsonRpcStartTime)
 
             let response: JSONRPCResponse
             switch request.method {
@@ -263,9 +273,14 @@ class HTTPServer: ObservableObject {
     }
 
     private func handleToolCall(_ request: JSONRPCRequest) async throws -> JSONRPCResponse {
+        let toolCallStartTime = Date()
+        Util.logLatency("🔧", "Tool call processing started")
+        
         guard let params = request.params, let toolName = params.objectValue?["name"]?.stringValue else {
             return JSONRPCResponse(error: .invalidParams, id: request.id)
         }
+        
+        Util.logLatency("🎯", "Tool identified: \(toolName)", since: toolCallStartTime)
 
         do {
             let result: MCPResult
@@ -276,7 +291,9 @@ class HTTPServer: ObservableObject {
 
             switch toolName {
             case "play_sequence":
+                let sequenceDecodeStart = Date()
                 let sequence = try decoder.decode(MusicSequence.self, from: data)
+                Util.logLatency("🎼", "Sequence decoded", since: sequenceDecodeStart)
                 result = try await handlePlaySequence(sequence: sequence)
             case "stop":
                 result = handleStop()
@@ -297,10 +314,15 @@ class HTTPServer: ObservableObject {
     // MARK: - Tool Implementations
 
     private func handlePlaySequence(sequence: MusicSequence) async throws -> MCPResult {
+        let playSequenceStartTime = Date()
+        Util.logLatency("🎵", "handlePlaySequence started")
+        
         let validInstruments = Instruments.getInstrumentNames()
         for track in sequence.tracks where !validInstruments.contains(track.instrument) {
             throw JSONRPCError.serverError("Invalid instrument \"\(track.instrument)\". Check the instrument enum in the schema for valid options.")
         }
+        
+        Util.logLatency("✅", "Instrument validation completed", since: playSequenceStartTime)
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted]
@@ -308,6 +330,10 @@ class HTTPServer: ObservableObject {
         guard let jsonString = String(data: jsonData, encoding: .utf8) else {
             throw JSONRPCError.serverError("Failed to serialize sequence for audio manager.")
         }
+        
+        Util.logLatency("📝", "Sequence serialized")
+        
+        Util.logLatency("🎶", "Calling AudioManager.playSequenceFromJSON")
         audioManager.playSequenceFromJSON(jsonString)
 
         let totalEvents = sequence.tracks.reduce(0) { $0 + $1.events.count }

@@ -15,9 +15,8 @@ enum PlaybackState {
     case stopped
 }
 
-// By annotating the entire class with @MainActor, we guarantee that all of its
-// properties and methods are accessed on the main thread. This makes the class
-// safe to use in a concurrent environment.
+// @MainActor guarantees all properties and methods are accessed on the main thread.
+// This makes the class safe to use in a concurrent environment.
 @MainActor
 class AudioManager: ObservableObject {
     // MARK: - Published Properties
@@ -64,7 +63,7 @@ class AudioManager: ObservableObject {
     }
     
     private func loadSoundFont() {
-        guard let soundFontURL = Bundle.main.url(forResource: "90_sNutz_GM", withExtension: "sf2") else {
+        guard let soundFontURL = Bundle.main.url(forResource: "instruments", withExtension: "sf2") else {
             lastError = "Could not find soundfont file"
             return
         }
@@ -80,7 +79,6 @@ class AudioManager: ObservableObject {
         let startTime = Date()
         Util.logTiming("AudioManager.playSequenceFromJSON started")
 
-        // This method is now on the Main Actor. We can safely stop the current sequence.
         stopSequence()
         
         // Set loading state immediately
@@ -114,7 +112,7 @@ class AudioManager: ObservableObject {
                 self.startElapsedTimeUpdates()
                 
                 // CLEAN START EVENT: Everything is ready, start playback
-                print("🎵 AudioManager: Setting playbackState to .playing with totalDuration=\(self.totalDuration)")
+                Util.logLatency("🎶", "AudioManager: Setting playbackState to .playing")
                 self.playbackState = .playing
 
             } catch {
@@ -145,7 +143,7 @@ class AudioManager: ObservableObject {
         trackSamplers.removeAll()
         
         // Create and setup samplers for each track
-        guard let soundFontURL = Bundle.main.url(forResource: "90_sNutz_GM", withExtension: "sf2") else {
+        guard let soundFontURL = Bundle.main.url(forResource: "instruments", withExtension: "sf2") else {
             lastError = "Could not find soundfont file for tracks"
             return
         }
@@ -192,17 +190,14 @@ class AudioManager: ObservableObject {
                     startTimer.setEventHandler { [weak self] in
                         let actualDelay = CFAbsoluteTimeGetCurrent() - scheduleStart
                         Util.logTiming("Note \(midiNote) START: scheduled=\(scheduledTime)s, actual=\(String(format: "%.3f", actualDelay))s, diff=\(String(format: "%.3f", actualDelay - scheduledTime))s")
+                        Util.logLatency("🎵", "FIRST AUDIO: Note \(midiNote) playing")
                         guard let self = self, self.isPlaying, self.isSchedulingActive else { return }
                         trackSampler.startNote(midiNote, withVelocity: velocity, onChannel: 0)
                         startTimer.cancel()
                     }
                     startTimer.resume()
                     noteTimers.append(startTimer)
-                    
-                    // Note stop timer
-//                    let scheduledStopTime = startTime + duration
-//                    let stopScheduleStart = CFAbsoluteTimeGetCurrent()
-                    
+
                     let stopTimer = DispatchSource.makeTimerSource(queue: .main)
                     stopTimer.schedule(deadline: .now() + .milliseconds(Int((startTime + duration) * 1000)))
                     stopTimer.setEventHandler { [weak self] in
@@ -297,7 +292,7 @@ class AudioManager: ObservableObject {
         }
     }
 
-    // MARK: - Elapsed Time Updates (Progress bar handled by SwiftUI animation)
+    // MARK: - Elapsed Time Updates
 
     private func startElapsedTimeUpdates() {
         // Cancel any existing task to ensure we only have one running.
