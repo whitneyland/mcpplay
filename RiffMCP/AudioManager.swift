@@ -56,23 +56,22 @@ class AudioManager: ObservableObject {
 
         do {
             try audioEngine.start()
-            loadSoundFont()
+            guard let soundFontURL = loadSoundFont() else {
+                lastError = "Could not find soundfont file"
+                return
+            }
+            do {
+                try sampler.loadSoundBankInstrument(at: soundFontURL, program: 0, bankMSB: 0x79, bankLSB: 0)
+            } catch {
+                lastError = "Failed to load soundfont: \(error.localizedDescription)"
+            }
         } catch {
             lastError = "Failed to start audio engine: \(error.localizedDescription)"
         }
     }
     
-    private func loadSoundFont() {
-        guard let soundFontURL = Bundle.main.url(forResource: "instruments", withExtension: "sf2") else {
-            lastError = "Could not find soundfont file"
-            return
-        }
-        
-        do {
-            try sampler.loadSoundBankInstrument(at: soundFontURL, program: 0, bankMSB: 0x79, bankLSB: 0)
-        } catch {
-            lastError = "Failed to load soundfont: \(error.localizedDescription)"
-        }
+    private func loadSoundFont() -> URL? {
+        return Bundle.main.url(forResource: "FluidR3_GM", withExtension: "sf2")
     }
 
     func playSequenceFromJSON(_ jsonString: String) {
@@ -143,7 +142,7 @@ class AudioManager: ObservableObject {
         trackSamplers.removeAll()
         
         // Create and setup samplers for each track
-        guard let soundFontURL = Bundle.main.url(forResource: "instruments", withExtension: "sf2") else {
+        guard let soundFontURL = loadSoundFont() else {
             lastError = "Could not find soundfont file for tracks"
             return
         }

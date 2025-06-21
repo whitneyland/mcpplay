@@ -107,3 +107,7 @@ CLAUDE.md
 # Temporary files
 *.tmp
 temp_sequence_*.json
+
+# Soundfonts - too large for git
+*.sf2
+*.SF2
