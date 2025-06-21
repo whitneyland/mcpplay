@@ -1,17 +1,21 @@
 #!/usr/bin/env zsh
-# scripts/srcclip
 # Combines Swift source files, strips comments, and copies to clipboard
 
 set -euo pipefail
 
+# Find the Git project root
+PROJECT_ROOT=$(git -C "$PWD" rev-parse --show-toplevel 2>/dev/null)
+if [[ -z "$PROJECT_ROOT" ]]; then
+  echo "❌ Not inside a Git repo. Aborting."
+  exit 1
+fi
+
+cd "$PROJECT_ROOT"
+echo "📁 Using project root: $PROJECT_ROOT"
+
 # Configuration
 OUT_DIR="build"
 OUT_FILE="$OUT_DIR/combined.swift"
-SCRIPT_DIR="$(dirname "$0")"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-
-# Change to project root
-cd "$PROJECT_ROOT"
 
 # Create output directory
 mkdir -p "$OUT_DIR"
@@ -19,40 +23,51 @@ mkdir -p "$OUT_DIR"
 echo "🔍 Finding Swift files..."
 
 # Find and combine Swift files, strip comments
-find . -type f -name '*.swift' \
+{
+    find . -type f -name '*.swift' \
+        -not -path '*/Pods/*' \
+        -not -path '*/Carthage/*' \
+        -not -path '*/DerivedData/*' \
+        -not -path '*/build/*' \
+        -not -path '*/.build/*' \
+        -print0 \
+    | sort -z \
+    | while IFS= read -r -d '' file; do
+        echo "// $file"
+        cat "$file" | sed -E '
+            # Remove single-line comments
+            s@//.*$@@
+
+            # Remove multi-line comments
+            :a
+            /\/\*/ {
+                /\*\//! {
+                    N
+                    ba
+                }
+                s@/\*.*\*/@@
+            }
+        ' | awk '
+            /^[[:space:]]*$/ { next }
+            { print }
+        '
+        echo ""
+    done
+} > "$OUT_FILE"
+
+LINE_COUNT=$(wc -l < "$OUT_FILE")
+FILE_COUNT=$(find . -type f -name '*.swift' \
     -not -path '*/Pods/*' \
     -not -path '*/Carthage/*' \
     -not -path '*/DerivedData/*' \
     -not -path '*/build/*' \
     -not -path '*/.build/*' \
-    -print0 \
-| sort -z \
-| xargs -0 cat \
-| sed -E '
-    # Remove single-line comments (// to end of line)
-    s@//.*$@@
-    
-    # Remove multi-line comments /* ... */
-    :a
-    /\/\*/ {
-        /\*\//! {
-            N
-            ba
-        }
-        s@/\*.*\*/@@
-    }
-' \
-| awk '
-    # Only remove completely blank lines
-    /^[[:space:]]*$/ { next }
-    { print }
-' > "$OUT_FILE"
+    | wc -l)
 
-LINE_COUNT=$(wc -l < "$OUT_FILE")
-echo "✅ Combined $(find . -name '*.swift' -not -path '*/Pods/*' -not -path '*/Carthage/*' -not -path '*/DerivedData/*' -not -path '*/build/*' | wc -l) Swift files"
+echo "✅ Combined $FILE_COUNT Swift files"
 echo "📄 Wrote $LINE_COUNT lines to $OUT_FILE"
 
-# Copy to clipboard if available
+# Copy to clipboard
 if command -v pbcopy >/dev/null 2>&1; then
     cat "$OUT_FILE" | pbcopy
     echo "📋 Copied to clipboard"
