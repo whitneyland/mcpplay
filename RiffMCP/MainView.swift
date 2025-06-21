@@ -61,7 +61,7 @@ struct MainView: View {
                     Spacer()
                     
                     Text("\(Util.formatTime(audioManager.elapsedTime)) / \(Util.formatTime(audioManager.totalDuration))")
-                        .font(.caption.monospaced())
+                        .font(.body.monospaced())
                         .foregroundColor(.secondary)
                 }
                 .padding(.top,5)
