@@ -383,9 +383,17 @@ private extension MEIConverter {
         var staffCount = 0
 
         for (i, track) in tracks.enumerated() {
-            let instrumentName = track.instrument ?? "acoustic_grand_piano"
-            guard let midiProgram = MEIConstants.instrumentToMidiProgram[instrumentName] else {
-                throw ConversionError.unknownInstrument(instrumentName)
+            let requestedInstrument = track.instrument ?? "acoustic_grand_piano"
+            let instrumentName: String
+            let midiProgram: Int
+            
+            if let program = MEIConstants.instrumentToMidiProgram[requestedInstrument] {
+                instrumentName = requestedInstrument
+                midiProgram = program
+            } else {
+                // Default to piano for unrecognized instruments
+                instrumentName = "acoustic_grand_piano"
+                midiProgram = MEIConstants.instrumentToMidiProgram[instrumentName]!
             }
 
             if MEIConstants.pianoInstrumentNames.contains(instrumentName) {
