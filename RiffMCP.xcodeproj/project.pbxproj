@@ -8,14 +8,15 @@
 
 /* Begin PBXBuildFile section */
 		9BA506E62E01DB8E000EFB3E /* examples in Resources */ = {isa = PBXBuildFile; fileRef = 9BA506E52E01DB8E000EFB3E /* examples */; };
-		9BA506EB2E01DC00000EFB3E /* libverovio.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BA506EC2E01DC00000EFB3E /* libverovio.a */; };
+		9BA506EB2E01DC00000EFB3E /* lib/libverovio.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BA506EC2E01DC00000EFB3E /* lib/libverovio.a */; };
 		9BAECE312E0F04620054DBE2 /* CREDITS.md in Resources */ = {isa = PBXBuildFile; fileRef = 9BAECE302E0F04620054DBE2 /* CREDITS.md */; };
+		9BAECF222E0F07880054DBE2 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 9BA506F22E01DE00000EFB3E /* MarkdownUI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		9B5BB77E2DF4AF03003EC64C /* RiffMCP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RiffMCP.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9BA506E52E01DB8E000EFB3E /* examples */ = {isa = PBXFileReference; lastKnownFileType = folder; path = examples; sourceTree = "<group>"; };
-		9BA506EC2E01DC00000EFB3E /* libverovio.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = lib/libverovio.a; sourceTree = "<group>"; };
+		9BA506EC2E01DC00000EFB3E /* lib/libverovio.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = lib/libverovio.a; sourceTree = "<group>"; };
 		9BAECE302E0F04620054DBE2 /* CREDITS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CREDITS.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -32,7 +33,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9BA506EB2E01DC00000EFB3E /* libverovio.a in Frameworks */,
+				9BAECF222E0F07880054DBE2 /* MarkdownUI in Frameworks */,
+				9BA506EB2E01DC00000EFB3E /* lib/libverovio.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -61,7 +63,7 @@
 		9BA506EE2E01DC10000EFB3E /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				9BA506EC2E01DC00000EFB3E /* libverovio.a */,
+				9BA506EC2E01DC00000EFB3E /* lib/libverovio.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -87,6 +89,7 @@
 			);
 			name = RiffMCP;
 			packageProductDependencies = (
+				9BA506F22E01DE00000EFB3E /* MarkdownUI */,
 			);
 			productName = RiffMCP;
 			productReference = 9B5BB77E2DF4AF03003EC64C /* RiffMCP.app */;
@@ -117,6 +120,7 @@
 			mainGroup = 9B5BB7752DF4AF03003EC64C;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				9BA506F12E01DE00000EFB3E /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9B5BB77F2DF4AF03003EC64C /* Products */;
@@ -392,6 +396,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		9BA506F12E01DE00000EFB3E /* XCRemoteSwiftPackageReference "swift-markdown-ui" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gonzalezreal/swift-markdown-ui";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		9BA506F22E01DE00000EFB3E /* MarkdownUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9BA506F12E01DE00000EFB3E /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
+			productName = MarkdownUI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 9B5BB7762DF4AF03003EC64C /* Project object */;
 }

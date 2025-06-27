@@ -8,7 +8,6 @@
 import SwiftUI
 import Foundation
 
-
 @main
 struct RiffMCPApp: App {
     @StateObject private var audioManager = AudioManager()
@@ -31,6 +30,9 @@ struct RiffMCPApp: App {
                     await startHTTPServer()
                 }
         }
+        .commands {
+            AboutCommands()
+        }
     }
     
     private func validateVerovioIntegration() {
@@ -48,6 +50,22 @@ struct RiffMCPApp: App {
             try await httpServer.start()
         } catch {
             print("❌ Failed to start HTTP server: \(error)")
+        }
+    }
+}
+
+struct AboutCommands: Commands {
+    var body: some Commands {
+        CommandGroup(replacing: .appInfo) {
+            Button("About RiffMCP") {
+                if let window = NSApplication.shared.windows.first {
+                    let aboutView = AboutView()
+                    let hostingController = NSHostingController(rootView: aboutView)
+                    let aboutWindow = NSWindow(contentViewController: hostingController)
+                    aboutWindow.title = "About RiffMCP"
+                    window.beginSheet(aboutWindow, completionHandler: nil)
+                }
+            }
         }
     }
 }
