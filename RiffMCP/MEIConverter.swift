@@ -487,7 +487,8 @@ private enum MEIConstants {
         "tenor_sax": treble, "baritone_sax": treble, "trumpet": treble,
         "trombone": bass, "tuba": bass, "muted_trumpet": treble, "french_horn": treble,
         "acoustic_guitar_nylon": treble, "acoustic_guitar_steel": treble,
-        "acoustic_bass": bass, "electric_bass_finger": bass, "electric_bass_pick": bass
+        "acoustic_bass": bass, "electric_bass_finger": bass, "electric_bass_pick": bass,
+        "timpani": bass
     ]
 
     static let instrumentToMidiProgram: [String: Int] = [
@@ -499,7 +500,7 @@ private enum MEIConstants {
         "electric_guitar_clean": 28, "electric_guitar_muted": 29, "overdriven_guitar": 30,
         "distortion_guitar": 31, "acoustic_bass": 33, "electric_bass_finger": 34, "electric_bass_pick": 35,
         "fretless_bass": 36, "slap_bass_1": 37, "slap_bass_2": 38, "violin": 41, "viola": 42, "cello": 43,
-        "contrabass": 44, "tremolo_strings": 45, "pizzicato_strings": 46, "orchestral_harp": 47,
+        "contrabass": 44, "tremolo_strings": 45, "pizzicato_strings": 46, "orchestral_harp": 47, "timpani": 48,
         "string_ensemble_1": 49, "string_ensemble_2": 50, "choir_aahs": 53, "voice_oohs": 54, "trumpet": 57,
         "trombone": 58, "tuba": 59, "muted_trumpet": 60, "french_horn": 61, "brass_section": 62,
         "soprano_sax": 65, "alto_sax": 66, "tenor_sax": 67, "baritone_sax": 68, "oboe": 69, "bassoon": 71,
