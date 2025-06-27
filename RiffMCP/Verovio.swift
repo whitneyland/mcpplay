@@ -26,6 +26,7 @@ class Verovio {
     }
     
     static func svgFromMEI(_ meiXML: String, pageWidth: Int = 1700, pageHeight: Int = 2200) -> String? {
+
         // TODO: Don't use hardcoded path for Verovio resources
         let resourcePath = "/Users/lee/verovio-resources/data"
         print("Using path:", resourcePath, FileManager.default.fileExists(atPath: resourcePath))
@@ -41,9 +42,9 @@ class Verovio {
         if !success {
             print("Warning: Failed to set resource path explicitly")
         }
-        
         print("Created Verovio toolkit with resource path: \(resourcePath)")
-        
+
+
         // Set options for better rendering with explicit font configuration
         let options = """
         {
