@@ -8,28 +8,15 @@
 
 /* Begin PBXBuildFile section */
 		9BA506E62E01DB8E000EFB3E /* examples in Resources */ = {isa = PBXBuildFile; fileRef = 9BA506E52E01DB8E000EFB3E /* examples */; };
-		9BA506EB2E01DC00000EFB3E /* VerovioMacOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BA506EC2E01DC00000EFB3E /* VerovioMacOS.framework */; };
-		9BA506ED2E01DC00000EFB3E /* VerovioMacOS.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9BA506EC2E01DC00000EFB3E /* VerovioMacOS.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		9BA506EB2E01DC00000EFB3E /* libverovio.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BA506EC2E01DC00000EFB3E /* libverovio.a */; };
+		9BAECE312E0F04620054DBE2 /* CREDITS.md in Resources */ = {isa = PBXBuildFile; fileRef = 9BAECE302E0F04620054DBE2 /* CREDITS.md */; };
 /* End PBXBuildFile section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		9BA506EF2E01DC20000EFB3E /* Embed Frameworks */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 10;
-			files = (
-				9BA506ED2E01DC00000EFB3E /* VerovioMacOS.framework in Embed Frameworks */,
-			);
-			name = "Embed Frameworks";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		9B5BB77E2DF4AF03003EC64C /* RiffMCP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RiffMCP.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9BA506E52E01DB8E000EFB3E /* examples */ = {isa = PBXFileReference; lastKnownFileType = folder; path = examples; sourceTree = "<group>"; };
-		9BA506EC2E01DC00000EFB3E /* VerovioMacOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = VerovioMacOS.framework; sourceTree = "<group>"; };
+		9BA506EC2E01DC00000EFB3E /* libverovio.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = lib/libverovio.a; sourceTree = "<group>"; };
+		9BAECE302E0F04620054DBE2 /* CREDITS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CREDITS.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -45,7 +32,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9BA506EB2E01DC00000EFB3E /* VerovioMacOS.framework in Frameworks */,
+				9BA506EB2E01DC00000EFB3E /* libverovio.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -55,6 +42,7 @@
 		9B5BB7752DF4AF03003EC64C = {
 			isa = PBXGroup;
 			children = (
+				9BAECE302E0F04620054DBE2 /* CREDITS.md */,
 				9BA506E52E01DB8E000EFB3E /* examples */,
 				9B5BB7802DF4AF03003EC64C /* RiffMCP */,
 				9B5BB77F2DF4AF03003EC64C /* Products */,
@@ -73,7 +61,7 @@
 		9BA506EE2E01DC10000EFB3E /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				9BA506EC2E01DC00000EFB3E /* VerovioMacOS.framework */,
+				9BA506EC2E01DC00000EFB3E /* libverovio.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -88,7 +76,7 @@
 				9B5BB77A2DF4AF03003EC64C /* Sources */,
 				9B5BB77B2DF4AF03003EC64C /* Frameworks */,
 				9B5BB77C2DF4AF03003EC64C /* Resources */,
-				9BA506EF2E01DC20000EFB3E /* Embed Frameworks */,
+				9BA506F02E01DD00000EFB3E /* Strip Debug Symbols */,
 			);
 			buildRules = (
 			);
@@ -145,11 +133,33 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9BAECE312E0F04620054DBE2 /* CREDITS.md in Resources */,
 				9BA506E62E01DB8E000EFB3E /* examples in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		9BA506F02E01DD00000EFB3E /* Strip Debug Symbols */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Strip Debug Symbols";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ -f \"${PROJECT_DIR}/lib/libverovio.a\" ]; then\n    echo \"Stripping debug symbols from lib/libverovio.a...\"\n    # Clear extended attributes that may prevent stripping\n    xattr -c \"${PROJECT_DIR}/lib/libverovio.a\" 2>/dev/null || true\n    # Strip debug symbols\n    strip -S \"${PROJECT_DIR}/lib/libverovio.a\" 2>/dev/null || true\n    echo \"Library size after stripping: $(ls -lh ${PROJECT_DIR}/lib/libverovio.a | awk '{print $5}')\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		9B5BB77A2DF4AF03003EC64C /* Sources */ = {
@@ -306,11 +316,17 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/lib",
+				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = "-lc++";
 				PRODUCT_BUNDLE_IDENTIFIER = com.whitneyland.RiffMCP;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "RiffMCP/RiffMCP-Bridging-Header.h";
 				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
@@ -339,11 +355,17 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/lib",
+				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = "-lc++";
 				PRODUCT_BUNDLE_IDENTIFIER = com.whitneyland.RiffMCP;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "RiffMCP/RiffMCP-Bridging-Header.h";
 				SWIFT_VERSION = 6.0;
 			};
 			name = Release;

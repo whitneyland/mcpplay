@@ -1,5 +1,4 @@
 import Foundation
-import VerovioMacOS
 import AppKit
 
 class Verovio {
