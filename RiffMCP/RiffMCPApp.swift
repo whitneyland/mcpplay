@@ -26,12 +26,20 @@ struct RiffMCPApp: App {
             MainView()
                 .environmentObject(audioManager)
                 .environmentObject(httpServer)
-                .onOpenURL { url in
-                    handleURL(url)
-                }
                 .task {
+                    validateVerovioIntegration()
                     await startHTTPServer()
                 }
+        }
+    }
+    
+    private func validateVerovioIntegration() {
+        print("🎼 Testing Verovio integration...")
+        let success = Verovio.validateVerovioIntegration()
+        if success {
+            print("✅ Verovio library successfully integrated!")
+        } else {
+            print("❌ Verovio integration test failed")
         }
     }
     
@@ -40,52 +48,6 @@ struct RiffMCPApp: App {
             try await httpServer.start()
         } catch {
             print("❌ Failed to start HTTP server: \(error)")
-        }
-    }
-
-    private func handleURL(_ url: URL) {
-        let startTime = Date()
-        Util.logTiming("---- handleURL started")
-
-        print("🔗 handleURL called with: \(url)")
-        guard url.scheme == "riffmcp" else {
-            print("❌ Invalid scheme: \(url.scheme ?? "nil")")
-            return
-        }
-
-        let command = url.host ?? ""
-        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-        print("📱 Command: \(command)")
-        print("🔍 Query items: \(components?.queryItems ?? [])")
-
-        switch command {
-        case "play":
-            if let raw = components?
-                .queryItems?
-                .first(where: { $0.name == "json" })?
-                .value {
-
-                // 🚿 1. strip literal newlines / spaces users may paste in
-                let tidyEncoded = raw
-                    .components(separatedBy: .whitespacesAndNewlines)
-                    .joined()
-
-                // 🔓 2. decode the % sequences (one pass is enough after cleaning)
-                guard let tidyJSON = tidyEncoded.removingPercentEncoding else {
-                    print("❌ JSON payload couldn’t be percent-decoded")
-                    return
-                }
-                print("🎵 Final JSON ready to parse -> \(tidyJSON)")
-                Util.logTiming("About to call playSequenceFromJSON at \(Date().timeIntervalSince(startTime) * 1000)ms")
-                audioManager.playSequenceFromJSON(tidyJSON)
-            } else {
-                print("❌ No valid JSON parameter found")
-            }
-        case "stop":
-            print("⏹️ Stopping playback")
-            audioManager.stopSequence()
-        default:
-            print("❌ Unknown command: \(command)")
         }
     }
 }

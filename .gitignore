@@ -110,4 +110,6 @@ temp_sequence_*.json
 
 # Soundfonts - too large for git
 *.sf2
-*.SF2
+*.SF2verovio/
+
+verovio

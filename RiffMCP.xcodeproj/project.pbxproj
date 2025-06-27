@@ -8,11 +8,28 @@
 
 /* Begin PBXBuildFile section */
 		9BA506E62E01DB8E000EFB3E /* examples in Resources */ = {isa = PBXBuildFile; fileRef = 9BA506E52E01DB8E000EFB3E /* examples */; };
+		9BA506EB2E01DC00000EFB3E /* VerovioMacOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BA506EC2E01DC00000EFB3E /* VerovioMacOS.framework */; };
+		9BA506ED2E01DC00000EFB3E /* VerovioMacOS.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9BA506EC2E01DC00000EFB3E /* VerovioMacOS.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		9BA506EF2E01DC20000EFB3E /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				9BA506ED2E01DC00000EFB3E /* VerovioMacOS.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		9B5BB77E2DF4AF03003EC64C /* RiffMCP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RiffMCP.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9BA506E52E01DB8E000EFB3E /* examples */ = {isa = PBXFileReference; lastKnownFileType = folder; path = examples; sourceTree = "<group>"; };
+		9BA506EC2E01DC00000EFB3E /* VerovioMacOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = VerovioMacOS.framework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -28,6 +45,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9BA506EB2E01DC00000EFB3E /* VerovioMacOS.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -40,6 +58,7 @@
 				9BA506E52E01DB8E000EFB3E /* examples */,
 				9B5BB7802DF4AF03003EC64C /* RiffMCP */,
 				9B5BB77F2DF4AF03003EC64C /* Products */,
+				9BA506EE2E01DC10000EFB3E /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -49,6 +68,14 @@
 				9B5BB77E2DF4AF03003EC64C /* RiffMCP.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		9BA506EE2E01DC10000EFB3E /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				9BA506EC2E01DC00000EFB3E /* VerovioMacOS.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -61,6 +88,7 @@
 				9B5BB77A2DF4AF03003EC64C /* Sources */,
 				9B5BB77B2DF4AF03003EC64C /* Frameworks */,
 				9B5BB77C2DF4AF03003EC64C /* Resources */,
+				9BA506EF2E01DC20000EFB3E /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -266,6 +294,10 @@
 				DEVELOPMENT_TEAM = XVCKDWA745;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)",
+				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "RiffMCP-Info.plist";
 				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleURLName = \"RiffMCP URL Scheme\";\n    CFBundleURLSchemes =     (\n        riffmcp\n    );\n}";
@@ -295,6 +327,10 @@
 				DEVELOPMENT_TEAM = XVCKDWA745;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)",
+				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "RiffMCP-Info.plist";
 				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleURLName = \"RiffMCP URL Scheme\";\n    CFBundleURLSchemes =     (\n        riffmcp\n    );\n}";

@@ -15,6 +15,7 @@ struct MainView: View {
     @State private var jsonInput = ""
     @State private var animatedElapsedTime: Double = 0.0
     @State private var currentSequence: MusicSequence?
+    @State private var notationSVG: String?
 
     var body: some View {
         VSplitView {
@@ -70,12 +71,33 @@ struct MainView: View {
 
             // Bottom section with Piano Roll
             VStack {
-                PianoRoll(
-                    sequence: currentSequence,
-                    animatedElapsedTime: animatedElapsedTime,
-                    totalDuration: audioManager.totalDuration
-                )
-                .frame(minHeight: 100)
+                HStack {
+                    PianoRoll(
+                        sequence: currentSequence,
+                        animatedElapsedTime: animatedElapsedTime,
+                        totalDuration: audioManager.totalDuration
+                    )
+                    
+                    // Verovio notation display
+                    VStack {
+                        Text("Musical Notation")
+                            .font(.headline)
+                            .padding(.bottom, 4)
+                        if let notationSVG = notationSVG {
+                            SVGImageView(svgString: notationSVG)
+                                .aspectRatio(contentMode: .fit)
+                                .border(Color.gray.opacity(0.3), width: 1)
+                        } else {
+                            Rectangle()
+                                .fill(Color.gray.opacity(0.1))
+                                .overlay(
+                                    Text("No notation")
+                                        .foregroundColor(.secondary)
+                                )
+                                .border(Color.gray.opacity(0.3), width: 1)
+                        }
+                    }
+                }
             }
             .padding()
         }
@@ -123,6 +145,7 @@ struct MainView: View {
     private func updateCurrentSequence() {
         guard !jsonInput.isEmpty else {
             currentSequence = nil
+            notationSVG = nil
             return
         }
         
@@ -130,8 +153,42 @@ struct MainView: View {
             let cleanedJSON = Util.cleanJSON(from: jsonInput)
             guard let data = cleanedJSON.data(using: .utf8) else { return }
             currentSequence = try JSONDecoder().decode(MusicSequence.self, from: data)
+            
+            updateNotationImage()
         } catch {
             currentSequence = nil
+            notationSVG = nil
+        }
+    }
+    
+    private func updateNotationImage() {
+        guard let currentSequence = currentSequence else {
+            print("No current sequence available, using fallback notation")
+            let svg = Verovio.svgFromSimpleTestXml()
+            notationSVG = svg
+            return
+        }
+        
+        print("Updating notation for sequence with \(currentSequence.tracks.count) tracks")
+        
+        do {
+            // Convert current sequence to JSON
+            let sequenceData = try JSONEncoder().encode(currentSequence)
+            print("Encoded sequence data: \(sequenceData.count) bytes")
+            
+            // Convert JSON to MEI XML
+            let meiXML = try MEIConverter.convert(from: sequenceData)
+            print("Generated MEI XML: \(meiXML.count) characters")
+            
+            // Generate SVG from MEI
+            let svg = Verovio.svgFromMEI(meiXML)
+            notationSVG = svg
+            print("Generated SVG notation successfully")
+        } catch {
+            print("Error converting sequence to notation: \(error)")
+            // Fall back to simple test notation
+            let svg = Verovio.svgFromSimpleTestXml()
+            notationSVG = svg
         }
     }    
 }
