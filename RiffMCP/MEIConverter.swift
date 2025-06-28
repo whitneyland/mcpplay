@@ -98,18 +98,32 @@ private extension MEIConverter {
 
     static func buildScoreDef(processedTracks: [ProcessedTrack]) throws -> XMLElement {
         let scoreDef = XMLElement(name: "scoreDef")
-
         scoreDef.addChild(makeAttributeElement("meterSig",
                                                attributes: ["count": "4", "unit": "4"]))
         scoreDef.addChild(makeAttributeElement("keySig",
                                                attributes: ["sig": "0", "pname": "c"]))
 
+        // ✨ NEW: How many distinct instruments are there?
+        let uniqueInstruments = Set(processedTracks.map { $0.instrumentName })
+        let hasMultipleInstruments = uniqueInstruments.count > 1
+        let singleInstrumentIsPiano =
+            uniqueInstruments.count == 1 &&
+            MEIConstants.pianoInstrumentNames.contains(uniqueInstruments.first!)
+
+        // decide if we show labels
+        let showLabels = hasMultipleInstruments || !singleInstrumentIsPiano
+
         let staffGrp = XMLElement(name: "staffGrp")
+        if hasMultipleInstruments {                         // ✨ NEW
+            staffGrp.addAttribute(att("symbol", "bracket"))
+        }
+
         var currentPianoGroup: XMLElement?
         var currentTrackIndex = -1
 
         for processedTrack in processedTracks {
-            let staffDef = buildStaffDef(for: processedTrack)
+            let staffDef = buildStaffDef(for: processedTrack,
+                                         showLabel: showLabels)
 
             if isPiano(processedTrack) {
                 if processedTrack.originalTrackIndex != currentTrackIndex {
@@ -133,11 +147,19 @@ private extension MEIConverter {
         return scoreDef
     }
 
-    static func buildStaffDef(for processedTrack: ProcessedTrack) -> XMLElement {
+    static func buildStaffDef(for processedTrack: ProcessedTrack,
+                              showLabel: Bool) -> XMLElement {
+
         let staffDef = XMLElement(name: "staffDef")
         staffDef.addAttribute(att("n", "\(processedTrack.staffIndex)"))
         staffDef.addAttribute(att("lines", "5"))
-        staffDef.addAttribute(att("label", processedTrack.label))
+        staffDef.addAttribute(att("label", processedTrack.label))   // harmless if blank
+
+        if showLabel && !processedTrack.label.isEmpty {
+            let labelElt = XMLElement(name: "label",
+                                      stringValue: processedTrack.label)
+            staffDef.addChild(labelElt)
+        }
 
         let instrDef = makeAttributeElement("instrDef",
                                             attributes: ["midi.instrnum": "\(processedTrack.midiProgram)"])
