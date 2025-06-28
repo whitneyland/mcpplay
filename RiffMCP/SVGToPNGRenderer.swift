@@ -3,21 +3,45 @@ import WebKit
 import AppKit
 import SwiftUI
 
-
+// Headless SVG rendering that we can use to serve images without UI
 struct SVGToPNGRenderer: NSViewRepresentable {
     let svgString: String
     @Binding var pngImage: NSImage?
-    let renderSize: CGSize
-    static var count = 0
+    let renderSize: CGSize                // concrete size chosen once
 
-    init(_ svgString: String, _ pngImage: Binding<NSImage?>, _ width: CGFloat = 2200, _ height: CGFloat = 1700) {
-        self.svgString = svgString
-        self._pngImage = pngImage
-        self.renderSize = CGSize(width: width, height: height)
+    /// Init: caller size ▶︎ SVG intrinsic ▶︎ fallback
+    init(_ svgString: String,
+         _ pngImage: Binding<NSImage?>,
+         requestedSize: CGSize? = nil)
+    {
+        self.svgString  = svgString
+        self._pngImage  = pngImage
 
-        print(String(format: "SD:SVGToPNG    : %04.0f x %04.0f", width, height))
+        // ── extract width / height from the <svg> tag, if any ──────────────
+        var intrinsicSize: CGSize? = nil
+        if let (w, h) = Util.extractDimensions(from: svgString) {
+            intrinsicSize = CGSize(width: w, height: h)
+            print(String(format: "SD:svgString   : %04d x %04d", w, h))
+        }
+
+        // ── final render size decision ─────────────────────────────────────
+        self.renderSize =
+              requestedSize                       // caller override
+           ?? intrinsicSize                       // SVG says so
+           ?? CGSize(width: 1700, height: 2200)   // last-ditch default
+
+        print(String(format: "SD:SVGToPNG    : %.0f x %.0f",
+                     renderSize.width, renderSize.height))
     }
-    
+
+    // Convenience for views that need the SVG’s own size
+    static func intrinsicSize(of svgString: String) -> CGSize? {
+        if let (w, h) = Util.extractDimensions(from: svgString) {
+            return CGSize(width: w, height: h)
+        }
+        return nil
+    }
+
     func makeNSView(context: Context) -> WKWebView {
         let webView = WKWebView(frame: CGRect(origin: .zero, size: renderSize))
         webView.navigationDelegate = context.coordinator
@@ -88,22 +112,42 @@ struct SVGToPNGRenderer: NSViewRepresentable {
             self.captureWebViewAsPNG(webView: webView)
         }
         
+
+
         private func captureWebViewAsPNG(webView: WKWebView) {
-            // Get the actual content dimensions
-            webView.evaluateJavaScript("document.body.scrollWidth") { width, _ in
-                webView.evaluateJavaScript("document.body.scrollHeight") { height, _ in
-                    let contentWidth = width as? Double ?? self.getRenderSize().width
-                    let contentHeight = height as? Double ?? self.getRenderSize().height
-                    
-                    let config = WKSnapshotConfiguration()
-                    config.rect = CGRect(x: 0, y: 0, width: contentWidth, height: contentHeight)
-                    
-                    webView.takeSnapshot(with: config) { [weak self] image, error in
-                        if let image = image {
-                            self?.pngImage?.wrappedValue = image
-                        }
-                    }
-                }
+            // use the size the outer struct already decided
+            let targetSize = renderSize
+
+            let config = WKSnapshotConfiguration()
+            config.rect = CGRect(origin: .zero, size: targetSize)
+
+            let scale = webView.window?.screen?.backingScaleFactor ?? 2.0
+            print("SD:snapConfig: \(Int(targetSize.width)) × \(Int(targetSize.height))")
+            print("SD:snapScale : \(scale)")
+
+            webView.takeSnapshot(with: config) { [weak self] image, error in
+                guard let self else { return }
+
+                if let error { print("❌ Snapshot failed: \(error)"); return }
+                guard let image else { print("❌ Snapshot failed: no image"); return }
+
+                // Update SwiftUI view
+                self.pngImage?.wrappedValue = image
+
+                // ───── debug stuff ───
+//                let tmp = FileManager.default.temporaryDirectory
+//                let svgURL = tmp.appendingPathComponent("debug_output.svg")
+//                let pngURL = tmp.appendingPathComponent("debug_output.png")
+//
+//                try? self.svgString.write(to: svgURL, atomically: true, encoding: .utf8)
+//
+//                if let tiff = image.tiffRepresentation,
+//                   let rep  = NSBitmapImageRep(data: tiff),
+//                   let png  = rep.representation(using: .png, properties: [:])
+//                {
+//                    print("SD:PNG size: \(rep.pixelsWide) × \(rep.pixelsHigh)")
+//                    try? png.write(to: pngURL)
+//                }
             }
         }
     }
@@ -113,31 +157,35 @@ struct SVGToPNGRenderer: NSViewRepresentable {
 struct SVGImageView: View {
     let svgString: String
     @State private var pngImage: NSImage?
-    
-    var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                if let pngImage = pngImage {
-                    Image(nsImage: pngImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                } else {
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.1))
-                        .overlay(
-                            ProgressView()
-                                .scaleEffect(0.5)
-                        )
-                }
 
-                // Hidden WebView for rendering - use opacity instead of offset
-                SVGToPNGRenderer(svgString, $pngImage, 1700, 2200)
-                    .frame(width: geometry.size.width, height: geometry.size.height)
-                    .printCount(String(format: "SD:SVGImageView: %04.0f x %04.0f", geometry.size.width, geometry.size.height))
-                    .opacity(0.01)  // Nearly invisible but still rendered
-                    .allowsHitTesting(false)  // Don't interfere with UI
-                    .zIndex(-1)  // Behind other content
+    // compute once per View
+    private var intrinsicSize: CGSize {
+        if let (w, h) = Util.extractDimensions(from: svgString) {
+            return CGSize(width: w, height: h)
+        }
+        return CGSize(width: 1700, height: 2200)   // fallback
+    }
+
+    var body: some View {
+        GeometryReader { _ in
+            if let img = pngImage {
+                Image(nsImage: img)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+        .background(
+            SVGToPNGRenderer(svgString,
+                             $pngImage,
+                             requestedSize: nil)     // ← nil → use intrinsic
+                .frame(width: intrinsicSize.width,
+                       height: intrinsicSize.height)
+                .opacity(0.01)
+                .allowsHitTesting(false)
+        )
     }
 }

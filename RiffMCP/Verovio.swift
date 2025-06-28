@@ -30,8 +30,6 @@ class Verovio {
 
         // TODO: Don't use hardcoded path for Verovio resources
         let resourcePath = "/Users/lee/verovio-resources/data"
-        print("Using path:", resourcePath, FileManager.default.fileExists(atPath: resourcePath))
-
         let toolkit = vrvToolkit_constructorResourcePath(resourcePath)
         guard toolkit != nil else {
             print("Failed to create Verovio toolkit with resource path: \(resourcePath)")
@@ -43,7 +41,7 @@ class Verovio {
         if !success {
             print("Warning: Failed to set resource path explicitly")
         }
-        print("Created Verovio toolkit with resource path: \(resourcePath)")
+        print("Verovio initialized resource path: \(resourcePath)")
 
 
         // Set options for better rendering with explicit font configuration
@@ -87,10 +85,6 @@ class Verovio {
 //            let preview = String(svgString.prefix(200))
 //            print("SVG preview: \(preview)...")
 //        }
-        if let (w, h) = Util.extractDimensions(from: svgString) {
-            print(String(format: "SD:svgString   : %04d x %04d", w, h))
-        }
-
         let svgStringPostProcessed = postProcessSvgString(svgString)
 //        let svgStringPostProcessed = svgString
 
