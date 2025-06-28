@@ -108,7 +108,7 @@ private extension MEIConverter {
         let hasMultipleInstruments = uniqueInstruments.count > 1
         let singleInstrumentIsPiano =
             uniqueInstruments.count == 1 &&
-            MEIConstants.pianoInstrumentNames.contains(uniqueInstruments.first!)
+            Instruments.isPianoInstrument(uniqueInstruments.first!)
 
         // decide if we show labels
         let showLabels = hasMultipleInstruments || !singleInstrumentIsPiano
@@ -362,11 +362,11 @@ private extension MEIConverter {
         let instrumentName: String
         let label: String
         let midiProgram: Int
-        let clef: MEIConstants.ClefInfo
+        let clef: ClefInfo
 
         init(originalTrackIndex: Int, staffIndex: Int,
              instrumentName: String, label: String,
-             midiProgram: Int, clef: MEIConstants.ClefInfo) {
+             midiProgram: Int, clef: ClefInfo) {
             self.originalTrackIndex = originalTrackIndex
             self.staffIndex = staffIndex
             self.instrumentName = instrumentName
@@ -381,7 +381,7 @@ private extension MEIConverter {
     }
 
     static func isPiano(_ processedTrack: ProcessedTrack) -> Bool {
-        MEIConstants.pianoInstrumentNames.contains(processedTrack.instrumentName)
+        Instruments.isPianoInstrument(processedTrack.instrumentName)
     }
 
     static func processAndCalculateMeasures(piece: Composition,
@@ -432,20 +432,20 @@ private extension MEIConverter {
 
         for (trackIndex, track) in tracks.enumerated() {
             let requestedInstrument = track.instrument ?? "acoustic_grand_piano"
-            let instrumentName = MEIConstants.instrumentToMidiProgram.keys.contains(requestedInstrument)
+            let instrumentName = Instruments.getMidiProgram(for: requestedInstrument) != nil
                                 ? requestedInstrument
                                 : "acoustic_grand_piano"
-            let midiProgram = MEIConstants.instrumentToMidiProgram[instrumentName]!
+            let midiProgram = Instruments.getMidiProgram(for: instrumentName) ?? 0
 
-            if MEIConstants.pianoInstrumentNames.contains(instrumentName) {
+            if Instruments.isPianoInstrument(instrumentName) {
                 staffCount += 1
                 processedTracks.append(
                     ProcessedTrack(originalTrackIndex: trackIndex,
                                    staffIndex: staffCount,
                                    instrumentName: instrumentName,
-                                   label: instrumentName.replacingOccurrences(of: "_", with: " ").capitalized,
+                                   label: Instruments.getDisplayName(for: instrumentName) ?? instrumentName.replacingOccurrences(of: "_", with: " ").capitalized,
                                    midiProgram: midiProgram,
-                                   clef: MEIConstants.treble))
+                                   clef: clefFromString("treble")))
                 staffCount += 1
                 processedTracks.append(
                     ProcessedTrack(originalTrackIndex: trackIndex,
@@ -453,16 +453,16 @@ private extension MEIConverter {
                                    instrumentName: instrumentName,
                                    label: "",
                                    midiProgram: midiProgram,
-                                   clef: MEIConstants.bass))
+                                   clef: clefFromString("bass")))
             } else {
                 staffCount += 1
                 processedTracks.append(
                     ProcessedTrack(originalTrackIndex: trackIndex,
                                    staffIndex: staffCount,
                                    instrumentName: instrumentName,
-                                   label: instrumentName.replacingOccurrences(of: "_", with: " ").capitalized,
+                                   label: Instruments.getDisplayName(for: instrumentName) ?? instrumentName.replacingOccurrences(of: "_", with: " ").capitalized,
                                    midiProgram: midiProgram,
-                                   clef: MEIConstants.instrumentToClef[instrumentName] ?? MEIConstants.treble))
+                                   clef: clefFromString(Instruments.getClef(for: instrumentName))))
             }
         }
         return processedTracks
@@ -518,51 +518,19 @@ private extension MEIConverter {
     }
 }
 
-// MARK: - Constants
-private enum MEIConstants {
+// MARK: - Clef Helper
+private extension MEIConverter {
     struct ClefInfo { let shape: String; let line: Int }
-    static let treble = ClefInfo(shape: "G", line: 2)
-    static let bass   = ClefInfo(shape: "F", line: 4)
-    static let alto   = ClefInfo(shape: "C", line: 3)
-    static let tenor  = ClefInfo(shape: "C", line: 4)
-
-    static let pianoInstrumentNames: Set<String> = [
-        "acoustic_grand_piano","bright_acoustic_piano","electric_grand_piano",
-        "honky_tonk_piano","electric_piano_1","electric_piano_2",
-        "harpsichord","clavinet"
-    ]
-
-    static let instrumentToClef: [String:ClefInfo] = [
-        "violin":treble,"viola":alto,"cello":bass,"contrabass":bass,
-        "flute":treble,"piccolo":treble,"oboe":treble,"clarinet":treble,
-        "bassoon":bass,"recorder":treble,"soprano_sax":treble,"alto_sax":treble,
-        "tenor_sax":treble,"baritone_sax":treble,"trumpet":treble,
-        "trombone":bass,"tuba":bass,"muted_trumpet":treble,"french_horn":treble,
-        "acoustic_guitar_nylon":treble,"acoustic_guitar_steel":treble,
-        "acoustic_bass":bass,"electric_bass_finger":bass,"electric_bass_pick":bass,
-        "timpani":bass
-    ]
-
-    static let instrumentToMidiProgram: [String:Int] = [
-        "acoustic_grand_piano":1,"bright_acoustic_piano":2,
-        "electric_grand_piano":3,"honky_tonk_piano":4,
-        "electric_piano_1":5,"electric_piano_2":6,"harpsichord":7,"clavinet":8,
-        "celesta":9,"glockenspiel":10,"music_box":11,"vibraphone":12,"marimba":13,
-        "xylophone":14,"tubular_bells":15,"drawbar_organ":17,"church_organ":20,
-        "accordion":22,"harmonica":23,"acoustic_guitar_nylon":25,
-        "acoustic_guitar_steel":26,"electric_guitar_jazz":27,
-        "electric_guitar_clean":28,"electric_guitar_muted":29,
-        "overdriven_guitar":30,"distortion_guitar":31,"acoustic_bass":33,
-        "electric_bass_finger":34,"electric_bass_pick":35,"fretless_bass":36,
-        "slap_bass_1":37,"slap_bass_2":38,"violin":41,"viola":42,"cello":43,
-        "contrabass":44,"tremolo_strings":45,"pizzicato_strings":46,
-        "orchestral_harp":47,"timpani":48,"string_ensemble_1":49,
-        "string_ensemble_2":50,"choir_aahs":53,"voice_oohs":54,"trumpet":57,
-        "trombone":58,"tuba":59,"muted_trumpet":60,"french_horn":61,
-        "brass_section":62,"soprano_sax":65,"alto_sax":66,"tenor_sax":67,
-        "baritone_sax":68,"oboe":69,"bassoon":71,"clarinet":72,"piccolo":73,
-        "flute":74,"recorder":75
-    ]
+    
+    static func clefFromString(_ clefName: String) -> ClefInfo {
+        switch clefName {
+        case "treble": return ClefInfo(shape: "G", line: 2)
+        case "bass":   return ClefInfo(shape: "F", line: 4)
+        case "alto":   return ClefInfo(shape: "C", line: 3)
+        case "tenor":  return ClefInfo(shape: "C", line: 4)
+        default:       return ClefInfo(shape: "G", line: 2) // default to treble
+        }
+    }
 }
 
 // MARK: - XML attribute convenience

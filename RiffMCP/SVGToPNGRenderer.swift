@@ -8,11 +8,14 @@ struct SVGToPNGRenderer: NSViewRepresentable {
     let svgString: String
     @Binding var pngImage: NSImage?
     let renderSize: CGSize
-    
-    init(svgString: String, pngImage: Binding<NSImage?>, renderSize: CGSize = CGSize(width: 400, height: 200)) {
+    static var count = 0
+
+    init(_ svgString: String, _ pngImage: Binding<NSImage?>, _ width: CGFloat = 2200, _ height: CGFloat = 1700) {
         self.svgString = svgString
         self._pngImage = pngImage
-        self.renderSize = renderSize
+        self.renderSize = CGSize(width: width, height: height)
+
+        print(String(format: "SD:SVGToPNG    : %04.0f x %04.0f", width, height))
     }
     
     func makeNSView(context: Context) -> WKWebView {
@@ -126,10 +129,11 @@ struct SVGImageView: View {
                                 .scaleEffect(0.5)
                         )
                 }
-                
+
                 // Hidden WebView for rendering - use opacity instead of offset
-                SVGToPNGRenderer(svgString: svgString, pngImage: $pngImage, renderSize: geometry.size)
+                SVGToPNGRenderer(svgString, $pngImage, 1700, 2200)
                     .frame(width: geometry.size.width, height: geometry.size.height)
+                    .printCount(String(format: "SD:SVGImageView: %04.0f x %04.0f", geometry.size.width, geometry.size.height))
                     .opacity(0.01)  // Nearly invisible but still rendered
                     .allowsHitTesting(false)  // Don't interfere with UI
                     .zIndex(-1)  // Behind other content

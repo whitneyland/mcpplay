@@ -8,6 +8,19 @@
 import Foundation
 
 struct Util {
+    static func extractDimensions(from svg: String) -> (width: Int, height: Int)? {
+        let pattern = #"width="(\d+)[a-zA-Z]*"\s+height="(\d+)[a-zA-Z]*""#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: svg, range: NSRange(svg.startIndex..., in: svg)),
+              let widthRange = Range(match.range(at: 1), in: svg),
+              let heightRange = Range(match.range(at: 2), in: svg),
+              let width = Int(svg[widthRange]),
+              let height = Int(svg[heightRange]) else {
+            return nil
+        }
+        return (width, height)
+    }
+
     static func formatTime(_ seconds: Double) -> String {
         guard seconds.isFinite && seconds >= 0 else {
             return "0:00.0"

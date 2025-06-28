@@ -24,6 +24,7 @@ struct MainView: View {
                 TextEditor(text: $jsonInput)
                     .border(Color.gray, width: 1)
                     .padding(.bottom, 5)
+                    .frame(minHeight: 100)
 
                 if !presetManager.presets.isEmpty {
                     Picker("Examples", selection: $selectedPresetId) {
@@ -69,36 +70,34 @@ struct MainView: View {
             }
             .padding()
 
-            // Bottom section with Piano Roll
-            VStack {
-                HStack {
-                    PianoRoll(
-                        sequence: currentSequence,
-                        animatedElapsedTime: animatedElapsedTime,
-                        totalDuration: audioManager.totalDuration
-                    )
-                    
-                    // Verovio notation display
-                    VStack {
-                        Text("Musical Notation")
-                            .font(.headline)
-                            .padding(.bottom, 4)
-                        if let notationSVG = notationSVG {
-                            SVGImageView(svgString: notationSVG)
-                                .aspectRatio(contentMode: .fit)
-                                .border(Color.gray.opacity(0.3), width: 1)
-                        } else {
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.1))
-                                .overlay(
-                                    Text("No notation")
-                                        .foregroundColor(.secondary)
-                                )
-                                .border(Color.gray.opacity(0.3), width: 1)
-                        }
+            // Bottom section with Piano Roll and Sheet music
+            HSplitView {
+                PianoRoll(
+                    sequence: currentSequence,
+                    animatedElapsedTime: animatedElapsedTime,
+                    totalDuration: audioManager.totalDuration
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                
+                // Sheet music
+                VStack {
+                    if let notationSVG = notationSVG {
+                        SVGImageView(svgString: notationSVG)
+//                            .aspectRatio(contentMode: .fill)
+                            .border(Color.gray.opacity(0.3), width: 1)
+                    } else {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.1))
+                            .overlay(
+                                Text("No notation")
+                                    .foregroundColor(.secondary)
+                            )
+                            .border(Color.gray.opacity(0.3), width: 1)
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .frame(minHeight: 50)
             .padding()
         }
         .onAppear {
