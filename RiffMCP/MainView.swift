@@ -28,8 +28,8 @@ struct MainView: View {
 
                 if !presetManager.presets.isEmpty {
                     Picker("Examples", selection: $selectedPresetId) {
-                        ForEach(presetManager.presets, id: \.id) { preset in
-                            Text(preset.displayName).tag(preset.id)
+                        ForEach(presetManager.presets, id: \.fileName) { preset in
+                            Text(preset.displayName).tag(preset.fileName)
                         }
                     }
                     .pickerStyle(SegmentedPickerStyle())
@@ -102,7 +102,7 @@ struct MainView: View {
         }
         .onAppear {
             if !presetManager.presets.isEmpty && selectedPresetId.isEmpty {
-                selectedPresetId = presetManager.presets.first?.id ?? ""
+                selectedPresetId = presetManager.presets.first?.fileName ?? ""
                 loadPresetToInput()
             }
         }
