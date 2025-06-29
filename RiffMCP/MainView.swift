@@ -85,12 +85,12 @@ struct MainView: View {
                     totalDuration: audioManager.totalDuration
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                
+                .padding(.horizontal, 12)
+
                 // Sheet music
                 VStack {
                     if let notationSVG = notationSVG {
                         SVGImageView(svgString: notationSVG)
-//                            .aspectRatio(contentMode: .fill)
                             .border(Color.gray.opacity(0.3), width: 1)
                     } else {
                         Rectangle()
@@ -105,7 +105,6 @@ struct MainView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .frame(minHeight: 50)
-            .padding()
         }
         .onAppear {
             if !presetManager.presets.isEmpty && selectedPresetId.isEmpty {
