@@ -153,14 +153,20 @@ class HTTPServer: ObservableObject {
                     case .ready:
                         self?.isRunning = true
                         print("🚀 HTTP Server started on \(self?.host ?? "127.0.0.1"):\(self?.port ?? 27272)")
+                        ActivityLog.shared.updateServerStatus(online: true)
+                        ActivityLog.shared.add(message: "Server listening on port \(self?.port ?? 0)", type: .success)
                         try? await self?.writeConfigFile()
                     case .failed(let error):
                         self?.lastError = "Server failed: \(error.localizedDescription)"
                         self?.isRunning = false
                         print("❌ HTTP Server failed: \(error.localizedDescription)")
+                        ActivityLog.shared.updateServerStatus(online: false)
+                        ActivityLog.shared.add(message: "Server failed: \(error.localizedDescription)", type: .error)
                     case .cancelled:
                         self?.isRunning = false
                         print("🛑 HTTP Server stopped")
+                        ActivityLog.shared.updateServerStatus(online: false)
+                        ActivityLog.shared.add(message: "Server stopped", type: .success)
                     default:
                         break
                     }
@@ -219,10 +225,15 @@ class HTTPServer: ObservableObject {
 
         let (method, path, body) = (components[0], components[1], String(httpString[bodyStartIndex...]))
         
+        // Extract User-Agent from headers
+        let userAgent = lines.first(where: { $0.lowercased().starts(with: "user-agent:") })?
+            .components(separatedBy: ":").dropFirst().joined(separator: ":").trimmingCharacters(in: .whitespaces) ?? "Unknown"
+        let bodySize = body.data(using: .utf8)?.count ?? 0
+
         Util.logLatency("🚦", "Request routing - \(method) \(path)", since: requestStartTime)
 
         switch (method, path) {
-        case ("POST", "/"): await handleJSONRPC(body: body, connection: connection)
+        case ("POST", "/"): await handleJSONRPC(body: body, connection: connection, userAgent: userAgent, bodySize: bodySize)
         case ("POST", "/play_note"): await handlePlayNote(body: body, connection: connection)
         case ("GET", "/health"): await sendHTTPResponse(connection: connection, statusCode: 200, headers: ["Content-Type": "application/json"], body: #"{"status":"healthy","port":\#(port)}"#)
         default: await sendHTTPResponse(connection: connection, statusCode: 404, body: "Not Found")
@@ -231,7 +242,7 @@ class HTTPServer: ObservableObject {
 
     // MARK: - JSON-RPC Handler
 
-    private func handleJSONRPC(body: String, connection: NWConnection) async {
+    private func handleJSONRPC(body: String, connection: NWConnection, userAgent: String, bodySize: Int) async {
         let jsonRpcStartTime = Date()
         Util.logLatency("📄", "JSON-RPC processing started")
         
@@ -240,6 +251,26 @@ class HTTPServer: ObservableObject {
             let request = try JSONDecoder().decode(JSONRPCRequest.self, from: bodyData)
             guard request.jsonrpc == "2.0" else { throw JSONRPCError.invalidRequest }
             
+            // Detailed logging
+            var toolNameDetail = ""
+            if request.method == "tools/call",
+               let params = request.params,
+               let name = params.objectValue?["name"]?.stringValue {
+                toolNameDetail = " - \(name)"
+            }
+            
+            let eventType: ActivityEvent.EventType
+            switch request.method {
+            case "notifications/initialized": eventType = .notification
+            case "tools/list": eventType = .toolsList
+            case "tools/call": eventType = .toolsCall
+            case "resources/list": eventType = .resourcesList
+            case "prompts/list": eventType = .promptsList
+            default: eventType = .request
+            }
+            
+            ActivityLog.shared.add(message: "POST /\(request.method)\(toolNameDetail) (\(bodySize) bytes)", type: eventType)
+
             Util.logLatency("🔍", "JSON-RPC parsed - method: \(request.method)", since: jsonRpcStartTime)
 
             let response: JSONRPCResponse
@@ -336,6 +367,7 @@ class HTTPServer: ObservableObject {
 
         let totalEvents = sequence.tracks.reduce(0) { $0 + $1.events.count }
         let summary = "Playing music sequence at \(Int(sequence.tempo)) BPM with \(totalEvents) event\(totalEvents == 1 ? "" : "s")."
+        ActivityLog.shared.add(message: "Generated \(totalEvents) notes for \(sequence.tracks.first?.instrument ?? "unknown")", type: .generation)
         return MCPResult(content: [MCPContentItem(type: "text", text: summary)])
     }
 

@@ -19,56 +19,63 @@ struct MainView: View {
 
     var body: some View {
         VSplitView {
-            // Top section
-            VStack {
-                TextEditor(text: $jsonInput)
-                    .border(Color.gray, width: 1)
-                    .padding(.bottom, 5)
-                    .frame(minHeight: 100)
+            // Top section now split horizontally
+            HSplitView {
+                // Left side: JSON Editor and controls
+                VStack {
+                    TextEditor(text: $jsonInput)
+                        .border(Color.gray, width: 1)
+                        .padding(.bottom, 5)
+                        .frame(minHeight: 100)
 
-                if !presetManager.presets.isEmpty {
-                    Picker("Examples", selection: $selectedPresetId) {
-                        ForEach(presetManager.presets, id: \.fileName) { preset in
-                            Text(preset.displayName).tag(preset.fileName)
+                    if !presetManager.presets.isEmpty {
+                        Picker("Examples", selection: $selectedPresetId) {
+                            ForEach(presetManager.presets, id: \.fileName) { preset in
+                                Text(preset.displayName).tag(preset.fileName)
+                            }
                         }
+                        .pickerStyle(SegmentedPickerStyle())
+                        .onChange(of: selectedPresetId) {
+                            loadPresetToInput()
+                        }
+                    } else {
+                        Text("No presets available")
+                            .foregroundColor(.secondary)
                     }
-                    .pickerStyle(SegmentedPickerStyle())
-                    .onChange(of: selectedPresetId) {
-                        loadPresetToInput()
+                    HStack {
+                        Button(action: {
+                            if audioManager.isPlaying {
+                                audioManager.stopSequence()
+                            } else {
+                                audioManager.playSequenceFromJSON(jsonInput)
+                            }
+                        }) {
+                            HStack {
+                                Image(systemName: audioManager.isPlaying ? "stop.fill" : "play.fill")
+                                Text(audioManager.isPlaying ? "Stop" : "Play")
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                        }
+                        .background(Color.gray30)
+                        .cornerRadius(6)
+                        .disabled(jsonInput.isEmpty)
+                        
+                        Spacer()
+                        
+                        Text("\(Util.formatTime(audioManager.elapsedTime)) / \(Util.formatTime(audioManager.totalDuration))")
+                            .font(.body.monospaced())
+                            .foregroundColor(.secondary)
                     }
-                } else {
-                    Text("No presets available")
-                        .foregroundColor(.secondary)
+                    .padding(.top,5)
                 }
-                HStack {
-                    Button(action: {
-                        if audioManager.isPlaying {
-                            audioManager.stopSequence()
-                        } else {
-                            audioManager.playSequenceFromJSON(jsonInput)
-                        }
-                    }) {
-                        HStack {
-                            Image(systemName: audioManager.isPlaying ? "stop.fill" : "play.fill")
-                            Text(audioManager.isPlaying ? "Stop" : "Play")
-                        }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                    }
-                    .background(Color.gray30)
-                    .cornerRadius(6)
-                    .disabled(jsonInput.isEmpty)
-                    
-                    Spacer()
-                    
-                    Text("\(Util.formatTime(audioManager.elapsedTime)) / \(Util.formatTime(audioManager.totalDuration))")
-                        .font(.body.monospaced())
-                        .foregroundColor(.secondary)
-                }
-                .padding(.top,5)
+                .padding()
+
+                // Right side: Server Activity View
+                ServerActivityView()
+                    .frame(minWidth: 300) // Give it a reasonable minimum width
             }
-            .padding()
 
             // Bottom section with Piano Roll and Sheet music
             HSplitView {
