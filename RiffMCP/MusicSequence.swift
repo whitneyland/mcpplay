@@ -90,7 +90,7 @@ struct Track: Codable, Sendable {
     // Because we provide a custom init(from:), we must also provide encode(to:).
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(name, forKey: .name)
+        try container.encodeIfPresent(name, forKey: .name)
         try container.encode(instrument, forKey: .instrument)
         try container.encode(events, forKey: .events)
     }
