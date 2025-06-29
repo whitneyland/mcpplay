@@ -3,14 +3,91 @@ import SwiftUI
 
 struct ServerActivityView: View {
     @StateObject private var activityLog = ActivityLog.shared
+    @State private var selectedEvent: ActivityEvent?
+    @State private var showInspector: Bool = true
 
     var body: some View {
+        if showInspector {
+            NavigationSplitView {
+                // Main list view
+                mainListView
+                    .navigationSplitViewColumnWidth(min: 300, ideal: 400)
+            } detail: {
+                // Inspector pane
+                if let selectedEvent = selectedEvent {
+                    EventInspectorView(event: selectedEvent)
+                } else {
+                    VStack {
+                        Image(systemName: "sidebar.right")
+                            .font(.system(size: 40))
+                            .foregroundColor(.secondary)
+                        Text("Select an event to view details")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+        } else {
+            mainListView
+        }
+    }
+    
+    private var mainListView: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header
-            headerView
-                .padding(.horizontal)
-                .padding(.top, 10)
-                .padding(.bottom, 5)
+            // Header with controls
+            HStack {
+                headerView
+                
+                Spacer()
+                
+                // Action buttons
+                HStack(spacing: 8) {
+                    Button(action: {
+                        activityLog.clearLog()
+                        selectedEvent = nil
+                    }) {
+                        Image(systemName: "trash")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                            .frame(width: 20, height: 20)
+                            .padding(8)
+                            .background(Color.white.opacity(0.1))
+                            .cornerRadius(6)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .help("Clear all log entries")
+                    
+                    Button(action: {
+                        activityLog.copyPostEventsToClipboard()
+                    }) {
+                        Image(systemName: "doc.on.clipboard")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                            .frame(width: 20, height: 20)
+                            .padding(8)
+                            .background(Color.white.opacity(0.1))
+                            .cornerRadius(6)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .help("Copy POST events to clipboard")
+                    
+                    Button(action: { showInspector.toggle() }) {
+                        Image(systemName: showInspector ? "sidebar.right" : "sidebar.left")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                            .frame(width: 20, height: 20)
+                            .padding(8)
+                            .background(Color.white.opacity(0.1))
+                            .cornerRadius(6)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .help("Toggle Inspector")
+                }
+            }
+            .padding(.horizontal)
+            .padding(.top, 10)
+            .padding(.bottom, 5)
 
             Divider()
 
@@ -62,7 +139,7 @@ struct ServerActivityView: View {
     }
 
     private var activityFeedView: some View {
-        List(activityLog.events) { event in
+        List(activityLog.events, selection: $selectedEvent) { event in
             HStack(spacing: 12) {
                 Image(systemName: event.type.rawValue)
                     .foregroundColor(event.type.color)
@@ -80,9 +157,159 @@ struct ServerActivityView: View {
             }
             .listRowBackground(Color.clear)
             .padding(.vertical, 2)
+            .tag(event)
         }
         .listStyle(PlainListStyle())
         .background(Color.clear)
+    }
+}
+
+struct EventInspectorView: View {
+    let event: ActivityEvent
+    @EnvironmentObject var audioManager: AudioManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Header with event type and timestamp
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: event.type.rawValue)
+                        .foregroundColor(event.type.color)
+                        .font(.title2)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(eventTypeDisplayName)
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        
+                        Text(event.timestampString)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                }
+                
+                Divider()
+            }
+            
+            // Message
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Message")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                
+                Text(event.message)
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .textSelection(.enabled)
+            }
+            
+            // Data display based on event type
+            if event.type == .generation, let sequenceData = event.sequenceData, !sequenceData.isEmpty {
+                // Show clean sequence JSON for generation events
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Music Sequence")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        Button("Load in Editor") {
+                            audioManager.receivedJSON = sequenceData
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                    
+                    ScrollView {
+                        Text(formatJSON(sequenceData))
+                            .font(.system(.body, design: .monospaced))
+                            .foregroundColor(.primary)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .background(Color(.textBackgroundColor))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color(.separatorColor), lineWidth: 1)
+                    )
+                }
+            } else if let requestData = event.requestData, !requestData.isEmpty {
+                // Show JSON-RPC request for other events
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Request")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    ScrollView {
+                        Text(formatJSON(requestData))
+                            .font(.system(.body, design: .monospaced))
+                            .foregroundColor(.primary)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .background(Color(.textBackgroundColor))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color(.separatorColor), lineWidth: 1)
+                    )
+                }
+            }
+            
+            // Response Data (if available)
+            if let responseData = event.responseData, !responseData.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Response")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    ScrollView {
+                        Text(formatJSON(responseData))
+                            .font(.system(.body, design: .monospaced))
+                            .foregroundColor(.primary)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .background(Color(.textBackgroundColor))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color(.separatorColor), lineWidth: 1)
+                    )
+                }
+            }
+            
+            Spacer()
+        }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+    
+    private var eventTypeDisplayName: String {
+        switch event.type {
+        case .request: return "Request"
+        case .generation: return "Generation"
+        case .success: return "Success"
+        case .error: return "Error"
+        case .notification: return "Notification"
+        case .toolsList: return "Tools List"
+        case .toolsCall: return "Tool Call"
+        case .resourcesList: return "Resources List"
+        case .promptsList: return "Prompts List"
+        }
+    }
+    
+    private func formatJSON(_ jsonString: String) -> String {
+        guard let data = jsonString.data(using: .utf8),
+              let jsonObject = try? JSONSerialization.jsonObject(with: data),
+              let prettyData = try? JSONSerialization.data(withJSONObject: jsonObject, options: [.prettyPrinted, .sortedKeys]),
+              let prettyString = String(data: prettyData, encoding: .utf8) else {
+            return jsonString
+        }
+        return prettyString
     }
 }
 
@@ -93,12 +320,30 @@ struct ServerActivityView_Previews: PreviewProvider {
                 // Add some dummy data for previewing
                 let log = ActivityLog.shared
                 log.updateServerStatus(online: true)
-                log.add(message: "New request: play a C major scale", type: .request)
+                log.add(message: "New request: play a C major scale", type: .request, requestData: """
+                {
+                  "jsonrpc": "2.0",
+                  "id": 1,
+                  "method": "tools/call",
+                  "params": {
+                    "name": "play",
+                    "arguments": {
+                      "tempo": 120,
+                      "tracks": [
+                        {
+                          "instrument": "acoustic_grand_piano",
+                          "events": []
+                        }
+                      ]
+                    }
+                  }
+                }
+                """)
                 log.add(message: "Generated 12 notes for Piano", type: .generation)
                 log.add(message: "Playback complete", type: .success)
                 log.add(message: "Invalid instrument: 'banjo'", type: .error)
             }
-            .frame(width: 400, height: 500)
+            .frame(width: 800, height: 500)
             .background(Color.gray.opacity(0.3))
     }
 }

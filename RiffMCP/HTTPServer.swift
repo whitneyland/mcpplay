@@ -269,14 +269,14 @@ class HTTPServer: ObservableObject {
             default: eventType = .request
             }
             
-            ActivityLog.shared.add(message: "POST /\(request.method)\(toolNameDetail) (\(bodySize) bytes)", type: eventType)
+            ActivityLog.shared.add(message: "POST /\(request.method)\(toolNameDetail) (\(bodySize) bytes)", type: eventType, requestData: body)
 
             Util.logLatency("🔍", "JSON-RPC parsed - method: \(request.method)", since: jsonRpcStartTime)
 
             let response: JSONRPCResponse
             switch request.method {
             case "initialize":
-                let initResult = MCPInitializeResult(protocolVersion: "2024-11-05", capabilities: MCPCapabilities(tools: [:]), serverInfo: MCPServerInfo(name: "riff-http", version: "1.0.0"))
+                let initResult = MCPInitializeResult(protocolVersion: "2024-11-05", capabilities: MCPCapabilities(tools: [:]), serverInfo: MCPServerInfo(name: "riff", version: "1.0.0"))
                 response = JSONRPCResponse(result: try encodeToJSONValue(initResult), id: request.id)
             case "notifications/initialized":
                 await sendHTTPResponse(connection: connection, statusCode: 200, body: "")
@@ -294,12 +294,55 @@ class HTTPServer: ObservableObject {
                 response = JSONRPCResponse(error: .methodNotFound, id: request.id)
             }
             await sendJSONRPCResponse(response, connection: connection)
+            
+            // Update the last event with response data
+            do {
+                let responseData = try JSONEncoder().encode(response)
+                if let responseString = String(data: responseData, encoding: .utf8) {
+                    ActivityLog.shared.updateLastEventWithResponse(responseString)
+                }
+            } catch {
+                print("Failed to encode response for logging: \(error)")
+            }
         } catch let error as JSONRPCError {
-            await sendJSONRPCResponse(JSONRPCResponse(error: error, id: nil), connection: connection)
+            let errorResponse = JSONRPCResponse(error: error, id: nil)
+            await sendJSONRPCResponse(errorResponse, connection: connection)
+            
+            // Update with error response
+            do {
+                let responseData = try JSONEncoder().encode(errorResponse)
+                if let responseString = String(data: responseData, encoding: .utf8) {
+                    ActivityLog.shared.updateLastEventWithResponse(responseString)
+                }
+            } catch {
+                print("Failed to encode error response for logging: \(error)")
+            }
         } catch is DecodingError {
-            await sendJSONRPCResponse(JSONRPCResponse(error: .parseError, id: nil), connection: connection)
+            let parseErrorResponse = JSONRPCResponse(error: .parseError, id: nil)
+            await sendJSONRPCResponse(parseErrorResponse, connection: connection)
+            
+            // Update with parse error response
+            do {
+                let responseData = try JSONEncoder().encode(parseErrorResponse)
+                if let responseString = String(data: responseData, encoding: .utf8) {
+                    ActivityLog.shared.updateLastEventWithResponse(responseString)
+                }
+            } catch {
+                print("Failed to encode parse error response for logging: \(error)")
+            }
         } catch {
-            await sendJSONRPCResponse(JSONRPCResponse(error: .internalError, id: nil), connection: connection)
+            let internalErrorResponse = JSONRPCResponse(error: .internalError, id: nil)
+            await sendJSONRPCResponse(internalErrorResponse, connection: connection)
+            
+            // Update with internal error response
+            do {
+                let responseData = try JSONEncoder().encode(internalErrorResponse)
+                if let responseString = String(data: responseData, encoding: .utf8) {
+                    ActivityLog.shared.updateLastEventWithResponse(responseString)
+                }
+            } catch {
+                print("Failed to encode internal error response for logging: \(error)")
+            }
         }
     }
 
@@ -366,8 +409,10 @@ class HTTPServer: ObservableObject {
         audioManager.playSequenceFromJSON(jsonString)
 
         let totalEvents = sequence.tracks.reduce(0) { $0 + $1.events.count }
-        let summary = "Playing music sequence at \(Int(sequence.tempo)) BPM with \(totalEvents) event\(totalEvents == 1 ? "" : "s")."
-        ActivityLog.shared.add(message: "Generated \(totalEvents) notes for \(sequence.tracks.first?.instrument ?? "unknown")", type: .generation)
+        let summary = "Playing \(sequence.title ?? "") at \(Int(sequence.tempo)) BPM with \(totalEvents) event\(totalEvents == 1 ? "" : "s")."
+
+        ActivityLog.shared.add(message: "Play \(sequence.title ?? "") with \(totalEvents) notes for \(sequence.tracks.first?.instrument ?? "instrument")", type: .generation, sequenceData: jsonString)
+
         return MCPResult(content: [MCPContentItem(type: "text", text: summary)])
     }
 
