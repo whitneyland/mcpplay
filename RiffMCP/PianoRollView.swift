@@ -117,10 +117,10 @@ struct PianoRollView: View {
                     if midiNote >= noteRange.min && midiNote <= noteRange.max {
                         let beatDuration = 60.0 / sequence.tempo
                         let startTime = event.time * beatDuration
-                        let duration = event.dur * beatDuration
+                        let noteDuration = event.dur * beatDuration
                         
                         let x = (startTime / duration) * geometry.size.width
-                        let width = max(2, (duration / duration) * geometry.size.width)
+                        let width = max(2, (noteDuration / duration) * geometry.size.width)
                         let y = CGFloat(noteRange.max - midiNote) * noteHeight
                         
                         let velocity = event.vel ?? 100
