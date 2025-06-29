@@ -70,6 +70,46 @@ struct Util {
             try? data.append(to: fileURL)
         }
     }
+    
+    /// Add default octave (4) to note names that don't have an octave number.
+    /// This converts "F" → "F4", "C#" → "C#4", etc. within pitch arrays.
+    private static func addDefaultOctaveToNotes(_ jsonString: String) -> String {
+        // Regex to find note names within pitch arrays that don't end with a digit
+        // Matches: "C", "F#", "Bb", etc. but not "C4", "F#3", etc.
+        // Pattern explanation:
+        // "([A-G][#b]?)" - Capture note name (A-G) optionally followed by # or b
+        // (?!\d) - Negative lookahead: not followed by a digit
+        // " - Match closing quote
+        let notePattern = #""([A-G][#b]?)(?!\d)""#
+        
+        guard let regex = try? NSRegularExpression(pattern: notePattern, options: .caseInsensitive) else {
+            print("⚠️ Failed to create octave regex pattern")
+            return jsonString
+        }
+        
+        let range = NSRange(location: 0, length: jsonString.utf16.count)
+        let matches = regex.matches(in: jsonString, options: [], range: range)
+        print("🎵 Found \(matches.count) octaveless notes to fix")
+        
+        for match in matches {
+            if let swiftRange = Range(match.range, in: jsonString) {
+                print("  - Converting: \(String(jsonString[swiftRange]))")
+            }
+        }
+        
+        let result = regex.stringByReplacingMatches(
+            in: jsonString,
+            options: [],
+            range: range,
+            withTemplate: "\"$14\""  // Add "4" (default octave) to the captured note
+        )
+        
+        if result != jsonString {
+            print("🎵 Octave conversion successful")
+        }
+        
+        return result
+    }
 
     /// Cleans a user-supplied JSON-like string so that it can be parsed by
     /// `JSONDecoder`. Performs the following cleanup steps:
@@ -81,6 +121,7 @@ struct Util {
     /// 3. Strip trailing commas that appear immediately before a closing
     ///    object/array bracket (", }" or ", ]"), which are illegal in JSON but
     ///    common in hand-edited snippets.
+    /// 4. Add default octave (4) to octaveless note names like "F" → "F4".
     static func cleanJSON(from jsonString: String) -> String {
         var cleanedString = jsonString
 
@@ -114,6 +155,9 @@ struct Util {
             let range = NSRange(location: 0, length: cleanedString.utf16.count)
             cleanedString = trailingCommaRegex.stringByReplacingMatches(in: cleanedString, options: [], range: range, withTemplate: "")
         }
+        
+        // 4. Add default octave (4) to octaveless note names
+        cleanedString = addDefaultOctaveToNotes(cleanedString)
         
         return cleanedString
     }
