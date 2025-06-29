@@ -27,7 +27,7 @@ This MCP server allows Claude Desktop to control your music app and manage music
 
 ## Available Commands
 
-- `play_sequence` - Play music directly from JSON sequence data
+- `play` - Play music directly from JSON sequence data
 
 ## Usage Examples
 

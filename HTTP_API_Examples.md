@@ -50,7 +50,7 @@ curl -X POST http://localhost:3001/ \
     "jsonrpc": "2.0",
     "method": "tools/call",
     "params": {
-      "name": "play_sequence",
+      "name": "play",
       "arguments": {
         "tempo": 120,
         "tracks": [
@@ -82,7 +82,7 @@ curl -X POST http://localhost:3001/ \
     "jsonrpc": "2.0",
     "method": "tools/call",
     "params": {
-      "name": "play_sequence",
+      "name": "play",
       "arguments": {
         "title": "Multi-Track Example",
         "tempo": 120,
@@ -195,7 +195,7 @@ All JSON-RPC responses follow this format:
 3. Check app logs for startup errors
 
 **Invalid instrument error?**
-Check the instrument names in the `play_sequence` tool schema for all available options.
+Check the instrument names in the `play` tool schema for all available options.
 
 **JSON formatting issues?**
 Ensure proper escaping of quotes in bash. Use single quotes around the JSON data or escape double quotes with backslashes.

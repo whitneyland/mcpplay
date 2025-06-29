@@ -147,7 +147,7 @@ Use the exact instrument name (left side) in your track definitions. The complet
 
 When using the MCP server, you have access to these tools:
 
-### `play_sequence` 
+### `play` 
 - **Purpose**: Play a music sequence directly from JSON data
 - **Parameters**: `sequence` (JSON object matching the format above)
 - **Returns**: Confirmation of playback start

@@ -64,7 +64,7 @@ Update your LLM configuration to point to the HTTP endpoint.
 
 The HTTP server provides comprehensive music tools:
 
-### 1. `play_sequence`
+### 1. `play`
 **Purpose**: Play a music sequence from JSON data
 **Parameters**:
 - `version`: Schema version (always 1)
