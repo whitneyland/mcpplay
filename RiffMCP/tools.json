@@ -65,13 +65,5 @@
         }
       }
     }
-  },
-  {
-    "name": "stop",
-    "description": "Stop any currently playing music",
-    "inputSchema": {
-      "type": "object",
-      "properties": {}
-    }
   }
 ]

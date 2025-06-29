@@ -28,8 +28,6 @@ This MCP server allows Claude Desktop to control your music app and manage music
 ## Available Commands
 
 - `play_sequence` - Play music directly from JSON sequence data
-- `list_instruments` - Show all 70 available instruments by category
-- `stop` - Stop any currently playing music
 
 ## Usage Examples
 
@@ -39,7 +37,6 @@ Once configured, you can ask Claude Desktop:
 - "Play Twinkle Twinkle Little Star"
 - "Create and play a chord progression"
 - "Show me all available instruments"
-- "Stop the music"
 
 ## JSON Format
 

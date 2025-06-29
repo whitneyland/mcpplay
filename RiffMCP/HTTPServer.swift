@@ -295,8 +295,6 @@ class HTTPServer: ObservableObject {
                 let sequence = try decoder.decode(MusicSequence.self, from: data)
                 Util.logLatency("🎼", "Sequence decoded", since: sequenceDecodeStart)
                 result = try await handlePlaySequence(sequence: sequence)
-            case "stop":
-                result = handleStop()
             default:
                 throw JSONRPCError.serverError("Unknown tool: \(toolName)")
             }
@@ -342,10 +340,6 @@ class HTTPServer: ObservableObject {
     }
 
 
-    private func handleStop() -> MCPResult {
-        audioManager.stopSequence()
-        return MCPResult(content: [MCPContentItem(type: "text", text: "Stopped playback")])
-    }
 
     // MARK: - Simple Note Endpoint
 

@@ -39,25 +39,7 @@ curl -X POST http://localhost:3001/ \
   }'
 ```
 
-### 2. List Instruments
-
-Get all available instruments organized by category:
-
-```bash
-curl -X POST http://localhost:3001/ \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jsonrpc": "2.0",
-    "method": "tools/call",
-    "params": {
-      "name": "list_instruments",
-      "arguments": {}
-    },
-    "id": 2
-  }'
-```
-
-### 3. Play a Simple Sequence
+### 2. Play a Simple Sequence
 
 Play a simple melody:
 
@@ -89,7 +71,7 @@ curl -X POST http://localhost:3001/ \
   }'
 ```
 
-### 4. Play a Multi-Track Sequence
+### 3. Play a Multi-Track Sequence
 
 Play a sequence with multiple instruments:
 
@@ -130,23 +112,6 @@ curl -X POST http://localhost:3001/ \
   }'
 ```
 
-### 5. Stop Playback
-
-Stop any currently playing music:
-
-```bash
-curl -X POST http://localhost:3001/ \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jsonrpc": "2.0",
-    "method": "tools/call",
-    "params": {
-      "name": "stop",
-      "arguments": {}
-    },
-    "id": 5
-  }'
-```
 
 ## Simple Note Endpoint
 
@@ -230,7 +195,7 @@ All JSON-RPC responses follow this format:
 3. Check app logs for startup errors
 
 **Invalid instrument error?**
-Use the `list_instruments` tool to see all available instrument names.
+Check the instrument names in the `play_sequence` tool schema for all available options.
 
 **JSON formatting issues?**
 Ensure proper escaping of quotes in bash. Use single quotes around the JSON data or escape double quotes with backslashes.

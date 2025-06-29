@@ -62,14 +62,9 @@ Update your LLM configuration to point to the HTTP endpoint.
 
 ## Available Tools
 
-The HTTP server provides three comprehensive music tools:
+The HTTP server provides comprehensive music tools:
 
-### 1. `list_instruments`
-**Purpose**: Get all available instruments organized by category
-**Parameters**: None
-**Returns**: Formatted text list of 70 instruments across 9 categories
-
-### 2. `play_sequence`
+### 1. `play_sequence`
 **Purpose**: Play a music sequence from JSON data
 **Parameters**:
 - `version`: Schema version (always 1)
@@ -79,10 +74,6 @@ The HTTP server provides three comprehensive music tools:
 
 **Returns**: Summary of playback (tempo, event count, track count)
 
-### 3. `stop`
-**Purpose**: Stop any currently playing music
-**Parameters**: None
-**Returns**: Confirmation message
 
 ## Architecture Benefits
 
