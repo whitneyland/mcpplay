@@ -7,10 +7,10 @@
 
 import SwiftUI
 
-struct PianoRoll: View {
+struct PianoRollView: View {
     let sequence: MusicSequence?
-    let animatedElapsedTime: Double
-    let totalDuration: Double
+    let elapsedTime: Double
+    let duration: Double
     
     private let noteHeight: CGFloat = 8
     private let minHeight: CGFloat = 200
@@ -34,8 +34,8 @@ struct PianoRoll: View {
                     noteBlocks(geometry: geometry, sequence: sequence, noteRange: noteRange, rollHeight: rollHeight)
                     
                     // Playback cursor
-                    if totalDuration > 0 {
-                        let cursorX = (animatedElapsedTime / totalDuration) * geometry.size.width
+                    if duration > 0 {
+                        let cursorX = (elapsedTime / duration) * geometry.size.width
                         Rectangle()
                             .fill(Color.red)
                             .frame(width: 2, height: rollHeight)
@@ -70,10 +70,10 @@ struct PianoRoll: View {
             // Vertical beat lines
             let beatsPerMeasure = 4
             let beatDuration = 60.0 / sequence.tempo
-            let totalBeats = Int(ceil(totalDuration / beatDuration))
+            let totalBeats = Int(ceil(duration / beatDuration))
             
             ForEach(0...totalBeats, id: \.self) { beat in
-                let x = (Double(beat) * beatDuration / totalDuration) * geometry.size.width
+                let x = (Double(beat) * beatDuration / duration) * geometry.size.width
                 let isMeasureLine = beat % beatsPerMeasure == 0
                 Rectangle()
                     .fill(isMeasureLine ? Color.gray.opacity(0.6) : Color.gray.opacity(0.3))
@@ -119,8 +119,8 @@ struct PianoRoll: View {
                         let startTime = event.time * beatDuration
                         let duration = event.dur * beatDuration
                         
-                        let x = (startTime / totalDuration) * geometry.size.width
-                        let width = max(2, (duration / totalDuration) * geometry.size.width)
+                        let x = (startTime / duration) * geometry.size.width
+                        let width = max(2, (duration / duration) * geometry.size.width)
                         let y = CGFloat(noteRange.max - midiNote) * noteHeight
                         
                         let velocity = event.vel ?? 100
@@ -201,6 +201,6 @@ struct PianoRoll: View {
         ]
     )
     
-    PianoRoll(sequence: sampleSequence, animatedElapsedTime: 1.5, totalDuration: 4.0)
+    PianoRollView(sequence: sampleSequence, elapsedTime: 1.5, duration: 4.0)
         .frame(height: 300)
 }

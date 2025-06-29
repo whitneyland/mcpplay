@@ -79,30 +79,15 @@ struct MainView: View {
 
             // Bottom section with Piano Roll and Sheet music
             HSplitView {
-                PianoRoll(
+                PianoRollView(
                     sequence: currentSequence,
-                    animatedElapsedTime: animatedElapsedTime,
-                    totalDuration: audioManager.totalDuration
+                    elapsedTime: animatedElapsedTime,
+                    duration: audioManager.totalDuration
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.horizontal, 12)
 
-                // Sheet music
-                VStack {
-                    if let notationSVG = notationSVG {
-                        SVGImageView(svgString: notationSVG)
-                            .border(Color.gray.opacity(0.3), width: 1)
-                    } else {
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.1))
-                            .overlay(
-                                Text("No notation")
-                                    .foregroundColor(.secondary)
-                            )
-                            .border(Color.gray.opacity(0.3), width: 1)
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                SheetMusicView(notationSVG: notationSVG)
             }
             .frame(minHeight: 50)
         }
