@@ -4,14 +4,14 @@ import SwiftUI
 struct ServerActivityView: View {
     @StateObject private var activityLog = ActivityLog.shared
     @State private var selectedEvent: ActivityEvent?
-    @State private var showInspector: Bool = true
+    @State private var showInspector: Bool = false
 
     var body: some View {
         if showInspector {
             NavigationSplitView {
                 // Main list view
                 mainListView
-                    .navigationSplitViewColumnWidth(min: 300, ideal: 400)
+                    .navigationSplitViewColumnWidth(min: 300, ideal: 350)
             } detail: {
                 // Inspector pane
                 if let selectedEvent = selectedEvent {

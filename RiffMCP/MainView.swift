@@ -18,78 +18,81 @@ struct MainView: View {
     @State private var notationSVG: String?
 
     var body: some View {
-        VSplitView {
-            // Top section now split horizontally
-            HSplitView {
-                // Left side: JSON Editor and controls
-                VStack {
-                    TextEditor(text: $jsonInput)
-                        .border(Color.gray, width: 1)
-                        .padding(.bottom, 5)
-                        .frame(minHeight: 100)
+        HSplitView {
+            // Left side: VSplit with JSON/Activity on top, Piano Roll on bottom
+            VSplitView {
+                // Top section: JSON Editor and Server Activity
+                HSplitView {
+                    // Left: JSON Editor and controls
+                    VStack {
+                        TextEditor(text: $jsonInput)
+                            .border(Color.gray, width: 1)
+                            .padding(.bottom, 5)
+                            .frame(minHeight: 100)
 
-                    if !presetManager.presets.isEmpty {
-                        Picker("Examples", selection: $selectedPresetId) {
-                            ForEach(presetManager.presets, id: \.fileName) { preset in
-                                Text(preset.displayName).tag(preset.fileName)
+                        if !presetManager.presets.isEmpty {
+                            Picker("Examples", selection: $selectedPresetId) {
+                                ForEach(presetManager.presets, id: \.fileName) { preset in
+                                    Text(preset.displayName).tag(preset.fileName)
+                                }
                             }
+                            .pickerStyle(SegmentedPickerStyle())
+                            .onChange(of: selectedPresetId) {
+                                loadPresetToInput()
+                            }
+                        } else {
+                            Text("No presets available")
+                                .foregroundColor(.secondary)
                         }
-                        .pickerStyle(SegmentedPickerStyle())
-                        .onChange(of: selectedPresetId) {
-                            loadPresetToInput()
+                        HStack {
+                            Button(action: {
+                                if audioManager.isPlaying {
+                                    audioManager.stopSequence()
+                                } else {
+                                    audioManager.playSequenceFromJSON(jsonInput)
+                                }
+                            }) {
+                                HStack {
+                                    Image(systemName: audioManager.isPlaying ? "stop.fill" : "play.fill")
+                                    Text(audioManager.isPlaying ? "Stop" : "Play")
+                                }
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                            }
+                            .background(Color.gray30)
+                            .cornerRadius(6)
+                            .disabled(jsonInput.isEmpty)
+                            
+                            Spacer()
+                            
+                            Text("\(Util.formatTime(audioManager.elapsedTime)) / \(Util.formatTime(audioManager.totalDuration))")
+                                .font(.body.monospaced())
+                                .foregroundColor(.secondary)
                         }
-                    } else {
-                        Text("No presets available")
-                            .foregroundColor(.secondary)
+                        .padding(.top,5)
                     }
-                    HStack {
-                        Button(action: {
-                            if audioManager.isPlaying {
-                                audioManager.stopSequence()
-                            } else {
-                                audioManager.playSequenceFromJSON(jsonInput)
-                            }
-                        }) {
-                            HStack {
-                                Image(systemName: audioManager.isPlaying ? "stop.fill" : "play.fill")
-                                Text(audioManager.isPlaying ? "Stop" : "Play")
-                            }
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                        }
-                        .background(Color.gray30)
-                        .cornerRadius(6)
-                        .disabled(jsonInput.isEmpty)
-                        
-                        Spacer()
-                        
-                        Text("\(Util.formatTime(audioManager.elapsedTime)) / \(Util.formatTime(audioManager.totalDuration))")
-                            .font(.body.monospaced())
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.top,5)
+                    .padding()
+
+                    // Right: Server Activity View
+                    ServerActivityView()
+                        .frame(minWidth: 300, idealWidth: 700)
                 }
-                .padding()
+                .frame(minHeight: 300, idealHeight: 400)
 
-                // Right side: Server Activity View
-                ServerActivityView()
-                    .frame(minWidth: 300) // Give it a reasonable minimum width
-            }
-
-            // Bottom section with Piano Roll and Sheet music
-            HSplitView {
+                // Bottom section: Piano Roll
                 PianoRollView(
                     sequence: currentSequence,
                     elapsedTime: animatedElapsedTime,
                     duration: audioManager.totalDuration
                 )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity, idealHeight: 500, maxHeight: .infinity)
                 .padding(.horizontal, 12)
-
-                SheetMusicView(notationSVG: notationSVG)
             }
-            .frame(minHeight: 50)
+            .frame(minWidth: 400, idealWidth: 1200, minHeight: 200)
+
+            SheetMusicView(notationSVG: notationSVG)
+                .frame(minWidth: 200, idealWidth: 400)
         }
         .onAppear {
             if !presetManager.presets.isEmpty && selectedPresetId.isEmpty {
