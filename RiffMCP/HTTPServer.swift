@@ -245,7 +245,7 @@ class HTTPServer: ObservableObject {
             let response: JSONRPCResponse
             switch request.method {
             case "initialize":
-                let initResult = MCPInitializeResult(protocolVersion: "2024-11-05", capabilities: MCPCapabilities(tools: [:]), serverInfo: MCPServerInfo(name: "riffmcp-http", version: "1.0.0"))
+                let initResult = MCPInitializeResult(protocolVersion: "2024-11-05", capabilities: MCPCapabilities(tools: [:]), serverInfo: MCPServerInfo(name: "riff-http", version: "1.0.0"))
                 response = JSONRPCResponse(result: try encodeToJSONValue(initResult), id: request.id)
             case "notifications/initialized":
                 await sendHTTPResponse(connection: connection, statusCode: 200, body: "")
@@ -290,7 +290,7 @@ class HTTPServer: ObservableObject {
             let decoder = JSONDecoder()
 
             switch toolName {
-            case "play_sequence":
+            case "play":
                 let sequenceDecodeStart = Date()
                 let sequence = try decoder.decode(MusicSequence.self, from: data)
                 Util.logLatency("🎼", "Sequence decoded", since: sequenceDecodeStart)

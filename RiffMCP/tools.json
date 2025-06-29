@@ -1,6 +1,6 @@
 [
   {
-    "name": "play_sequence",
+    "name": "play",
     "description": "Play a multi-track, multi-instrument music sequence with precise timing and 70+ available instruments including piano, strings, brass, woodwinds, and more",
     "inputSchema": {
       "type": "object",
