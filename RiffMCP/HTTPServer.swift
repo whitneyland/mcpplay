@@ -411,7 +411,15 @@ class HTTPServer: ObservableObject {
         let totalEvents = sequence.tracks.reduce(0) { $0 + $1.events.count }
         let summary = "Playing \(sequence.title ?? "") at \(Int(sequence.tempo)) BPM with \(totalEvents) event\(totalEvents == 1 ? "" : "s")."
 
-        ActivityLog.shared.add(message: "Play \(sequence.title ?? "") with \(totalEvents) notes for \(sequence.tracks.first?.instrument ?? "instrument")", type: .generation, sequenceData: jsonString)
+        var titleWith = ""
+        if let title = sequence.title {
+            titleWith = title + " with"
+        }
+        var forInstrument = ""
+        if let insturment = sequence.tracks.first?.instrument {
+            forInstrument = " for \(insturment)"
+        }
+        ActivityLog.shared.add(message: "Play \(titleWith) \(totalEvents) notes\(forInstrument)", type: .generation, sequenceData: jsonString)
 
         return MCPResult(content: [MCPContentItem(type: "text", text: summary)])
     }
