@@ -21,7 +21,7 @@ struct SVGToPNGRenderer: NSViewRepresentable {
         var intrinsicSize: CGSize? = nil
         if let (w, h) = Util.extractDimensions(from: svgString) {
             intrinsicSize = CGSize(width: w, height: h)
-            print(String(format: "SD:svgString   : %04d x %04d", w, h))
+//            print(String(format: "SD:svgString   : %04d x %04d", w, h))
         }
 
         // ── final render size decision ─────────────────────────────────────
@@ -30,8 +30,7 @@ struct SVGToPNGRenderer: NSViewRepresentable {
            ?? intrinsicSize                       // SVG says so
            ?? CGSize(width: 1700, height: 2200)   // last-ditch default
 
-        print(String(format: "SD:SVGToPNG    : %.0f x %.0f",
-                     renderSize.width, renderSize.height))
+//        print(String(format: "SD:SVGToPNG    : %.0f x %.0f", renderSize.width, renderSize.height))
     }
 
     // Convenience for views that need the SVG’s own size
@@ -115,15 +114,8 @@ struct SVGToPNGRenderer: NSViewRepresentable {
 
 
         private func captureWebViewAsPNG(webView: WKWebView) {
-            // use the size the outer struct already decided
-            let targetSize = renderSize
-
             let config = WKSnapshotConfiguration()
-            config.rect = CGRect(origin: .zero, size: targetSize)
-
-            let scale = webView.window?.screen?.backingScaleFactor ?? 2.0
-            print("SD:snapConfig: \(Int(targetSize.width)) × \(Int(targetSize.height))")
-            print("SD:snapScale : \(scale)")
+            config.rect = CGRect(origin: .zero, size: renderSize)
 
             webView.takeSnapshot(with: config) { [weak self] image, error in
                 guard let self else { return }
