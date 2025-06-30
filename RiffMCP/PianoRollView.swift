@@ -109,7 +109,7 @@ struct PianoRollView: View {
         var noteRects: [NoteRect] = []
         
         for (trackIndex, track) in sequence.tracks.enumerated() {
-            let trackColor = getTrackColor(trackIndex: trackIndex)
+            let trackColor = PianoRollView.getTrackColor(trackIndex: trackIndex)
             
             for event in track.events {
                 for pitch in event.pitches {
@@ -180,7 +180,7 @@ struct PianoRollView: View {
         return [1, 3, 6, 8, 10].contains(noteInOctave) // C#, D#, F#, G#, A#
     }
     
-    private func getTrackColor(trackIndex: Int) -> Color {
+    static func getTrackColor(trackIndex: Int) -> Color {
         let colors: [Color] = [
             .blue, .green, .orange, .purple, .red, .yellow, .pink, .cyan
         ]

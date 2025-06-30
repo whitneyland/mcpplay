@@ -80,14 +80,26 @@ struct MainView: View {
                 }
                 .frame(minHeight: 300, idealHeight: 400)
 
-                // Bottom section: Piano Roll
-                PianoRollView(
-                    sequence: currentSequence,
-                    elapsedTime: animatedElapsedTime,
-                    duration: audioManager.totalDuration
-                )
+                // Bottom section: Piano Roll and Instrument list
+                VStack {
+                    PianoRollView(
+                        sequence: currentSequence,
+                        elapsedTime: animatedElapsedTime,
+                        duration: audioManager.totalDuration
+                    )
+                    HStack {
+                        ForEach(Array((currentSequence?.tracks ?? []).enumerated()), id: \.0) { index, track in
+                            Rectangle()
+                                .fill(PianoRollView.getTrackColor(trackIndex: index))
+                                .frame(width: 40, height: 12)
+                            Text(Instruments.getDisplayName(for: track.instrument) ?? track.instrument)
+                                .frame(width: 120, alignment: .leading)
+                        }
+                    }
+                }
                 .frame(maxWidth: .infinity, idealHeight: 500, maxHeight: .infinity)
                 .padding(.horizontal, 12)
+
             }
             .frame(minWidth: 400, idealWidth: 1200, minHeight: 200)
 
