@@ -72,6 +72,8 @@ struct MainView: View {
                                 .foregroundColor(.secondary)
                         }
                         .padding(.top,5)
+                        .background(Color.black.opacity(0.2))
+
                     }
                     .padding()
 
@@ -89,7 +91,7 @@ struct MainView: View {
                         duration: audioManager.totalDuration
                     )
                     
-                    HStack(spacing: 0) {
+                    HStack(spacing: 15) {
                         ForEach(Array((currentSequence?.tracks ?? []).enumerated()), id: \.0) { index, track in
                             TrackInstrument(
                                 trackIndex: index,
