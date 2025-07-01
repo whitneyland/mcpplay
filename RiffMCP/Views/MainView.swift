@@ -264,7 +264,8 @@ struct TrackInstrument: View {
                     updateTrackInstrument(trackIndex, instrumentName)
                 }
             ),
-            color: PianoRollView.getTrackColor(trackIndex: trackIndex)
+            color: PianoRollView.getTrackColor(trackIndex: trackIndex),
+            direction: .top     // Opens up
         )
         .frame(width: 190)
     }
