@@ -16,6 +16,7 @@ struct MainView: View {
     @State private var animatedElapsedTime: Double = 0.0
     @State private var currentSequence: MusicSequence?
     @State private var notationSVG: String?
+    @State private var trackInstrumentSelections: [String?] = []
 
     var body: some View {
         HSplitView {
@@ -89,11 +90,12 @@ struct MainView: View {
                     )
                     HStack {
                         ForEach(Array((currentSequence?.tracks ?? []).enumerated()), id: \.0) { index, track in
-                            Rectangle()
-                                .fill(PianoRollView.getTrackColor(trackIndex: index))
-                                .frame(width: 40, height: 12)
-                            Text(Instruments.getDisplayName(for: track.instrument) ?? track.instrument)
-                                .frame(width: 120, alignment: .leading)
+                            TrackInstrumentRow(
+                                trackIndex: index,
+                                track: track,
+                                trackInstrumentSelections: $trackInstrumentSelections,
+                                updateTrackInstrument: updateTrackInstrument
+                            )
                         }
                     }
                 }
@@ -155,10 +157,8 @@ struct MainView: View {
         }
         
         do {
-            let cleanedJSON = Util.cleanJSON(from: jsonInput)
-            guard let data = cleanedJSON.data(using: .utf8) else { return }
-            currentSequence = try JSONDecoder().decode(MusicSequence.self, from: data)
-            
+            currentSequence = try SequenceJSON.decode(jsonInput)
+            ensureTrackSelectionsCount()
             updateNotationImage()
         } catch {
             currentSequence = nil
@@ -195,8 +195,86 @@ struct MainView: View {
             let svg = Verovio.svgFromSimpleTestXml()
             notationSVG = svg
         }
-    }    
+    }
+    
+    private func updateTrackInstrument(trackIndex: Int, newInstrument: String?) {
+        guard let newInstrument = newInstrument,
+              let sequence = currentSequence,
+              trackIndex < sequence.tracks.count else { return }
+        
+        // Update the track instrument
+        var updatedTracks = sequence.tracks
+        let updatedTrack = Track(
+            instrument: newInstrument,
+            name: updatedTracks[trackIndex].name,
+            events: updatedTracks[trackIndex].events
+        )
+        updatedTracks[trackIndex] = updatedTrack
+        
+        // Create updated sequence
+        let updatedSequence = MusicSequence(
+            title: sequence.title,
+            tempo: sequence.tempo,
+            tracks: updatedTracks
+        )
+
+        // Encode back to JSON and update the input
+        do {
+            jsonInput = try SequenceJSON.prettyPrint(updatedSequence)
+        } catch {
+            print("Error encoding updated sequence: \(error)")
+        }        
+        
+        // Update local state
+        ensureTrackSelectionsCount()
+        if trackIndex < trackInstrumentSelections.count {
+            trackInstrumentSelections[trackIndex] = newInstrument
+        }
+    }
+    
+    private func ensureTrackSelectionsCount() {
+        let trackCount = currentSequence?.tracks.count ?? 0
+        if trackInstrumentSelections.count != trackCount {
+            trackInstrumentSelections = Array(0..<trackCount).map { index in
+                currentSequence?.tracks[index].instrument
+            }
+        }
+    }
 }
+
+struct TrackInstrumentRow: View {
+    let trackIndex: Int
+    let track: Track
+    @Binding var trackInstrumentSelections: [String?]
+    let updateTrackInstrument: (Int, String?) -> Void
+    
+    private var currentInstrument: String {
+        trackIndex < trackInstrumentSelections.count ? (trackInstrumentSelections[trackIndex] ?? track.instrument) : track.instrument
+    }
+    
+    private var displayName: String {
+        Instruments.getDisplayName(for: currentInstrument)
+    }
+    
+    var body: some View {
+        Rectangle()
+            .fill(PianoRollView.getTrackColor(trackIndex: trackIndex))
+            .frame(width: 30, height: 12)
+        CategoryMenu(
+            categories: Instruments.getInstrumentCategories(),
+            selectedItem: Binding(
+                get: { displayName },
+                set: { newDisplayName in
+                    guard let newDisplayName = newDisplayName,
+                          let instrumentName = Instruments.getInstrumentName(from: newDisplayName) else { return }
+                    updateTrackInstrument(trackIndex, instrumentName)
+                }
+            )
+        )
+        .frame(width: 180)
+    }
+}
+
 #Preview {
     MainView()
         .environmentObject(AudioManager())

@@ -74,54 +74,48 @@ class AudioManager: ObservableObject {
         return Bundle.main.url(forResource: "FluidR3_GM", withExtension: "sf2")
     }
 
-    func playSequenceFromJSON(_ jsonString: String) {
+    func playSequenceFromJSON(_ rawJSON: String) {
         let startTime = Date()
         Util.logTiming("AudioManager.playSequenceFromJSON started")
 
-        stopSequence()
-        
-        // Set loading state immediately
+        stopSequence()                     // cancel anything already playing
         playbackState = .loading
 
-        // Use a background Task to perform the heavy lifting of parsing and setup
-        // without blocking the UI.
         Task {
             do {
-                // Single pipeline: clean, decode, validate, re-encode for display
-                let sequenceData = try processJSONSequence(jsonString)
+                // ── 1. Parse / validate ───────────────────────────────
+                let sequence = try SequenceJSON.decode(rawJSON)
                 let decodeTime = Date().timeIntervalSince(startTime) * 1000
                 Util.logTiming("JSON processed in \(String(format: "%.1f", decodeTime))ms, calling scheduleSequence")
-                
-                // Calculate duration and update UI
-                let beatDuration = 60.0 / sequenceData.tempo
-                let maxEnd = sequenceData.tracks
+
+                // ── 2. Duration & UI fields ───────────────────────────
+                let beat = 60.0 / sequence.tempo
+                let maxEndBeat = sequence.tracks
                     .flatMap { $0.events.map { $0.time + $0.dur } }
                     .max() ?? 0
-                self.sequenceLength = maxEnd * beatDuration
-                self.totalDuration = self.sequenceLength
-                print("🎵 AudioManager: totalDuration set to \(self.totalDuration) seconds")
+                self.sequenceLength = maxEndBeat * beat
+                self.totalDuration  = self.sequenceLength
 
-                // Update UI properties on main thread
-                self.currentlyPlayingTitle = sequenceData.title ?? "Untitled Sequence"
-                self.currentlyPlayingInstrument = sequenceData.tracks.first?.instrument
-                
-                // Set playback start time and schedule the sequence
+                self.currentlyPlayingTitle       = sequence.title ?? "Untitled Sequence"
+                self.currentlyPlayingInstrument  = sequence.tracks.first?.instrument
+
+                // ── 3. Schedule & start ───────────────────────────────
                 self.playbackStartTime = Date()
-                await self.scheduleSequence(sequenceData)
+                await self.scheduleSequence(sequence)
                 self.startElapsedTimeUpdates()
-                
-                // CLEAN START EVENT: Everything is ready, start playback
-                Util.logLatency("🎶", "AudioManager: Setting playbackState to .playing")
+                Util.logLatency("🎶", "Audio playback started")
                 self.playbackState = .playing
 
+                // ── 4. Publish prettified JSON to the editor pane ─────
+                self.receivedJSON = try SequenceJSON.prettyPrint(sequence)
+
             } catch {
-                // Also update the UI with the error on the main thread.
-                self.lastError = "Failed to play sequence: \(error.localizedDescription)"
-                self.playbackState = .idle
+                self.lastError      = "Failed to play sequence: \(error.localizedDescription)"
+                self.playbackState  = .idle
             }
         }
     }
-    
+
     private func scheduleSequence(_ sequence: MusicSequence) async {
         let beatDuration = 60.0 / sequence.tempo
         Util.logTiming("Sequence scheduling started, beatDuration=\(beatDuration)")
@@ -267,10 +261,7 @@ class AudioManager: ObservableObject {
     func calculateDurationFromJSON(_ jsonString: String) {
         // Parse JSON for duration calculation only, don't update display
         do {
-            let cleanedJSON = Util.cleanJSON(from: jsonString)
-            guard let data = cleanedJSON.data(using: .utf8) else { return }
-            
-            let sequence = try JSONDecoder().decode(MusicSequence.self, from: data)
+            let sequence = try SequenceJSON.decode(jsonString)
             let beatDuration = 60.0 / sequence.tempo
             
             // Find the maximum end time across all tracks
@@ -330,45 +321,4 @@ class AudioManager: ObservableObject {
         progressUpdateTask?.cancel()
         progressUpdateTask = nil
     }
-    
-    // MARK: - JSON Processing Pipeline
-    
-    private func processJSONSequence(_ jsonString: String) throws -> MusicSequence {
-        // Step 1: Clean the JSON
-        let cleanedJSON = Util.cleanJSON(from: jsonString)
-        
-        // Step 2: Decode with validation and rounding
-        guard let data = cleanedJSON.data(using: .utf8) else {
-            throw NSError(domain: "AudioManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid JSON string"])
-        }
-        
-        let sequenceData = try JSONDecoder().decode(MusicSequence.self, from: data)
-        
-        // Step 3: Re-encode for clean display (this will use our custom encoder with rounding)
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted]
-        let cleanEncodedData = try encoder.encode(sequenceData)
-        
-        if let prettyJSONString = String(data: cleanEncodedData, encoding: .utf8) {
-            self.receivedJSON = compactEventObjects(prettyJSONString)
-        }
-        
-        return sequenceData
-    }
-    
-    private func compactEventObjects(_ jsonString: String) -> String {
-        return jsonString
-            .replacing(
-                /"events"\s*:\s*\[(?<body>(?:\s*\{[^}]+\}\s*,?)*)\s*\]/
-            ) { match in
-                let parts = match.body.split(separator: "{", omittingEmptySubsequences: true)
-                let glued = parts
-                    .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } // Skip empty/whitespace parts
-                    .map { "{\($0)".replacing(#/\s+/#, with: " ") }
-                    .joined(separator: "\n        ")
-                
-                return #""events": [\#(glued.isEmpty ? "" : "\n        \(glued)\n      ")]"#
-            }
-    }
-    
 }
