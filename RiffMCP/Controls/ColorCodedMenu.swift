@@ -7,28 +7,30 @@
 
 import SwiftUI
 
-struct ColorCodedMenu: View {
-    @State private var selectedItem: String? = "Electric Grand Piano"
+struct Category: Identifiable {
+    let id = UUID()
+    let name: String
+    let items: [String]
+}
 
-    let groupedItems: [String: [String]] = [
-        "Fruits": ["Electric Grand Piano", "Banana"],
-        "Vegetables": ["Carrot", "Broccoli"],
-        "Grains": ["Rice", "Wheat"]
-    ]
+struct ColorCodedMenu: View {
+    let categories: [Category]
+    @Binding var selectedItem: String?
+    let color: Color
 
     var body: some View {
         VStack(spacing: 20) {
             Menu {
-                ForEach(groupedItems.sorted(by: { $0.key < $1.key }), id: \.key) { category, items in
-                    Button(category) {}              // header
+                ForEach(categories) { category in
+                    Button(category.name) {}              // header
                         .disabled(true)
 
-                    ForEach(items, id: \.self) { item in
+                    ForEach(category.items, id: \.self) { item in
                         Button(item) { selectedItem = item }
                     }
                 }
             } label: {
-                Text(selectedItem ?? "Instrument")
+                Text(selectedItem ?? "Choose Item")
 
             }
             .padding(.leading, 4)
@@ -41,7 +43,7 @@ struct ColorCodedMenu: View {
             .overlay(alignment: .bottomLeading) {
                 if selectedItem != nil {
                     Rectangle()
-                        .fill(.green)
+                        .fill(color)
                         .frame(height: 2)
                         .offset(y: -5)
                         .padding(.leading, 6)
@@ -54,9 +56,24 @@ struct ColorCodedMenu: View {
 }
 
 #Preview {
-    HStack {
-        ColorCodedMenu()
-        ColorCodedMenu()
-        ColorCodedMenu()
+    struct ColorCodedMenuDemo: View {
+        @State private var selection1: String? = "Broccoli"
+        @State private var selection2: String? = "Banana"
+        @State private var selection3: String? = "Carrot"
+
+        private let sample: [Category] = [
+            .init(name: "Fruits",     items: ["Apple", "Banana", "Grape"]),
+            .init(name: "Vegetables", items: ["Carrot", "Broccoli", "Spinach"])
+        ]
+
+        var body: some View {
+            HStack {
+                ColorCodedMenu(categories: sample, selectedItem: $selection1, color: .green)
+                ColorCodedMenu(categories: sample, selectedItem: $selection2, color: .yellow)
+                ColorCodedMenu(categories: sample, selectedItem: $selection3, color: .orange)
+            }
+        }
     }
+
+    return ColorCodedMenuDemo()
 }

@@ -88,9 +88,10 @@ struct MainView: View {
                         elapsedTime: animatedElapsedTime,
                         duration: audioManager.totalDuration
                     )
-                    HStack {
+                    
+                    HStack(spacing: 0) {
                         ForEach(Array((currentSequence?.tracks ?? []).enumerated()), id: \.0) { index, track in
-                            TrackInstrumentRow(
+                            TrackInstrument(
                                 trackIndex: index,
                                 track: track,
                                 trackInstrumentSelections: $trackInstrumentSelections,
@@ -223,7 +224,7 @@ struct MainView: View {
             jsonInput = try SequenceJSON.prettyPrint(updatedSequence)
         } catch {
             print("Error encoding updated sequence: \(error)")
-        }        
+        }
         
         // Update local state
         ensureTrackSelectionsCount()
@@ -242,7 +243,7 @@ struct MainView: View {
     }
 }
 
-struct TrackInstrumentRow: View {
+struct TrackInstrument: View {
     let trackIndex: Int
     let track: Track
     @Binding var trackInstrumentSelections: [String?]
@@ -251,27 +252,21 @@ struct TrackInstrumentRow: View {
     private var currentInstrument: String {
         trackIndex < trackInstrumentSelections.count ? (trackInstrumentSelections[trackIndex] ?? track.instrument) : track.instrument
     }
-    
-    private var displayName: String {
-        Instruments.getDisplayName(for: currentInstrument)
-    }
-    
+
     var body: some View {
-        Rectangle()
-            .fill(PianoRollView.getTrackColor(trackIndex: trackIndex))
-            .frame(width: 30, height: 12)
-        CategoryMenu(
+        ColorCodedMenu(
             categories: Instruments.getInstrumentCategories(),
             selectedItem: Binding(
-                get: { displayName },
+                get: { Instruments.getDisplayName(for: currentInstrument) },
                 set: { newDisplayName in
                     guard let newDisplayName = newDisplayName,
                           let instrumentName = Instruments.getInstrumentName(from: newDisplayName) else { return }
                     updateTrackInstrument(trackIndex, instrumentName)
                 }
-            )
+            ),
+            color: PianoRollView.getTrackColor(trackIndex: trackIndex)
         )
-        .frame(width: 180)
+        .frame(width: 190)
     }
 }
 
