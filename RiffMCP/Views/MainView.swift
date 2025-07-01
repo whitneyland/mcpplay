@@ -24,15 +24,14 @@ struct MainView: View {
             VSplitView {
                 // Top section: JSON Editor and Server Activity
                 HSplitView {
-                    // Left: JSON Editor and controls
-                    VStack {
+                    // Left: JSON Editor, presets, and transport controls
+                    VStack(spacing: 12) {
                         TextEditor(text: $jsonInput)
                             .border(Color.gray, width: 1)
-                            .padding(.bottom, 5)
                             .frame(minHeight: 100)
 
                         if !presetManager.presets.isEmpty {
-                            Picker("Examples", selection: $selectedPresetId) {
+                            Picker("Presets", selection: $selectedPresetId) {
                                 ForEach(presetManager.presets, id: \.fileName) { preset in
                                     Text(preset.displayName).tag(preset.fileName)
                                 }
@@ -45,6 +44,7 @@ struct MainView: View {
                             Text("No presets available")
                                 .foregroundColor(.secondary)
                         }
+
                         HStack {
                             Button(action: {
                                 if audioManager.isPlaying {
@@ -64,18 +64,23 @@ struct MainView: View {
                             .background(Color.gray30)
                             .cornerRadius(6)
                             .disabled(jsonInput.isEmpty)
-                            
-                            Spacer()
-                            
-                            Text("\(Util.formatTime(audioManager.elapsedTime)) / \(Util.formatTime(audioManager.totalDuration))")
-                                .font(.body.monospaced())
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.top,5)
-                        .background(Color.black.opacity(0.2))
 
+                            Spacer()
+
+                            ZStack {
+                                Rectangle()
+                                    .fill(Color.black.opacity(0.2))
+                                    .frame(width: 200, height: 30)
+                                    .cornerRadius(6)
+
+                                Text("\(Util.formatTime(audioManager.elapsedTime)) / \(Util.formatTime(audioManager.totalDuration))")
+                                    .font(.body.monospaced())
+//                                    .foregroundColor(.secondary)
+                            }
+                        }
+//                        .padding(.vertical, 6)
                     }
-                    .padding()
+                    .padding(12)
 
                     // Right: Server Activity View
                     ServerActivityView()
