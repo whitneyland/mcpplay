@@ -108,7 +108,7 @@ struct MainView: View {
                 }
                 .frame(maxWidth: .infinity, idealHeight: 500, maxHeight: .infinity)
                 .padding(.horizontal, 12)
-
+                .padding(.bottom, 8)
             }
             .frame(minWidth: 400, idealWidth: 1200, minHeight: 200)
 
