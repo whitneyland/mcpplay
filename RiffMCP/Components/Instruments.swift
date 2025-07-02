@@ -21,12 +21,8 @@ struct Instruments {
     // SINGLE SOURCE OF TRUTH - all instrument data
     private static let allInfo: [InstrumentInfo] = [
         // Piano
-        InstrumentInfo(name: "acoustic_grand_piano", displayName: "Grand Piano", category: "Piano", midiProgram: 0, defaultClef: "treble", isPiano: true),
-        InstrumentInfo(name: "bright_acoustic_piano", displayName: "Bright Piano", category: "Piano", midiProgram: 1, defaultClef: "treble", isPiano: true),
-        InstrumentInfo(name: "electric_grand_piano", displayName: "Electric Grand Piano", category: "Piano", midiProgram: 2, defaultClef: "treble", isPiano: true),
-        InstrumentInfo(name: "honky_tonk_piano", displayName: "Honky Tonk Piano", category: "Piano", midiProgram: 3, defaultClef: "treble", isPiano: true),
-        InstrumentInfo(name: "electric_piano_1", displayName: "Electric Piano 1", category: "Piano", midiProgram: 4, defaultClef: "treble", isPiano: true),
-        InstrumentInfo(name: "electric_piano_2", displayName: "Electric Piano 2", category: "Piano", midiProgram: 5, defaultClef: "treble", isPiano: true),
+        InstrumentInfo(name: "grand_piano", displayName: "Grand Piano", category: "Piano", midiProgram: 0, defaultClef: "treble", isPiano: true),
+        InstrumentInfo(name: "electric_piano", displayName: "Electric Piano", category: "Piano", midiProgram: 4, defaultClef: "treble", isPiano: true),
         InstrumentInfo(name: "harpsichord", displayName: "Harpsichord", category: "Piano", midiProgram: 6, defaultClef: "treble", isPiano: true),
         InstrumentInfo(name: "clavinet", displayName: "Clavinet", category: "Piano", midiProgram: 7, defaultClef: "treble", isPiano: true),
         
@@ -38,56 +34,53 @@ struct Instruments {
         InstrumentInfo(name: "marimba", displayName: "Marimba", category: "Percussion", midiProgram: 12, defaultClef: "treble", isPiano: false),
         InstrumentInfo(name: "xylophone", displayName: "Xylophone", category: "Percussion", midiProgram: 13, defaultClef: "treble", isPiano: false),
         InstrumentInfo(name: "tubular_bells", displayName: "Tubular Bells", category: "Percussion", midiProgram: 14, defaultClef: "treble", isPiano: false),
-        InstrumentInfo(name: "dulcimer", displayName: "Dulcimer", category: "Percussion", midiProgram: 15, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "timpani", displayName: "Timpani", category: "Percussion", midiProgram: 47, defaultClef: "bass", isPiano: false),
+        InstrumentInfo(name: "agogo", displayName: "Agogo", category: "Percussion", midiProgram: 113, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "steel_drums", displayName: "Steel Drums", category: "Percussion", midiProgram: 114, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "woodblock", displayName: "Woodblock", category: "Percussion", midiProgram: 115, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "taiko_drum", displayName: "Taiko Drum", category: "Percussion", midiProgram: 116, defaultClef: "bass", isPiano: false),
+        InstrumentInfo(name: "castanets", displayName: "Castanets", category: "Percussion", midiProgram: 115, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "concert_bass_drum", displayName: "Concert Bass Drum", category: "Percussion", midiProgram: 116, defaultClef: "bass", isPiano: false),
+        InstrumentInfo(name: "melodic_tom", displayName: "Melodic Tom", category: "Percussion", midiProgram: 117, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "synth_drum", displayName: "Synth Drum", category: "Percussion", midiProgram: 118, defaultClef: "treble", isPiano: false),
         
         // Organ
-        InstrumentInfo(name: "drawbar_organ", displayName: "Drawbar Organ", category: "Organ", midiProgram: 16, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "drawbar_organ", displayName: "DrawbarOrgan", category: "Organ", midiProgram: 16, defaultClef: "treble", isPiano: false),
         InstrumentInfo(name: "percussive_organ", displayName: "Percussive Organ", category: "Organ", midiProgram: 17, defaultClef: "treble", isPiano: false),
         InstrumentInfo(name: "rock_organ", displayName: "Rock Organ", category: "Organ", midiProgram: 18, defaultClef: "treble", isPiano: false),
         InstrumentInfo(name: "church_organ", displayName: "Church Organ", category: "Organ", midiProgram: 19, defaultClef: "treble", isPiano: false),
         InstrumentInfo(name: "reed_organ", displayName: "Reed Organ", category: "Organ", midiProgram: 20, defaultClef: "treble", isPiano: false),
-        InstrumentInfo(name: "accordion", displayName: "Accordion", category: "Organ", midiProgram: 21, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "accordian", displayName: "Accordian", category: "Organ", midiProgram: 21, defaultClef: "treble", isPiano: false),
         InstrumentInfo(name: "harmonica", displayName: "Harmonica", category: "Organ", midiProgram: 22, defaultClef: "treble", isPiano: false),
-        InstrumentInfo(name: "tango_accordion", displayName: "Tango Accordion", category: "Organ", midiProgram: 23, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "bandoneon", displayName: "Bandoneon", category: "Organ", midiProgram: 23, defaultClef: "treble", isPiano: false),
         
         // Guitar
-        InstrumentInfo(name: "acoustic_guitar_nylon", displayName: "Guitar (Nylon)", category: "Guitar", midiProgram: 24, defaultClef: "treble", isPiano: false),
-        InstrumentInfo(name: "acoustic_guitar_steel", displayName: "Guitar (Steel)", category: "Guitar", midiProgram: 25, defaultClef: "treble", isPiano: false),
-        InstrumentInfo(name: "electric_guitar_jazz", displayName: "Electric Guitar (Jazz)", category: "Guitar", midiProgram: 26, defaultClef: "treble", isPiano: false),
-        InstrumentInfo(name: "electric_guitar_clean", displayName: "Electric Guitar (Clean)", category: "Guitar", midiProgram: 27, defaultClef: "treble", isPiano: false),
-        InstrumentInfo(name: "electric_guitar_muted", displayName: "Electric Guitar (Muted)", category: "Guitar", midiProgram: 28, defaultClef: "treble", isPiano: false),
-        InstrumentInfo(name: "overdriven_guitar", displayName: "Overdriven Guitar", category: "Guitar", midiProgram: 29, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "nylon_string_guitar", displayName: "Nylon String Guitar", category: "Guitar", midiProgram: 24, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "steel_string_guitar", displayName: "Steel String Guitar", category: "Guitar", midiProgram: 25, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "jazz_guitar", displayName: "Jazz Guitar", category: "Guitar", midiProgram: 26, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "clean_guitar", displayName: "Clean Guitar", category: "Guitar", midiProgram: 27, defaultClef: "treble", isPiano: false),
         InstrumentInfo(name: "distortion_guitar", displayName: "Distortion Guitar", category: "Guitar", midiProgram: 30, defaultClef: "treble", isPiano: false),
-        InstrumentInfo(name: "guitar_harmonics", displayName: "Guitar Harmonics", category: "Guitar", midiProgram: 31, defaultClef: "treble", isPiano: false),
         
         // Bass
         InstrumentInfo(name: "acoustic_bass", displayName: "Acoustic Bass", category: "Bass", midiProgram: 32, defaultClef: "bass", isPiano: false),
-        InstrumentInfo(name: "electric_bass_finger", displayName: "Electric Bass (Finger)", category: "Bass", midiProgram: 33, defaultClef: "bass", isPiano: false),
-        InstrumentInfo(name: "electric_bass_pick", displayName: "Electric Bass (Pick)", category: "Bass", midiProgram: 34, defaultClef: "bass", isPiano: false),
-        InstrumentInfo(name: "fretless_bass", displayName: "Fretless Bass", category: "Bass", midiProgram: 35, defaultClef: "bass", isPiano: false),
-        InstrumentInfo(name: "slap_bass_1", displayName: "Slap Bass 1", category: "Bass", midiProgram: 36, defaultClef: "bass", isPiano: false),
-        InstrumentInfo(name: "slap_bass_2", displayName: "Slap Bass 2", category: "Bass", midiProgram: 37, defaultClef: "bass", isPiano: false),
-        InstrumentInfo(name: "synth_bass_1", displayName: "Synth Bass 1", category: "Bass", midiProgram: 38, defaultClef: "bass", isPiano: false),
-        InstrumentInfo(name: "synth_bass_2", displayName: "Synth Bass 2", category: "Bass", midiProgram: 39, defaultClef: "bass", isPiano: false),
+        InstrumentInfo(name: "fingered_bass", displayName: "Fingered Bass", category: "Bass", midiProgram: 33, defaultClef: "bass", isPiano: false),
+        InstrumentInfo(name: "picked_bass", displayName: "Picked Bass", category: "Bass", midiProgram: 34, defaultClef: "bass", isPiano: false),
+        InstrumentInfo(name: "synth_bass", displayName: "Synth Bass", category: "Bass", midiProgram: 38, defaultClef: "bass", isPiano: false),
         
         // Strings
         InstrumentInfo(name: "violin", displayName: "Violin", category: "Strings", midiProgram: 40, defaultClef: "treble", isPiano: false),
         InstrumentInfo(name: "viola", displayName: "Viola", category: "Strings", midiProgram: 41, defaultClef: "alto", isPiano: false),
         InstrumentInfo(name: "cello", displayName: "Cello", category: "Strings", midiProgram: 42, defaultClef: "bass", isPiano: false),
         InstrumentInfo(name: "contrabass", displayName: "Contrabass", category: "Strings", midiProgram: 43, defaultClef: "bass", isPiano: false),
-        InstrumentInfo(name: "tremolo_strings", displayName: "Tremolo Strings", category: "Strings", midiProgram: 44, defaultClef: "treble", isPiano: false),
-        InstrumentInfo(name: "pizzicato_strings", displayName: "Pizzicato Strings", category: "Strings", midiProgram: 45, defaultClef: "treble", isPiano: false),
-        InstrumentInfo(name: "orchestral_harp", displayName: "Orchestral Harp", category: "Strings", midiProgram: 46, defaultClef: "treble", isPiano: false),
-        InstrumentInfo(name: "timpani", displayName: "Timpani", category: "Strings", midiProgram: 47, defaultClef: "bass", isPiano: false),
-        InstrumentInfo(name: "string_ensemble_1", displayName: "String Ensemble 1", category: "Strings", midiProgram: 48, defaultClef: "treble", isPiano: false),
-        InstrumentInfo(name: "string_ensemble_2", displayName: "String Ensemble 2", category: "Strings", midiProgram: 49, defaultClef: "treble", isPiano: false),
-        InstrumentInfo(name: "synth_strings_1", displayName: "Synth Strings 1", category: "Strings", midiProgram: 50, defaultClef: "treble", isPiano: false),
-        InstrumentInfo(name: "synth_strings_2", displayName: "Synth Strings 2", category: "Strings", midiProgram: 51, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "tremolo", displayName: "Tremolo", category: "Strings", midiProgram: 44, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "pizzicato_section", displayName: "Pizzicato Section", category: "Strings", midiProgram: 45, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "harp", displayName: "Harp", category: "Strings", midiProgram: 46, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "strings", displayName: "Strings", category: "Strings", midiProgram: 48, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "slow_strings", displayName: "Slow Strings", category: "Strings", midiProgram: 49, defaultClef: "treble", isPiano: false),
         
         // Choir
-        InstrumentInfo(name: "choir_aahs", displayName: "Choir Aahs", category: "Choir", midiProgram: 52, defaultClef: "treble", isPiano: false),
-        InstrumentInfo(name: "voice_oohs", displayName: "Voice Oohs", category: "Choir", midiProgram: 53, defaultClef: "treble", isPiano: false),
-        InstrumentInfo(name: "synth_voice", displayName: "Synth Voice", category: "Choir", midiProgram: 54, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "ahh_choir", displayName: "Ahh Choir", category: "Choir", midiProgram: 52, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "ohh_voices", displayName: "Ohh Voices", category: "Choir", midiProgram: 53, defaultClef: "treble", isPiano: false),
         InstrumentInfo(name: "orchestra_hit", displayName: "Orchestra Hit", category: "Choir", midiProgram: 55, defaultClef: "treble", isPiano: false),
         
         // Brass
@@ -95,10 +88,8 @@ struct Instruments {
         InstrumentInfo(name: "trombone", displayName: "Trombone", category: "Brass", midiProgram: 57, defaultClef: "bass", isPiano: false),
         InstrumentInfo(name: "tuba", displayName: "Tuba", category: "Brass", midiProgram: 58, defaultClef: "bass", isPiano: false),
         InstrumentInfo(name: "muted_trumpet", displayName: "Muted Trumpet", category: "Brass", midiProgram: 59, defaultClef: "treble", isPiano: false),
-        InstrumentInfo(name: "french_horn", displayName: "French Horn", category: "Brass", midiProgram: 60, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "french_horns", displayName: "French Horns", category: "Brass", midiProgram: 60, defaultClef: "treble", isPiano: false),
         InstrumentInfo(name: "brass_section", displayName: "Brass Section", category: "Brass", midiProgram: 61, defaultClef: "treble", isPiano: false),
-        InstrumentInfo(name: "synth_brass_1", displayName: "Synth Brass 1", category: "Brass", midiProgram: 62, defaultClef: "treble", isPiano: false),
-        InstrumentInfo(name: "synth_brass_2", displayName: "Synth Brass 2", category: "Brass", midiProgram: 63, defaultClef: "treble", isPiano: false),
         
         // Woodwinds
         InstrumentInfo(name: "soprano_sax", displayName: "Soprano Sax", category: "Woodwinds", midiProgram: 64, defaultClef: "treble", isPiano: false),
@@ -113,10 +104,21 @@ struct Instruments {
         InstrumentInfo(name: "flute", displayName: "Flute", category: "Woodwinds", midiProgram: 73, defaultClef: "treble", isPiano: false),
         InstrumentInfo(name: "recorder", displayName: "Recorder", category: "Woodwinds", midiProgram: 74, defaultClef: "treble", isPiano: false),
         InstrumentInfo(name: "pan_flute", displayName: "Pan Flute", category: "Woodwinds", midiProgram: 75, defaultClef: "treble", isPiano: false),
-        InstrumentInfo(name: "blown_bottle", displayName: "Blown Bottle", category: "Woodwinds", midiProgram: 76, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "bottle_chiff", displayName: "Bottle Chiff", category: "Woodwinds", midiProgram: 76, defaultClef: "treble", isPiano: false),
         InstrumentInfo(name: "shakuhachi", displayName: "Shakuhachi", category: "Woodwinds", midiProgram: 77, defaultClef: "treble", isPiano: false),
         InstrumentInfo(name: "whistle", displayName: "Whistle", category: "Woodwinds", midiProgram: 78, defaultClef: "treble", isPiano: false),
-        InstrumentInfo(name: "ocarina", displayName: "Ocarina", category: "Woodwinds", midiProgram: 79, defaultClef: "treble", isPiano: false)
+        InstrumentInfo(name: "ocarina", displayName: "Ocarina", category: "Woodwinds", midiProgram: 79, defaultClef: "treble", isPiano: false),
+        
+        // World Instruments
+        InstrumentInfo(name: "sitar", displayName: "Sitar", category: "World", midiProgram: 104, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "banjo", displayName: "Banjo", category: "World", midiProgram: 105, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "shamisen", displayName: "Shamisen", category: "World", midiProgram: 106, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "koto", displayName: "Koto", category: "World", midiProgram: 107, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "kalimba", displayName: "Kalimba", category: "World", midiProgram: 108, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "bagpipe", displayName: "BagPipe", category: "World", midiProgram: 109, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "fiddle", displayName: "Fiddle", category: "World", midiProgram: 110, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "shenai", displayName: "Shenai", category: "World", midiProgram: 111, defaultClef: "treble", isPiano: false),
+        InstrumentInfo(name: "tinker_bell", displayName: "Tinker Bell", category: "World", midiProgram: 112, defaultClef: "treble", isPiano: false)
     ]
 
     // Pre-computed dictionaries for O(1) lookups
@@ -163,7 +165,7 @@ struct Instruments {
         let grouped = Dictionary(grouping: allInfo, by: { $0.category })
         
         // Define preferred category order
-        let categoryOrder = ["Piano", "Percussion", "Organ", "Guitar", "Bass", "Strings", "Choir", "Brass", "Woodwinds"]
+        let categoryOrder = ["Piano", "Percussion", "Organ", "Guitar", "Bass", "Strings", "Choir", "Brass", "Woodwinds", "World"]
         
         return categoryOrder.compactMap { categoryName in
             guard let items = grouped[categoryName] else { return nil }

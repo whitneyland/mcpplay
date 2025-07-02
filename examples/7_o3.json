@@ -3,7 +3,7 @@
   "tempo": 120,
   "tracks": [
     {
-      "instrument": "acoustic_grand_piano",
+      "instrument": "grand_piano",
       "events": [
         { "time": 0,  "pitches": ["C2"],  "dur": 4, "vel": 80 },
         { "time": 4,  "pitches": ["G#1"], "dur": 4, "vel": 80 },
@@ -32,7 +32,7 @@
       ]
     },
     {
-      "instrument": "acoustic_grand_piano",
+      "instrument": "grand_piano",
       "events": [
         { "time": 0,  "pitches": ["C3","G3","D#4"],  "dur": 1, "vel": 70 },
         { "time": 1,  "pitches": ["C3","G3","D#4"],  "dur": 1, "vel": 70 },
@@ -156,7 +156,7 @@
       ]
     },
     {
-      "instrument": "acoustic_grand_piano",
+      "instrument": "grand_piano",
       "events": [
         { "time": 0.0,  "pitches": ["D#4"], "dur": 0.5, "vel": 110 },
         { "time": 0.5,  "pitches": ["G3"],  "dur": 0.5, "vel": 95 },

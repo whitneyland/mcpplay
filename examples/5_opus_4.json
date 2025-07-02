@@ -3,7 +3,7 @@
   "tempo": 140,
   "tracks": [
     {
-      "instrument": "acoustic_grand_piano",
+      "instrument": "grand_piano",
       "events": [
     { "time": 0.0, "pitches": ["D1", "D2"], "dur": 2.0, "vel": 120 },
     { "time": 2.0, "pitches": ["D1", "A1", "D2"], "dur": 1.5, "vel": 115 },
