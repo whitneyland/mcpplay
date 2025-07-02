@@ -28,8 +28,10 @@ class Verovio {
 
         print(String(format: "SD:svgFromMEI  : %04d x %04d", pageWidth, pageHeight))
 
-        // TODO: Don't use hardcoded path for Verovio resources
-        let resourcePath = "/Users/lee/verovio-resources/data"
+        guard let resourcePath = Bundle.main.path(forResource: "data", ofType: nil, inDirectory: "verovio-resources") else {
+            fatalError("Could not find verovio data resources in bundle")
+        }
+
         let toolkit = vrvToolkit_constructorResourcePath(resourcePath)
         guard toolkit != nil else {
             print("Failed to create Verovio toolkit with resource path: \(resourcePath)")
