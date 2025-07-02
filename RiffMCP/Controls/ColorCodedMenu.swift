@@ -20,8 +20,7 @@ struct ColorCodedMenu: View {
 
     var direction: Edge = .bottom
     var menuWidth: CGFloat = 220
-
-    var menuMaxHeight: CGFloat = 600
+    var menuMaxHeight: CGFloat = 500
 
     @State private var isPresented = false
 
@@ -60,50 +59,64 @@ struct ColorCodedMenu: View {
 
     // The content of the popover menu
     private var menuContent: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(categories) { category in
-                    Text(category.name)
-                        .font(.headline)
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal)
-                        .padding(.top, 10)
-                        .padding(.bottom, 5)
-
-                    ForEach(category.items, id: \.self) { item in
-                        Button {
-                            selectedItem = item
-                            isPresented = false // Dismiss popover on selection
-                        } label: {
-                            HStack {
-                                Text(item)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                // Add checkmark for the selected item
-                                if selectedItem == item {
-                                    Image(systemName: "checkmark")
-                                        .fontWeight(.bold)
-                                }
-                            }
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(categories) { category in
+                        Text(category.name)
+                            .font(.headline)
+                            .foregroundColor(.secondary)
                             .padding(.horizontal)
-                            .padding(.vertical, 8)
-                            .contentShape(Rectangle()) // Make the whole row tappable
-                        }
-                        .buttonStyle(.plain)
-                        .background(selectedItem == item ? Color.accentColor.opacity(0.15) : Color.clear)
-                        .cornerRadius(5)
-                    }
+                            .padding(.top, 10)
+                            .padding(.bottom, 5)
 
-                    // Add a divider unless it's the last category
-                    if category.id != categories.last?.id {
-                        Divider().padding(.top, 8)
+                        ForEach(category.items, id: \.self) { item in
+                            Button {
+                                selectedItem = item
+                                isPresented = false
+                            } label: {
+                                HStack {
+                                    Text(item)
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                    if selectedItem == item {
+                                        Image(systemName: "checkmark")
+                                            .fontWeight(.bold)
+                                    }
+                                }
+                                .padding(.horizontal)
+                                .padding(.vertical, 8)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .background(selectedItem == item ? Color.accentColor.opacity(0.15) : Color.clear)
+                            .cornerRadius(5)
+                            // Assign a unique, scrollable ID to each button.
+                            .id(item)
+                        }
+
+                        if category.id != categories.last?.id {
+                            Divider().padding(.top, 8)
+                        }
+                    }
+                }
+                .padding(.vertical, 5)
+                .frame(width: menuWidth)
+                // When the content appears, scroll to the selected item if it exists.
+                .onAppear {
+                    // We only want to scroll if there is a selection.
+                    guard let currentSelection = selectedItem else { return }
+
+                    // Use the proxy to scroll to the view with the matching ID.
+                    // The anchor parameter positions the item in the visible area.
+                    // .center is usually a good choice.
+                    withAnimation {
+                        proxy.scrollTo(currentSelection, anchor: .center)
                     }
                 }
             }
-            .padding(.vertical, 5)
-            .frame(width: menuWidth)
+            .frame(maxHeight: menuMaxHeight)
         }
-        .frame(maxHeight: menuMaxHeight)
     }
 }
 
