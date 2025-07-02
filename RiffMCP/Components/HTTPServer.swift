@@ -110,8 +110,19 @@ struct MCPContentItem: Codable, Sendable { let type: String; let text: String }
 struct MCPResult: Codable, Sendable { let content: [MCPContentItem] }
 struct MCPTool: Codable, Sendable { let name: String; let description: String; let inputSchema: [String: JSONValue] }
 struct MCPToolsResult: Codable, Sendable { let tools: [MCPTool] }
+struct MCPPromptArgument: Codable, Sendable { let name: String; let description: String; let required: Bool }
+struct MCPPrompt: Codable, Sendable { let name: String; let description: String; let arguments: [MCPPromptArgument]? }
+struct MCPPromptsResult: Codable, Sendable { let prompts: [MCPPrompt] }
 struct MCPInitializeResult: Codable, Sendable { let protocolVersion: String; let capabilities: MCPCapabilities; let serverInfo: MCPServerInfo }
-struct MCPCapabilities: Codable, Sendable { let tools: [String: JSONValue] }
+struct MCPCapabilities: Codable, Sendable { 
+    let tools: [String: JSONValue]
+    let prompts: [String: JSONValue]?
+    
+    init(tools: [String: JSONValue], prompts: [String: JSONValue]? = nil) {
+        self.tools = tools
+        self.prompts = prompts
+    }
+}
 struct MCPServerInfo: Codable, Sendable { let name: String; let version: String }
 struct PlayNoteRequest: Codable, Sendable { let pitch: String; let dur: Double?; let vel: Int? }
 struct PlayNoteResponse: Codable, Sendable { let status: String; let pitch: String; let dur: Double; let vel: Int }
@@ -276,7 +287,8 @@ class HTTPServer: ObservableObject {
             let response: JSONRPCResponse
             switch request.method {
             case "initialize":
-                let initResult = MCPInitializeResult(protocolVersion: "2024-11-05", capabilities: MCPCapabilities(tools: [:]), serverInfo: MCPServerInfo(name: "riff", version: "1.0.0"))
+                let capabilities = MCPCapabilities(tools: ["listChanged": .bool(true)], prompts: ["listChanged": .bool(true)])
+                let initResult = MCPInitializeResult(protocolVersion: "2024-11-05", capabilities: capabilities, serverInfo: MCPServerInfo(name: "riff", version: "1.0.0"))
                 response = JSONRPCResponse(result: try encodeToJSONValue(initResult), id: request.id)
             case "notifications/initialized":
                 await sendHTTPResponse(connection: connection, statusCode: 200, body: "")
@@ -289,7 +301,8 @@ class HTTPServer: ObservableObject {
             case "resources/list":
                 response = JSONRPCResponse(result: .object(["resources": .array([])]), id: request.id)
             case "prompts/list":
-                response = JSONRPCResponse(result: .object(["prompts": .array([])]), id: request.id)
+                let result = MCPPromptsResult(prompts: getPromptDefinitions())
+                response = JSONRPCResponse(result: try encodeToJSONValue(result), id: request.id)
             default:
                 response = JSONRPCResponse(error: .methodNotFound, id: request.id)
             }
@@ -517,11 +530,42 @@ class HTTPServer: ObservableObject {
         }
     }
 
-    // MARK: - Tool Definitions & Instruments Data
+    // MARK: - Tool & Prompt Definitions
+
+    private func getPromptDefinitions() -> [MCPPrompt] {
+        // Load prompt definitions from prompts.json file
+        guard let promptsURL = Bundle.main.url(forResource: "prompts", withExtension: "json", subdirectory: "mcp"),
+              let promptsData = try? Data(contentsOf: promptsURL),
+              let promptsArray = try? JSONSerialization.jsonObject(with: promptsData) as? [[String: Any]] else {
+            print("❌ Failed to load prompts.json, falling back to empty array")
+            return []
+        }
+        
+        return promptsArray.compactMap { promptDict in
+            guard let name = promptDict["name"] as? String,
+                  let description = promptDict["description"] as? String else {
+                return nil
+            }
+            
+            var arguments: [MCPPromptArgument]? = nil
+            if let argsArray = promptDict["arguments"] as? [[String: Any]] {
+                arguments = argsArray.compactMap { argDict in
+                    guard let argName = argDict["name"] as? String,
+                          let argDescription = argDict["description"] as? String else {
+                        return nil
+                    }
+                    let required = argDict["required"] as? Bool ?? false
+                    return MCPPromptArgument(name: argName, description: argDescription, required: required)
+                }
+            }
+            
+            return MCPPrompt(name: name, description: description, arguments: arguments)
+        }
+    }
 
     private func getToolDefinitions() -> [MCPTool] {
         // Load tool definitions from clean JSON file instead of ugly Swift code
-        guard let toolsURL = Bundle.main.url(forResource: "tools", withExtension: "json"),
+        guard let toolsURL = Bundle.main.url(forResource: "tools", withExtension: "json", subdirectory: "mcp"),
               let toolsData = try? Data(contentsOf: toolsURL),
               let toolsArray = try? JSONSerialization.jsonObject(with: toolsData) as? [[String: Any]] else {
             print("❌ Failed to load tools.json, falling back to empty array")

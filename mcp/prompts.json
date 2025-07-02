@@ -1,0 +1,50 @@
+[
+  {
+    "name": "jazz_chord_progression",
+    "description": "Generate 12 bars of cool jazz chord progressions with sophisticated harmony and rhythm",
+    "arguments": [
+      {
+        "name": "key",
+        "description": "Musical key (e.g., C, Dm, F#)",
+        "required": false
+      },
+      {
+        "name": "tempo", 
+        "description": "BPM (default: 120)",
+        "required": false
+      }
+    ]
+  },
+  {
+    "name": "walking_bass_line",
+    "description": "Add a walking bass line with quarter note movement and jazz harmony",
+    "arguments": [
+      {
+        "name": "chord_progression",
+        "description": "Chord progression to follow (e.g., 'Cmaj7 Am7 Dm7 G7')",
+        "required": false
+      },
+      {
+        "name": "bars",
+        "description": "Number of bars (default: 8)",
+        "required": false
+      }
+    ]
+  },
+  {
+    "name": "impressive_percussion",
+    "description": "Compose an impressive percussion track with dynamic rhythms and multiple drum voices",
+    "arguments": [
+      {
+        "name": "style",
+        "description": "Percussion style (e.g., 'rock', 'latin', 'funk', 'orchestral')",
+        "required": false
+      },
+      {
+        "name": "intensity",
+        "description": "Intensity level from 1-10 (default: 7)",
+        "required": false
+      }
+    ]
+  }
+]

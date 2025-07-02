@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9B07B21B2E15C80200631641 /* mcp in Resources */ = {isa = PBXBuildFile; fileRef = 9B07B21A2E15C80200631641 /* mcp */; };
 		9BA506E62E01DB8E000EFB3E /* examples in Resources */ = {isa = PBXBuildFile; fileRef = 9BA506E52E01DB8E000EFB3E /* examples */; };
 		9BA506EB2E01DC00000EFB3E /* lib/libverovio.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BA506EC2E01DC00000EFB3E /* lib/libverovio.a */; };
 		9BAECE312E0F04620054DBE2 /* CREDITS.md in Resources */ = {isa = PBXBuildFile; fileRef = 9BAECE302E0F04620054DBE2 /* CREDITS.md */; };
@@ -14,13 +15,33 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		9B07B21A2E15C80200631641 /* mcp */ = {isa = PBXFileReference; lastKnownFileType = folder; path = mcp; sourceTree = "<group>"; };
 		9B5BB77E2DF4AF03003EC64C /* RiffMCP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RiffMCP.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9BA506E52E01DB8E000EFB3E /* examples */ = {isa = PBXFileReference; lastKnownFileType = folder; path = examples; sourceTree = "<group>"; };
 		9BA506EC2E01DC00000EFB3E /* lib/libverovio.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = lib/libverovio.a; sourceTree = "<group>"; };
 		9BAECE302E0F04620054DBE2 /* CREDITS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CREDITS.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		9B07B21C2E15C80600631641 /* Exceptions for "mcp" folder in "RiffMCP" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				prompts.json,
+				tools.json,
+			);
+			target = 9B5BB77D2DF4AF03003EC64C /* RiffMCP */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		9B07B1D92E15C6FD00631641 /* mcp */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				9B07B21C2E15C80600631641 /* Exceptions for "mcp" folder in "RiffMCP" target */,
+			);
+			path = mcp;
+			sourceTree = "<group>";
+		};
 		9B5BB7802DF4AF03003EC64C /* RiffMCP */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = RiffMCP;
@@ -44,6 +65,8 @@
 		9B5BB7752DF4AF03003EC64C = {
 			isa = PBXGroup;
 			children = (
+				9B07B1D92E15C6FD00631641 /* mcp */,
+				9B07B21A2E15C80200631641 /* mcp */,
 				9BAECE302E0F04620054DBE2 /* CREDITS.md */,
 				9BA506E52E01DB8E000EFB3E /* examples */,
 				9B5BB7802DF4AF03003EC64C /* RiffMCP */,
@@ -85,6 +108,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				9B07B1D92E15C6FD00631641 /* mcp */,
 				9B5BB7802DF4AF03003EC64C /* RiffMCP */,
 			);
 			name = RiffMCP;
@@ -137,6 +161,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9B07B21B2E15C80200631641 /* mcp in Resources */,
 				9BAECE312E0F04620054DBE2 /* CREDITS.md in Resources */,
 				9BA506E62E01DB8E000EFB3E /* examples in Resources */,
 			);
