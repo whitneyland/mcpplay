@@ -16,12 +16,13 @@ struct PianoRollView: View {
     private let minHeight: CGFloat = 200
     
     var body: some View {
+
         GeometryReader { geometry in
             if let sequence = sequence {
                 let noteRange = calculateNoteRange(sequence: sequence)
                 let totalRows = noteRange.max - noteRange.min + 1
                 let rollHeight = max(minHeight, CGFloat(totalRows) * noteHeight)
-                
+
                 ZStack(alignment: .topLeading) {
                     // Background
                     Rectangle()
@@ -42,6 +43,20 @@ struct PianoRollView: View {
                             .position(x: cursorX + 1, y: rollHeight / 2)
                     }
                 }
+//                // DEBUG
+//                HStack {
+//                    VStack(alignment: .leading) {
+//                        Text("Elapsed:  \(elapsedTime, specifier: "%.2f")")
+//                        Text("Duration: \(duration,    specifier: "%.2f")")
+//                        if duration > 0 {
+//                            let cursorX = (elapsedTime / duration) * geometry.size.width
+//                            Text("cursorX:  \(cursorX,   specifier: "%.2f")")
+//                        }
+//                    }
+//                    Spacer()
+//                }
+//                .padding(.horizontal)
+//                .font(.caption.monospaced())
             } else {
                 Rectangle()
                     .fill(Color(NSColor.controlBackgroundColor))

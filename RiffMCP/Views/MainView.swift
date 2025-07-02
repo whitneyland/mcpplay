@@ -13,7 +13,6 @@ struct MainView: View {
     @StateObject private var presetManager = PresetManager()
     @State private var selectedPresetId: String = ""
     @State private var jsonInput = ""
-    @State private var animatedElapsedTime: Double = 0.0
     @State private var currentSequence: MusicSequence?
     @State private var notationSVG: String?
     @State private var trackInstrumentSelections: [String?] = []
@@ -92,7 +91,7 @@ struct MainView: View {
                 VStack {
                     PianoRollView(
                         sequence: currentSequence,
-                        elapsedTime: animatedElapsedTime,
+                        elapsedTime: audioManager.elapsedTime,
                         duration: audioManager.totalDuration
                     )
                     
@@ -132,19 +131,6 @@ struct MainView: View {
             audioManager.calculateDurationFromJSON(jsonInput)
             updateCurrentSequence()
         }
-        .onChange(of: audioManager.playbackState) { _, state in
-            switch state {
-            case .playing:
-                animatedElapsedTime = 0.0
-                withAnimation(.linear(duration: audioManager.totalDuration)) {
-                    animatedElapsedTime = audioManager.totalDuration
-                }
-            case .stopped, .idle:
-                animatedElapsedTime = 0.0
-            case .loading:
-                break
-            }
-        }
     }
     
     private func loadPresetToInput() {
@@ -154,7 +140,6 @@ struct MainView: View {
         }
         
         jsonInput = preset.content
-        audioManager.calculateDurationFromJSON(preset.content)
     }
     
     private func updateCurrentSequence() {

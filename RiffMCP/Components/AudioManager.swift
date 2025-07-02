@@ -7,6 +7,7 @@
 
 import AVFoundation
 import Foundation
+import QuartzCore
 
 enum PlaybackState {
     case idle
@@ -37,9 +38,9 @@ class AudioManager: ObservableObject {
     private var sampler: AVAudioUnitSampler
     private var trackSamplers: [AVAudioUnitSampler] = []
     private var sequenceLength: TimeInterval = 0.0
-    private var progressUpdateTask: Task<Void, Never>?
+    private var displayTimer: Timer?
     private var isSchedulingActive = false
-    private var playbackStartTime: Date?
+    private var playbackStartTicks: CFTimeInterval?
     private var testTimers: [DispatchSourceTimer] = []
     private var noteTimers: [DispatchSourceTimer] = []
 
@@ -100,7 +101,7 @@ class AudioManager: ObservableObject {
                 self.currentlyPlayingInstrument  = sequence.tracks.first?.instrument
 
                 // ── 3. Schedule & start ───────────────────────────────
-                self.playbackStartTime = Date()
+                self.playbackStartTicks = CACurrentMediaTime()
                 await self.scheduleSequence(sequence)
                 self.startElapsedTimeUpdates()
                 Util.logLatency("🎶", "Audio playback started")
@@ -283,42 +284,29 @@ class AudioManager: ObservableObject {
     }
 
     // MARK: - Elapsed Time Updates
-
     private func startElapsedTimeUpdates() {
-        // Cancel any existing task to ensure we only have one running.
-        stopElapsedTimeUpdates()
+        stopElapsedTimeUpdates()                        // ensure single timer
 
-        progressUpdateTask = Task {
-            // This Task automatically inherits the MainActor context from this function.
-            while !Task.isCancelled {
-                // Update elapsed time for display
-                updateElapsedTime()
-
-                // If sequence ended, exit the loop
-                if !self.isPlaying { break }
-
-                // Update every 100ms for smooth time display
-                try? await Task.sleep(for: .milliseconds(100))
+        displayTimer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.updateElapsedTime()
             }
         }
-    }
-
-    private func updateElapsedTime() {
-        guard let startTime = playbackStartTime, isPlaying, sequenceLength > 0 else {
-            return
-        }
-
-        let elapsed = Date().timeIntervalSince(startTime)
-        elapsedTime = elapsed
-        
-        // Stop sequence when we've exceeded the total duration
-        if elapsed >= sequenceLength {
-            stopSequence()
-        }
+        RunLoop.main.add(displayTimer!, forMode: .common)
     }
 
     private func stopElapsedTimeUpdates() {
-        progressUpdateTask?.cancel()
-        progressUpdateTask = nil
+        displayTimer?.invalidate()
+        displayTimer = nil
+    }
+
+    private func updateElapsedTime() {
+        guard let start = playbackStartTicks, isPlaying, sequenceLength > 0 else { return }
+        elapsedTime = CACurrentMediaTime() - start
+
+        // Stop sequence when we've exceeded the total duration
+        if elapsedTime >= sequenceLength {
+            stopSequence()
+        }
     }
 }
