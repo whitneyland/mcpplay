@@ -1,8 +1,8 @@
 # RiffMCP Server
 
-This MCP server allows Claude Desktop to control your music app and manage music sequences.
+This MCP server allows an LLM to compose and play music sequences.
 
-## Setup Instructions
+## Setup Instructions for Claude Desktop on MacOS
 
 1. **Start RiffMCP app:**
    Launch the RiffMCP.app from Applications or Xcode. The HTTP server starts automatically on port 3001.
@@ -31,7 +31,7 @@ This MCP server allows Claude Desktop to control your music app and manage music
 
 ## Usage Examples
 
-Once configured, you can ask Claude Desktop:
+Once configured, you can chat to request things like:
 
 - "Play a simple C major scale"
 - "Play Twinkle Twinkle Little Star"
@@ -40,7 +40,7 @@ Once configured, you can ask Claude Desktop:
 
 ## JSON Format
 
-Music sequences support multi-track JSON with comprehensive instrument support:
+Music sequences support multi-track JSON with multi-instrument support:
 
 ```json
 {
