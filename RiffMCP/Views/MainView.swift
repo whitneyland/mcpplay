@@ -71,19 +71,17 @@ struct MainView: View {
                                     .fill(Color.black.opacity(0.2))
                                     .frame(width: 200, height: 30)
                                     .cornerRadius(6)
-
                                 Text("\(Util.formatTime(audioManager.elapsedTime)) / \(Util.formatTime(audioManager.totalDuration))")
                                     .font(.body.monospaced())
-//                                    .foregroundColor(.secondary)
                             }
                         }
-//                        .padding(.vertical, 6)
                     }
+                    .frame(idealWidth: 200, maxWidth: 600)
                     .padding(12)
 
                     // Right: Server Activity View
                     ServerActivityView()
-                        .frame(minWidth: 300, idealWidth: 700)
+                        .frame(minWidth: 100, idealWidth: 700)
                 }
                 .frame(minHeight: 300, idealHeight: 400)
 

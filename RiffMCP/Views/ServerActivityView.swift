@@ -1,3 +1,9 @@
+//
+//  ServerActivityView.swift
+//  RiffMCP
+//
+//  Display server log info
+//
 
 import SwiftUI
 
@@ -8,14 +14,15 @@ struct ServerActivityView: View {
 
     var body: some View {
         if showInspector {
-            NavigationSplitView {
+            HSplitView {
                 // Main list view
                 mainListView
-                    .navigationSplitViewColumnWidth(min: 300, ideal: 350)
-            } detail: {
+                    .frame(minWidth: 300, idealWidth: 350, maxWidth: .infinity)
+                
                 // Inspector pane
                 if let selectedEvent = selectedEvent {
                     EventInspectorView(event: selectedEvent)
+                        .frame(minWidth: 200, idealWidth: 200, maxWidth: 600)
                 } else {
                     VStack {
                         Image(systemName: "sidebar.right")
@@ -25,7 +32,7 @@ struct ServerActivityView: View {
                             .font(.headline)
                             .foregroundColor(.secondary)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(minWidth: 200, idealWidth: 200, maxWidth: 400)
                 }
             }
         } else {
@@ -72,7 +79,13 @@ struct ServerActivityView: View {
                     .buttonStyle(PlainButtonStyle())
                     .help("Copy POST events to clipboard")
                     
-                    Button(action: { showInspector.toggle() }) {
+                    Button(action: { 
+                        showInspector.toggle()
+                        // If turning on inspector and no event selected, select the first one
+                        if showInspector && selectedEvent == nil && !activityLog.events.isEmpty {
+                            selectedEvent = activityLog.events.first
+                        }
+                    }) {
                         Image(systemName: showInspector ? "sidebar.right" : "sidebar.left")
                             .font(.title2)
                             .foregroundColor(.white)
