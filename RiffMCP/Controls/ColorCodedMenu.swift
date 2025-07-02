@@ -21,7 +21,8 @@ struct ColorCodedMenu: View {
     var direction: Edge = .bottom
     var menuWidth: CGFloat = 220
 
-    // MARK: State
+    var menuMaxHeight: CGFloat = 600
+
     @State private var isPresented = false
 
     var body: some View {
@@ -59,48 +60,50 @@ struct ColorCodedMenu: View {
 
     // The content of the popover menu
     private var menuContent: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(categories) { category in
-                // Header (more semantic than a disabled button)
-                Text(category.name)
-                    .font(.headline)
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal)
-                    .padding(.top, 10)
-                    .padding(.bottom, 5)
-
-                ForEach(category.items, id: \.self) { item in
-                    Button {
-                        selectedItem = item
-                        isPresented = false // Dismiss popover on selection
-                    } label: {
-                        HStack {
-                            Text(item)
-                                .foregroundColor(.primary)
-                            Spacer()
-                            // Add a checkmark for the selected item
-                            if selectedItem == item {
-                                Image(systemName: "checkmark")
-                                    .fontWeight(.bold)
-                            }
-                        }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(categories) { category in
+                    Text(category.name)
+                        .font(.headline)
+                        .foregroundColor(.secondary)
                         .padding(.horizontal)
-                        .padding(.vertical, 8)
-                        .contentShape(Rectangle()) // Make the whole row tappable
-                    }
-                    .buttonStyle(.plain)
-                    .background(selectedItem == item ? Color.accentColor.opacity(0.15) : Color.clear)
-                    .cornerRadius(5)
-                }
+                        .padding(.top, 10)
+                        .padding(.bottom, 5)
 
-                // Add a divider unless it's the last category
-                if category.id != categories.last?.id {
-                    Divider().padding(.top, 8)
+                    ForEach(category.items, id: \.self) { item in
+                        Button {
+                            selectedItem = item
+                            isPresented = false // Dismiss popover on selection
+                        } label: {
+                            HStack {
+                                Text(item)
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                // Add checkmark for the selected item
+                                if selectedItem == item {
+                                    Image(systemName: "checkmark")
+                                        .fontWeight(.bold)
+                                }
+                            }
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
+                            .contentShape(Rectangle()) // Make the whole row tappable
+                        }
+                        .buttonStyle(.plain)
+                        .background(selectedItem == item ? Color.accentColor.opacity(0.15) : Color.clear)
+                        .cornerRadius(5)
+                    }
+
+                    // Add a divider unless it's the last category
+                    if category.id != categories.last?.id {
+                        Divider().padding(.top, 8)
+                    }
                 }
             }
+            .padding(.vertical, 5)
+            .frame(width: menuWidth)
         }
-        .padding(.vertical, 5)
-        .frame(width: menuWidth)
+        .frame(maxHeight: menuMaxHeight)
     }
 }
 
@@ -115,34 +118,48 @@ struct ColorCodedMenu: View {
             .init(name: "Vegetables", items: ["Carrot", "Broccoli", "Spinach"])
         ]
 
+        // A longer list to demonstrate scrolling capability.
+        private let longSample: [Category] = [
+            .init(name: "Fruits", items: ["Apple", "Apricot", "Avocado", "Banana", "Blackberry", "Blueberry", "Cherry", "Cranberry", "Date", "Dragonfruit", "Elderberry"]),
+            .init(name: "Vegetables", items: ["Artichoke", "Asparagus", "Beetroot", "Broccoli", "Cabbage", "Carrot", "Cauliflower", "Celery", "Corn", "Cucumber"]),
+            .init(name: "Grains", items: ["Barley", "Buckwheat", "Millet", "Oats", "Quinoa", "Rice", "Rye", "Sorghum", "Spelt", "Wheat"])
+        ]
+
         var body: some View {
-            VStack {
-                Spacer() // Push the content to the bottom
+            VStack(spacing: 40) {
                 HStack(spacing: 20) {
+                    // this menu will scroll because content is long
                     ColorCodedMenu(
-                        categories: sample,
+                        categories: longSample,
                         selectedItem: $selection1,
                         color: .green,
-                        direction: .top     // Opens up
+                        direction: .top
                     )
 
                     ColorCodedMenu(
-                        categories: sample,
+                        categories: longSample,
                         selectedItem: $selection2,
                         color: .yellow,
-                        direction: .bottom  // Opens down
+                        direction: .bottom
                     )
 
                     ColorCodedMenu(
-                        categories: sample,
+                        categories: longSample,
                         selectedItem: $selection3,
                         color: .orange,
-                        direction: .top     // Opens up
+                        direction: .top
                     )
+
+                    ColorCodedMenu(
+                       categories: sample, // Using the short list
+                       selectedItem: .constant("Apple"),
+                       color: .red,
+                       direction: .bottom
+                   )
                 }
-                .padding()
             }
-            .frame(width: 600, height: 400)
+            .padding()
+            .frame(width: 700, height: 500)
             .background(Color(nsColor: .windowBackgroundColor))
         }
     }
