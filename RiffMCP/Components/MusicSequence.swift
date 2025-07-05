@@ -44,7 +44,7 @@ struct MusicSequence: Codable, Sendable {
         } else {
             // Fallback for legacy single-track format where events are at the top level.
             let legacyContainer = try decoder.container(keyedBy: LegacyCodingKeys.self)
-            let instrument = try legacyContainer.decodeIfPresent(String.self, forKey: .init(stringValue: "instrument")!) ?? "acoustic_grand_piano"
+            let instrument = try legacyContainer.decodeIfPresent(String.self, forKey: .init(stringValue: "instrument")!) ?? "grand_piano"
             let events = try legacyContainer.decode([SequenceEvent].self, forKey: .init(stringValue: "events")!)
             let singleTrack = Track(instrument: instrument, name: nil, events: events)
             tracks = [singleTrack]
@@ -82,7 +82,7 @@ struct Track: Codable, Sendable {
     // A custom decoder to provide a default value for 'instrument'.
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        instrument = try container.decodeIfPresent(String.self, forKey: .instrument) ?? "acoustic_grand_piano"
+        instrument = try container.decodeIfPresent(String.self, forKey: .instrument) ?? "grand_piano"
         name = try container.decodeIfPresent(String.self, forKey: .name)
         events = try container.decode([SequenceEvent].self, forKey: .events)
     }

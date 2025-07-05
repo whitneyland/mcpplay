@@ -208,7 +208,7 @@ struct PianoRollView: View {
         title: "Sample",
         tempo: 120,
         tracks: [
-            Track(instrument: "acoustic_grand_piano", name: nil, events: [
+            Track(instrument: "grand_piano", name: nil, events: [
                 SequenceEvent(time: 0.0, pitches: [Pitch.int(60)], dur: 1.0, vel: 100),
                 SequenceEvent(time: 1.0, pitches: [Pitch.int(64)], dur: 1.0, vel: 80),
                 SequenceEvent(time: 2.0, pitches: [Pitch.int(67)], dur: 1.0, vel: 90)

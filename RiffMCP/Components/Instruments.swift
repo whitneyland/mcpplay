@@ -9,7 +9,7 @@ import Foundation
 import SwiftUI
 
 struct InstrumentInfo {
-    let name: String           // raw name (e.g., "acoustic_grand_piano")
+    let name: String           // raw name (e.g., "grand_piano")
     let displayName: String    // polished name (e.g., "Grand Piano")
     let category: String       // category (e.g., "Piano")
     let midiProgram: Int       // MIDI program number (0-based)

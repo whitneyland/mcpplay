@@ -431,10 +431,10 @@ private extension MEIConverter {
         var staffCount = 0
 
         for (trackIndex, track) in tracks.enumerated() {
-            let requestedInstrument = track.instrument ?? "acoustic_grand_piano"
+            let requestedInstrument = track.instrument ?? "grand_piano"
             let instrumentName = Instruments.getMidiProgram(for: requestedInstrument) != nil
                                 ? requestedInstrument
-                                : "acoustic_grand_piano"
+                                : "grand_piano"
             let midiProgram = Instruments.getMidiProgram(for: instrumentName) ?? 0
 
             if Instruments.isPianoInstrument(instrumentName) {

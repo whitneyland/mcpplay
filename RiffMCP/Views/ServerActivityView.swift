@@ -344,7 +344,7 @@ struct ServerActivityView_Previews: PreviewProvider {
                       "tempo": 120,
                       "tracks": [
                         {
-                          "instrument": "acoustic_grand_piano",
+                          "instrument": "grand_piano",
                           "events": []
                         }
                       ]
