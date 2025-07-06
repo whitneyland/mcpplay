@@ -143,6 +143,112 @@ struct SVGToPNGRenderer: NSViewRepresentable {
             }
         }
     }
+    
+    @MainActor
+    static func renderToPNG(svgString: String, size: CGSize? = nil) async throws -> Data {
+        // Determine the rendering size
+        let renderSize: CGSize
+        if let providedSize = size {
+            renderSize = providedSize
+        } else if let (w, h) = Util.extractDimensions(from: svgString) {
+            renderSize = CGSize(width: w, height: h)
+        } else {
+            renderSize = CGSize(width: 1700, height: 2200) // Default fallback
+        }
+
+        // Create a web view offscreen
+        let webView = WKWebView(frame: CGRect(origin: .zero, size: renderSize))
+        
+        // Use a continuation to bridge the callback
+        return try await withCheckedThrowingContinuation { continuation in
+            // Create a coordinator to handle web view delegate methods
+            let coordinator = HeadlessCoordinator(
+                svgString: svgString,
+                renderSize: renderSize,
+                continuation: continuation
+            )
+            
+            webView.navigationDelegate = coordinator
+            
+            // Keep the coordinator alive
+            objc_setAssociatedObject(webView, "headlessCoordinator", coordinator, .OBJC_ASSOCIATION_RETAIN)
+
+            // Load the SVG content
+            let htmlContent = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body { background: white; width: fit-content; height: fit-content; }
+                    svg { display: block; }
+                </style>
+            </head>
+            <body>
+                \(svgString)
+            </body>
+            </html>
+            """
+            webView.loadHTMLString(htmlContent, baseURL: nil)
+        }
+    }
+}
+
+// A new coordinator class specifically for the headless operation
+private class HeadlessCoordinator: NSObject, WKNavigationDelegate {
+    let svgString: String
+    let renderSize: CGSize
+    var continuation: CheckedContinuation<Data, Error>?
+
+    init(svgString: String, renderSize: CGSize, continuation: CheckedContinuation<Data, Error>) {
+        self.svgString = svgString
+        self.renderSize = renderSize
+        self.continuation = continuation
+    }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        let config = WKSnapshotConfiguration()
+        config.rect = CGRect(origin: .zero, size: renderSize)
+
+        webView.takeSnapshot(with: config) { [weak self] image, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                self.continuation?.resume(throwing: error)
+                self.continuation = nil
+                return
+            }
+            
+            guard let image = image else {
+                self.continuation?.resume(throwing: NSError(domain: "SVGToPNGRenderer", code: 1, userInfo: [NSLocalizedDescriptionKey: "Snapshot failed to produce an image."]))
+                self.continuation = nil
+                return
+            }
+
+            // Convert NSImage to PNG Data
+            guard let tiffRepresentation = image.tiffRepresentation,
+                  let bitmapImage = NSBitmapImageRep(data: tiffRepresentation),
+                  let pngData = bitmapImage.representation(using: .png, properties: [:]) else {
+                self.continuation?.resume(throwing: NSError(domain: "SVGToPNGRenderer", code: 2, userInfo: [NSLocalizedDescriptionKey: "Failed to convert NSImage to PNG data."]))
+                self.continuation = nil
+                return
+            }
+            
+            self.continuation?.resume(returning: pngData)
+            self.continuation = nil
+        }
+    }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        continuation?.resume(throwing: error)
+        continuation = nil
+    }
+
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        continuation?.resume(throwing: error)
+        continuation = nil
+    }
 }
 
 // SwiftUI view that displays the PNG image

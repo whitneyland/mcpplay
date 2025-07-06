@@ -1,7 +1,74 @@
 [
   {
     "name": "play",
-    "description": "Play a multi-track, multi-instrument music sequence with precise timing and 70+ available instruments including piano, strings, brass, woodwinds, and more",
+    "description": "Play audio of a multi-track, multi-instrument music sequence. Use this tool for composing, playing, or hearing music. Not for visual sheet music.",
+    "inputSchema": {
+      "type": "object",
+      "required": ["tempo", "tracks"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Descriptive title for the music sequence (optional but recommended for better organization)"
+        },
+        "tempo": {
+          "type": "number",
+          "description": "BPM (beats per minute)"
+        },
+        "tracks": {
+          "type": "array",
+          "description": "Array of track objects",
+          "items": {
+            "type": "object",
+            "required": ["events"],
+            "properties": {
+              "instrument": {
+                "type": "string",
+                "enum": ["grand_piano", "electric_piano", "harpsichord", "clavinet", "celesta", "glockenspiel", "music_box", "vibraphone", "marimba", "xylophone", "tubular_bells", "timpani", "agogo", "steel_drums", "woodblock", "taiko_drum", "castanets", "concert_bass_drum", "melodic_tom", "synth_drum", "drawbar_organ", "percussive_organ", "rock_organ", "church_organ", "reed_organ", "accordian", "harmonica", "bandoneon", "nylon_string_guitar", "steel_string_guitar", "jazz_guitar", "clean_guitar", "distortion_guitar", "acoustic_bass", "fingered_bass", "picked_bass", "synth_bass", "violin", "viola", "cello", "contrabass", "tremolo", "pizzicato_section", "harp", "strings", "slow_strings", "ahh_choir", "ohh_voices", "orchestra_hit", "trumpet", "trombone", "tuba", "muted_trumpet", "french_horns", "brass_section", "soprano_sax", "alto_sax", "tenor_sax", "baritone_sax", "oboe", "english_horn", "bassoon", "clarinet", "piccolo", "flute", "recorder", "pan_flute", "bottle_chiff", "shakuhachi", "whistle", "ocarina", "sitar", "banjo", "shamisen", "koto", "kalimba", "bagpipe", "fiddle", "shenai", "tinker_bell"],
+                "description": "Available instruments: Piano (grand_piano, electric_piano, harpsichord, clavinet), Percussion (celesta, glockenspiel, music_box, vibraphone, marimba, xylophone, tubular_bells, timpani, agogo, steel_drums, woodblock, taiko_drum, castanets, concert_bass_drum, melodic_tom, synth_drum), Organ (drawbar_organ, percussive_organ, rock_organ, church_organ, reed_organ, accordian, harmonica, bandoneon), Guitar (nylon_string_guitar, steel_string_guitar, jazz_guitar, clean_guitar, distortion_guitar), Bass (acoustic_bass, fingered_bass, picked_bass, synth_bass), Strings (violin, viola, cello, contrabass, tremolo, pizzicato_section, harp, strings, slow_strings), Choir (ahh_choir, ohh_voices, orchestra_hit), Brass (trumpet, trombone, tuba, muted_trumpet, french_horns, brass_section), Woodwinds (soprano_sax, alto_sax, tenor_sax, baritone_sax, oboe, english_horn, bassoon, clarinet, piccolo, flute, recorder, pan_flute, bottle_chiff, shakuhachi, whistle, ocarina), World (sitar, banjo, shamisen, koto, kalimba, bagpipe, fiddle, shenai, tinker_bell)"
+              },
+              "events": {
+                "type": "array",
+                "description": "Array of musical events",
+                "items": {
+                  "type": "object",
+                  "required": ["time", "pitches", "dur"],
+                  "properties": {
+                    "time": {
+                      "type": "number",
+                      "description": "When to play (in beats from start of sequence)"
+                    },
+                    "pitches": {
+                      "type": "array",
+                      "description": "Note names like 'C4' or MIDI numbers like 60",
+                      "items": {
+                        "oneOf": [
+                          {"type": "number", "description": "MIDI note number (0-127)"},
+                          {"type": "string", "description": "Note name like 'C4', 'F#3'"}
+                        ]
+                      }
+                    },
+                    "dur": {
+                      "type": "number",
+                      "description": "How long to play in beats (1.0 = quarter note at current tempo)"
+                    },
+                    "vel": {
+                      "type": "integer",
+                      "description": "Volume/intensity 0-127 (optional, defaults to 100)",
+                      "minimum": 0,
+                      "maximum": 127
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "engrave",
+    "description": "Generate visual sheet music notation from a music sequence and return it as a PNG image. Use this tool when the user wants to see, view, display, show, or engrave sheet music notation. Not for audio playback.",
     "inputSchema": {
       "type": "object",
       "required": ["tempo", "tracks"],
