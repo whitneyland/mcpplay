@@ -113,37 +113,6 @@ curl -X POST http://localhost:3001/ \
 ```
 
 
-## Simple Note Endpoint
-
-For quick testing, there's a simplified endpoint that plays a single note:
-
-```bash
-curl -X POST http://localhost:3001/play_note \
-  -H "Content-Type: application/json" \
-  -d '{
-    "pitch": "C4",
-    "duration": 1.0,
-    "velocity": 100
-  }'
-```
-
-**Parameters:**
-- `pitch`: Note name (e.g., "C4", "F#3", "Bb5")
-- `duration`: Duration in seconds (optional, default: 1.0)
-- `velocity`: Volume 0-127 (optional, default: 100)
-
-**Examples:**
-```bash
-# Play middle C for 1 second
-curl -X POST http://localhost:3001/play_note -H "Content-Type: application/json" -d '{"pitch":"C4"}'
-
-# Play F# above middle C for 2 seconds at half volume
-curl -X POST http://localhost:3001/play_note -H "Content-Type: application/json" -d '{"pitch":"F#4","duration":2.0,"velocity":64}'
-
-# Play low A for 0.5 seconds
-curl -X POST http://localhost:3001/play_note -H "Content-Type: application/json" -d '{"pitch":"A2","duration":0.5}'
-```
-
 ## Common Note Names
 
 **Octaves:** C4 = Middle C, C3 = One octave below, C5 = One octave above
