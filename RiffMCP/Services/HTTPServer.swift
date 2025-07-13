@@ -373,11 +373,6 @@ class HTTPServer: ObservableObject {
         return MCPResult(content: [.text(summary)])
     }
 
-    // Temporary public test method
-    func testHandleEngraveSequence(sequence: MusicSequence) async throws -> MCPResult {
-        return try await handleEngraveSequence(sequence: sequence)
-    }
-
     private func handleEngraveSequence(sequence: MusicSequence) async throws -> MCPResult {
         Util.logLatency("🎼", "handleEngraveSequence started")
 
