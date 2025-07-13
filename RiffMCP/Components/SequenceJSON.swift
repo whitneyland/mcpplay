@@ -32,10 +32,7 @@ struct SequenceJSON {
             throw NSError(domain: "SequenceJSON", code: 2,
                           userInfo: [NSLocalizedDescriptionKey : "Unable to encode JSON"])
         }
-
-        print("JSON 1:\n\(json)")
-        let compactedJson = compactEventObjects(json, debug: true).json
-        print("JSON 2:\n\(compactedJson)")
+        let compactedJson = compactEventObjects(json).json
         return compactedJson
     }
 
@@ -79,14 +76,8 @@ struct SequenceJSON {
 
     /// Compacts whitespace inside each `"events"` array and tells you how many
     /// arrays it rewrote.
-    ///
-    /// - Parameters:
-    ///   - json:  Raw JSON text.
-    ///   - debug: When `true`, prints one line per replacement.
-    /// - Returns: `(compactJSON, replacementCount)`
     static func compactEventObjects(
-        _ json: String,
-        debug: Bool = false
+        _ json: String
     ) -> (json: String, replacements: Int) {
 
         // Typed regex → `match.body` is a real `Substring`, so no `AnyRegexOutput` issues.
@@ -113,8 +104,6 @@ struct SequenceJSON {
             }
             
             let glued = eventObjects.joined(separator: ",\n        ")
-
-            if debug { print("compactEventObjects – replacement #\(replacements)") }
 
             // Empty array → keep "events": []
             return #""events": [\#(glued.isEmpty ? "" : "\n        \(glued)\n      ")]"#

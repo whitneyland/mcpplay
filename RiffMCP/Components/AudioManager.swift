@@ -9,6 +9,7 @@ import AVFoundation
 import Foundation
 import QuartzCore
 
+
 enum PlaybackState {
     case idle
     case loading
@@ -16,8 +17,30 @@ enum PlaybackState {
     case stopped
 }
 
+enum AudioError: LocalizedError {
+    case soundFontNotFound
+    case sequencerStartFailed(String)
+    case instrumentLoadFailed(String, String)
+    case jsonDecodeFailed(String)
+    case tempoTrackMissing
+    
+    var errorDescription: String? {
+        switch self {
+        case .soundFontNotFound:
+            return "Could not find soundfont file"
+        case .sequencerStartFailed(let detail):
+            return "Failed to start sequencer: \(detail)"
+        case .instrumentLoadFailed(let instrument, let detail):
+            return "Failed to load instrument \(instrument): \(detail)"
+        case .jsonDecodeFailed(let detail):
+            return "Failed to play sequence: \(detail)"
+        case .tempoTrackMissing:
+            return "No tempo track available"
+        }
+    }
+}
+
 // @MainActor guarantees all properties and methods are accessed on the main thread.
-// This makes the class safe to use in a concurrent environment.
 @MainActor
 class AudioManager: ObservableObject {
     // MARK: - Published Properties
@@ -27,7 +50,7 @@ class AudioManager: ObservableObject {
     @Published var totalDuration: Double = 0.0
     @Published var currentlyPlayingTitle: String?
     @Published var currentlyPlayingInstrument: String?
-    @Published var lastError: String?
+    @Published var lastError: AudioError?
     @Published var receivedJSON: String = ""
     
     // Computed property for backward compatibility
@@ -38,15 +61,15 @@ class AudioManager: ObservableObject {
     private var sampler: AVAudioUnitSampler
     private var trackSamplers: [AVAudioUnitSampler] = []
     private var sequenceLength: TimeInterval = 0.0
+    private var currentTempo: Double = 120.0
     private var displayTimer: Timer?
-    private var isSchedulingActive = false
     private var playbackStartTicks: CFTimeInterval?
-    private var testTimers: [DispatchSourceTimer] = []
-    private var noteTimers: [DispatchSourceTimer] = []
+    private var sequencer: AVAudioSequencer
 
     init() {
         audioEngine = AVAudioEngine()
         sampler = AVAudioUnitSampler()
+        sequencer = AVAudioSequencer(audioEngine: audioEngine)
         setupAudioEngine()
         Util.logTiming("AudioManager init completed")
     }
@@ -58,16 +81,16 @@ class AudioManager: ObservableObject {
         do {
             try audioEngine.start()
             guard let soundFontURL = loadSoundFont() else {
-                lastError = "Could not find soundfont file"
+                lastError = .soundFontNotFound
                 return
             }
             do {
                 try sampler.loadSoundBankInstrument(at: soundFontURL, program: 0, bankMSB: 0x79, bankLSB: 0)
             } catch {
-                lastError = "Failed to load soundfont: \(error.localizedDescription)"
+                lastError = .instrumentLoadFailed("FluidR3_GM", error.localizedDescription)
             }
         } catch {
-            lastError = "Failed to start audio engine: \(error.localizedDescription)"
+            lastError = .sequencerStartFailed(error.localizedDescription)
         }
     }
     
@@ -90,46 +113,60 @@ class AudioManager: ObservableObject {
                 Util.logTiming("JSON processed in \(String(format: "%.1f", decodeTime))ms, calling scheduleSequence")
 
                 // ── 2. Duration & UI fields ───────────────────────────
+                currentTempo = sequence.tempo
                 let beat = 60.0 / sequence.tempo
                 let maxEndBeat = sequence.tracks
                     .flatMap { $0.events.map { $0.time + $0.dur } }
                     .max() ?? 0
-                self.sequenceLength = maxEndBeat * beat
-                self.totalDuration  = self.sequenceLength
+                sequenceLength = maxEndBeat * beat
+                totalDuration  = sequenceLength
 
-                self.currentlyPlayingTitle       = sequence.title ?? "Untitled Sequence"
-                self.currentlyPlayingInstrument  = sequence.tracks.first?.instrument
+                currentlyPlayingTitle       = sequence.title ?? "Untitled Sequence"
+                currentlyPlayingInstrument  = sequence.tracks.first?.instrument
 
                 // ── 3. Schedule & start ───────────────────────────────
-                self.playbackStartTicks = CACurrentMediaTime()
-                await self.scheduleSequence(sequence)
-                self.startElapsedTimeUpdates()
+                playbackStartTicks = CACurrentMediaTime()
+                try scheduleSequence(sequence)
+                startElapsedTimeUpdates()
                 Util.logLatency("🎶", "Audio playback started")
-                self.playbackState = .playing
+                playbackState = .playing
 
                 // ── 4. Publish prettified JSON to the editor pane ─────
-                self.receivedJSON = try SequenceJSON.prettyPrint(sequence)
+                receivedJSON = try SequenceJSON.prettyPrint(sequence)
 
+            } catch let audioError as AudioError {
+                lastError = audioError
+                playbackState = .idle
             } catch {
-                self.lastError      = "Failed to play sequence: \(error.localizedDescription)"
-                self.playbackState  = .idle
+                lastError = .jsonDecodeFailed(error.localizedDescription)
+                playbackState = .idle
             }
         }
     }
 
-    private func scheduleSequence(_ sequence: MusicSequence) async {
-        let beatDuration = 60.0 / sequence.tempo
-        Util.logTiming("Sequence scheduling started, beatDuration=\(beatDuration)")
+    private func scheduleSequence(_ sequence: MusicSequence) throws {
+        Util.logTiming("Sequence scheduling started, tempo=\(sequence.tempo)")
 
-        // Clear any existing scheduling and track samplers  
-        isSchedulingActive = false
+        // Stop and clear any existing sequencer
+        sequencer.stop()
         
-        // Cancel and clear all note timers
-        for timer in noteTimers {
-            timer.cancel()
+        // 1. Get the tempo track
+        let tempoTrack = sequencer.tempoTrack
+        
+        // 2. Remove any previous tempo events (skip if track is empty to avoid error -50)
+        if tempoTrack.lengthInBeats > 0 {
+            tempoTrack.clearEvents(in: AVMakeBeatRange(0, tempoTrack.lengthInBeats))
         }
-        noteTimers.removeAll()
         
+        // 3. Insert the new tempo event
+        tempoTrack.addEvent(
+            AVExtendedTempoEvent(tempo: sequence.tempo),   // <-- <-- the right class
+            at: AVMusicTimeStamp(0)
+        )
+        
+        // 4. Keep the global speed-multiplier at 1×
+        sequencer.rate = 1.0
+
         // Detach previous track samplers
         for ts in trackSamplers {
             audioEngine.detach(ts)
@@ -138,116 +175,105 @@ class AudioManager: ObservableObject {
         
         // Create and setup samplers for each track
         guard let soundFontURL = loadSoundFont() else {
-            lastError = "Could not find soundfont file for tracks"
-            return
+            throw AudioError.soundFontNotFound
         }
 
         let instrumentPrograms = Instruments.getInstrumentPrograms()
 
-        Util.logTiming("Loading instruments")
-        for track in sequence.tracks {
+        for (index, track) in sequence.tracks.enumerated() {
             let trackSampler = AVAudioUnitSampler()
             audioEngine.attach(trackSampler)
             audioEngine.connect(trackSampler, to: audioEngine.mainMixerNode, format: nil)
             
             let program = instrumentPrograms[track.instrument] ?? 0
+            print("🎵 Track \(index): Loading \(track.instrument) (program \(program))")
+            
             do {
                 try trackSampler.loadSoundBankInstrument(at: soundFontURL, program: program, bankMSB: 0x79, bankLSB: 0)
+                print("🎵 Track \(index): Successfully loaded soundbank")
             } catch {
-                print("Failed to load instrument \(track.instrument): \(error)")
+                print("🎵 Track \(index): Failed to load instrument \(track.instrument): \(error)")
+                throw AudioError.instrumentLoadFailed(track.instrument, error.localizedDescription)
             }
             trackSamplers.append(trackSampler)
         }
         
-        // Schedule note events for each track
-        isSchedulingActive = true
-        Util.logTiming("Begin scheduling")
+        // Create AVAudioSequencer tracks and schedule events
         for (trackIndex, track) in sequence.tracks.enumerated() {
-
+            let sequencerTrack = sequencer.createAndAppendTrack()
             let trackSampler = trackSamplers[trackIndex]
             
+            // Connect the sequencer track to our sampler
+            sequencerTrack.destinationAudioUnit = trackSampler
+            print("🎵 Track \(trackIndex): Connected to \(track.instrument) sampler, \(track.events.count) events")
+            
+            var eventCount = 0
             for event in track.events {
-                let startTime = event.time * beatDuration
-                let duration = event.dur * beatDuration
+                let startTime = event.time  // Already in beats
+                let duration = event.dur    // Already in beats
                 let velocity = UInt8(event.vel ?? 100)
 
                 for pitch in event.pitches {
                     let midiNote = UInt8(pitch.midiValue)
                     
-                    // Use DispatchSourceTimer for precise timing
-                    let scheduledTime = startTime
-                    let scheduleStart = CFAbsoluteTimeGetCurrent()
+                    // Create MIDI note event (times are in beats)
+                    let noteEvent = AVMIDINoteEvent(
+                        channel: 0,
+                        key: UInt32(midiNote),
+                        velocity: UInt32(velocity),
+                        duration: AVMusicTimeStamp(duration)
+                    )
                     
-                    // Note start timer
-                    let startTimer = DispatchSource.makeTimerSource(queue: .main)
-                    startTimer.schedule(deadline: .now() + .milliseconds(Int(startTime * 1000)))
-                    startTimer.setEventHandler { [weak self] in
-                        let actualDelay = CFAbsoluteTimeGetCurrent() - scheduleStart
-                        Util.logTiming("Note \(midiNote) START: scheduled=\(scheduledTime)s, actual=\(String(format: "%.3f", actualDelay))s, diff=\(String(format: "%.3f", actualDelay - scheduledTime))s")
-                        Util.logLatency("🎵", "FIRST AUDIO: Note \(midiNote) playing")
-                        guard let self = self, self.isPlaying, self.isSchedulingActive else { return }
-                        trackSampler.startNote(midiNote, withVelocity: velocity, onChannel: 0)
-                        startTimer.cancel()
-                    }
-                    startTimer.resume()
-                    noteTimers.append(startTimer)
-
-                    let stopTimer = DispatchSource.makeTimerSource(queue: .main)
-                    stopTimer.schedule(deadline: .now() + .milliseconds(Int((startTime + duration) * 1000)))
-                    stopTimer.setEventHandler { [weak self] in
-                        guard let self = self, self.isPlaying, self.isSchedulingActive else { return }
-                        trackSampler.stopNote(midiNote, onChannel: 0)
-                        stopTimer.cancel()
-                    }
-                    stopTimer.resume()
-                    noteTimers.append(stopTimer)
+                    // Add to track at specified time (in beats)
+                    sequencerTrack.lengthInBeats = max(sequencerTrack.lengthInBeats, AVMusicTimeStamp(startTime + duration))
+                    let timeStamp = AVMusicTimeStamp(startTime)
+                    sequencerTrack.addEvent(noteEvent, at: timeStamp)
+                    eventCount += 1
                 }
             }
+            print("🎵 Track \(trackIndex): Added \(eventCount) MIDI events, length \(String(format: "%.3f", sequencerTrack.lengthInBeats)) beats")
         }
         
-        // Schedule sequence end
-        let endTimer = DispatchSource.makeTimerSource(queue: .main)
-        endTimer.schedule(deadline: .now() + .milliseconds(Int(sequenceLength * 1000)))
-        endTimer.setEventHandler { [weak self] in
-            guard let self = self, self.isPlaying, self.isSchedulingActive else { return }
-            self.stopSequence()
-            endTimer.cancel()
+        // Prepare and start the sequencer
+        sequencer.prepareToPlay()
+
+        // Reset position to start of sequence
+        sequencer.currentPositionInBeats = 0.0
+
+        do {
+            try sequencer.start()
+            Util.logLatency("🎶", "AVAudioSequencer started")
+        } catch {
+            print("🎵 Sequencer: Failed to start - \(error.localizedDescription)")
+            throw AudioError.sequencerStartFailed(error.localizedDescription)
         }
-        endTimer.resume()
-        noteTimers.append(endTimer)
     }
 
     func stopSequence() {
         playbackState = .stopped
         progress = 0.0
         elapsedTime = 0.0
+        currentTempo = 120.0
         currentlyPlayingTitle = nil
         currentlyPlayingInstrument = nil
         
-        // Stop all scheduling
-        isSchedulingActive = false
-        
-        // Cancel all note timers
-        for timer in noteTimers {
-            timer.cancel()
-        }
-        noteTimers.removeAll()
-        
-        // Stop all currently playing notes
-        for note in 0...127 {
-            sampler.stopNote(UInt8(note), onChannel: 0)
-        }
-        // Stop track sampler notes
+        // Stop the sequencer
+        sequencer.stop()
+
+        // Send MIDI CC 123 (allNotesOff) to stop all notes efficiently
+        sampler.sendController(123, withValue: 0, onChannel: 0)
         for ts in trackSamplers {
-            for note in 0...127 {
-                ts.stopNote(UInt8(note), onChannel: 0)
-            }
+            ts.sendController(123, withValue: 0, onChannel: 0)
         }
+        
+        // Detach track samplers to free resources
+        for ts in trackSamplers {
+            audioEngine.detach(ts)
+        }
+        trackSamplers.removeAll()
         
         stopElapsedTimeUpdates()
     }
-
-    // MARK: - Simple Note Playback
 
     func playNote(midiNote: UInt8, velocity: UInt8 = 100) {
         sampler.startNote(midiNote, withVelocity: velocity, onChannel: 0)
@@ -301,8 +327,11 @@ class AudioManager: ObservableObject {
     }
 
     private func updateElapsedTime() {
-        guard let start = playbackStartTicks, isPlaying, sequenceLength > 0 else { return }
-        elapsedTime = CACurrentMediaTime() - start
+        guard isPlaying, sequenceLength > 0 else { return }
+        
+        let currentBeats = sequencer.currentPositionInBeats
+        let beatDuration = 60.0 / currentTempo
+        elapsedTime = currentBeats * beatDuration
 
         // Stop sequence when we've exceeded the total duration
         if elapsedTime >= sequenceLength {

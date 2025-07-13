@@ -26,8 +26,6 @@ class Verovio {
     
     static func svgFromMEI(_ meiXML: String, _ pageWidth: Int = 1700, _ pageHeight: Int = 2200) -> String? {
 
-        print(String(format: "SD:svgFromMEI  : %04d x %04d", pageWidth, pageHeight))
-
         guard let resourcePath = Bundle.main.path(forResource: "data", ofType: nil, inDirectory: "verovio-resources") else {
             fatalError("Could not find verovio data resources in bundle")
         }
@@ -41,10 +39,8 @@ class Verovio {
         // Explicitly set resource path for good measure
         let success = vrvToolkit_setResourcePath(toolkit, resourcePath)
         if !success {
-            print("Warning: Failed to set resource path explicitly")
+            print("Warning: Failed to set resource path explicitly: \(resourcePath)")
         }
-        print("Verovio initialized resource path: \(resourcePath)")
-
 
         // Set options for better rendering with explicit font configuration
         let options = """
@@ -59,9 +55,7 @@ class Verovio {
         }
         """
         var result = vrvToolkit_setOptions(toolkit, options)
-
-        print("Loading provided MEI XML")
-        
+       
         // Load MEI data into Verovio
         let success1 = vrvToolkit_loadData(toolkit, meiXML)
         guard success1 else {
@@ -70,7 +64,6 @@ class Verovio {
             return nil
         }
         
-        print("Attempting to render SVG...")
         let generateClasses = true
         let svgPtr = vrvToolkit_renderToSVG(toolkit, 1, generateClasses) // page 1, no XML declaration
         guard let svgPtr = svgPtr else {
@@ -80,7 +73,6 @@ class Verovio {
         }
         
         let svgString = String(cString: svgPtr)
-        print("Successfully generated SVG! Length: \(svgString.count)")
 
         // Debug preview of SVG content
 //        if svgString.count > 100 {

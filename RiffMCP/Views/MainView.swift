@@ -165,21 +165,18 @@ struct MainView: View {
             return
         }
         
-        print("Updating notation for sequence with \(currentSequence.tracks.count) tracks")
-        
         do {
             // Convert current sequence to JSON
             let sequenceData = try JSONEncoder().encode(currentSequence)
-            print("Encoded sequence data: \(sequenceData.count) bytes")
-            
+            // print("Encoded sequence data: \(sequenceData.count) bytes")
+
             // Convert JSON to MEI XML
             let meiXML = try MEIConverter.convert(from: sequenceData)
-            print("Generated MEI XML: \(meiXML.count) characters")
-            
+            // print("Generated MEI XML: \(meiXML.count) characters")
+
             // Generate SVG from MEI
             let svg = Verovio.svgFromMEI(meiXML)
             notationSVG = svg
-            print("Generated SVG notation successfully")
         } catch {
             print("Error converting sequence to notation: \(error)")
             // Fall back to simple test notation
