@@ -148,7 +148,7 @@ struct MainView: View {
         }
         
         do {
-            currentSequence = try SequenceJSON.decode(jsonInput)
+            currentSequence = try MusicSequenceJSONSerializer.decode(jsonInput)
             ensureTrackSelectionsCount()
             updateNotationImage()
         } catch {
@@ -171,7 +171,7 @@ struct MainView: View {
             // print("Encoded sequence data: \(sequenceData.count) bytes")
 
             // Convert JSON to MEI XML
-            let meiXML = try MEIConverter.convert(from: sequenceData)
+            let meiXML = try JSONToMEIConverter.convert(from: sequenceData)
             // print("Generated MEI XML: \(meiXML.count) characters")
 
             // Generate SVG from MEI
@@ -208,7 +208,7 @@ struct MainView: View {
 
         // Encode back to JSON and update the input
         do {
-            jsonInput = try SequenceJSON.prettyPrint(updatedSequence)
+            jsonInput = try MusicSequenceJSONSerializer.prettyPrint(updatedSequence)
         } catch {
             print("Error encoding updated sequence: \(error)")
         }

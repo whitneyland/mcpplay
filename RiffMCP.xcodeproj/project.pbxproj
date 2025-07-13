@@ -7,19 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		9B07B21B2E15C80200631641 /* mcp in Resources */ = {isa = PBXBuildFile; fileRef = 9B07B21A2E15C80200631641 /* mcp */; };
-		9B07BC7E2E15DB3900631641 /* verovio-resources in Resources */ = {isa = PBXBuildFile; fileRef = 9B07BC7D2E15DB3900631641 /* verovio-resources */; };
-		9BA506E62E01DB8E000EFB3E /* examples in Resources */ = {isa = PBXBuildFile; fileRef = 9BA506E52E01DB8E000EFB3E /* examples */; };
 		9BA506EB2E01DC00000EFB3E /* lib/libverovio.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BA506EC2E01DC00000EFB3E /* lib/libverovio.a */; };
 		9BAECE312E0F04620054DBE2 /* CREDITS.md in Resources */ = {isa = PBXBuildFile; fileRef = 9BAECE302E0F04620054DBE2 /* CREDITS.md */; };
 		9BAECF222E0F07880054DBE2 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 9BA506F22E01DE00000EFB3E /* MarkdownUI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		9B07B21A2E15C80200631641 /* mcp */ = {isa = PBXFileReference; lastKnownFileType = folder; path = mcp; sourceTree = "<group>"; };
-		9B07BC7D2E15DB3900631641 /* verovio-resources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "verovio-resources"; sourceTree = "<group>"; };
 		9B5BB77E2DF4AF03003EC64C /* RiffMCP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RiffMCP.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		9BA506E52E01DB8E000EFB3E /* examples */ = {isa = PBXFileReference; lastKnownFileType = folder; path = examples; sourceTree = "<group>"; };
 		9BA506EC2E01DC00000EFB3E /* lib/libverovio.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = lib/libverovio.a; sourceTree = "<group>"; };
 		9BAECE302E0F04620054DBE2 /* CREDITS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CREDITS.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -27,6 +21,11 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		9B5BB7802DF4AF03003EC64C /* RiffMCP */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFolders = (
+				MCP,
+				Resources/Examples,
+				Resources/Verovio,
+			);
 			path = RiffMCP;
 			sourceTree = "<group>";
 		};
@@ -48,10 +47,7 @@
 		9B5BB7752DF4AF03003EC64C = {
 			isa = PBXGroup;
 			children = (
-				9B07BC7D2E15DB3900631641 /* verovio-resources */,
-				9B07B21A2E15C80200631641 /* mcp */,
 				9BAECE302E0F04620054DBE2 /* CREDITS.md */,
-				9BA506E52E01DB8E000EFB3E /* examples */,
 				9B5BB7802DF4AF03003EC64C /* RiffMCP */,
 				9B5BB77F2DF4AF03003EC64C /* Products */,
 				9BA506EE2E01DC10000EFB3E /* Frameworks */,
@@ -143,10 +139,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9B07BC7E2E15DB3900631641 /* verovio-resources in Resources */,
-				9B07B21B2E15C80200631641 /* mcp in Resources */,
 				9BAECE312E0F04620054DBE2 /* CREDITS.md in Resources */,
-				9BA506E62E01DB8E000EFB3E /* examples in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -338,7 +331,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_OBJC_BRIDGING_HEADER = "RiffMCP/RiffMCP-Bridging-Header.h";
+				SWIFT_OBJC_BRIDGING_HEADER = "RiffMCP/App/RiffMCP-Bridging-Header.h";
 				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
@@ -377,7 +370,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_OBJC_BRIDGING_HEADER = "RiffMCP/RiffMCP-Bridging-Header.h";
+				SWIFT_OBJC_BRIDGING_HEADER = "RiffMCP/App/RiffMCP-Bridging-Header.h";
 				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
