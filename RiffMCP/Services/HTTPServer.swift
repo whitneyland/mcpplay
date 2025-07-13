@@ -397,7 +397,7 @@ class HTTPServer: ObservableObject {
             let meiXML = try JSONToMEIConverter.convert(from: sequenceData)
             Util.logLatency("🎵", "MEI conversion completed")
 
-            guard let svgString = Verovio.svgFromMEI(meiXML) else {
+            guard let svgString = Verovio.svg(from: meiXML) else {
                 print("❌ Verovio.svgFromMEI returned nil")
                 throw JSONRPCError.serverError("Failed to generate SVG from MEI.")
             }

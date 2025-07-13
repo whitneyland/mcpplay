@@ -175,7 +175,7 @@ struct MainView: View {
             // print("Generated MEI XML: \(meiXML.count) characters")
 
             // Generate SVG from MEI
-            let svg = Verovio.svgFromMEI(meiXML)
+            let svg = Verovio.svg(from: meiXML)
             notationSVG = svg
         } catch {
             print("Error converting sequence to notation: \(error)")

@@ -26,7 +26,6 @@ struct RiffMCPApp: App {
                 .environmentObject(audioManager)
                 .environmentObject(httpServer)
                 .task {
-                    validateVerovioIntegration()
                     await startHTTPServer()
                 }
         }
@@ -34,17 +33,7 @@ struct RiffMCPApp: App {
             AboutCommands()
         }
     }
-    
-    private func validateVerovioIntegration() {
-        print("🎼 Testing Verovio integration...")
-        let success = Verovio.validateVerovioIntegration()
-        if success {
-            print("✅ Verovio library successfully integrated!")
-        } else {
-            print("❌ Verovio integration test failed")
-        }
-    }
-    
+
     private func startHTTPServer() async {
         do {
             try await httpServer.start()

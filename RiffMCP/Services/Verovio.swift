@@ -1,91 +1,19 @@
+//
+//  Verovio.swift
+//  RiffMCP
+//
+//  Created by Lee Whitney on 6/14/25.
+//
+
 import Foundation
 import AppKit
 
+@MainActor
 class Verovio {
-    static func validateVerovioIntegration() -> Bool {
-        // Test creating a Verovio toolkit instance
-        let toolkit = vrvToolkit_constructor()
-        guard toolkit != nil else {
-            print("Failed to create Verovio toolkit")
-            return false
-        }
-        
-        // Test getting version
-        let version = vrvToolkit_getVersion(toolkit)
-        if let versionString = version {
-            let swiftVersion = String(cString: versionString)
-            print("Verovio version: \(swiftVersion)")
-        }
-        
-        // Clean up
-        vrvToolkit_destructor(toolkit)
-        
-        print("Verovio integration test passed!")
-        return true
+
+    static func svg(from meiXML: String, _ pageWidth: Int = 1700, _ pageHeight: Int = 2200) -> String? {
+        return VerovioManager.shared.svg(from: meiXML, pageWidth: pageWidth, pageHeight: pageHeight)
     }
-    
-    static func svgFromMEI(_ meiXML: String, _ pageWidth: Int = 1700, _ pageHeight: Int = 2200) -> String? {
-
-        guard let resourcePath = Bundle.main.path(forResource: "data", ofType: nil, inDirectory: "Verovio") else {
-            fatalError("Could not find verovio data resources in bundle")
-        }
-
-        let toolkit = vrvToolkit_constructorResourcePath(resourcePath)
-        guard toolkit != nil else {
-            print("Failed to create Verovio toolkit with resource path: \(resourcePath)")
-            return nil
-        }
-        
-        // Explicitly set resource path for good measure
-        let success = vrvToolkit_setResourcePath(toolkit, resourcePath)
-        if !success {
-            print("Warning: Failed to set resource path explicitly: \(resourcePath)")
-        }
-
-        // Set options for better rendering with explicit font configuration
-        let options = """
-        {
-            "pageWidth": \(pageWidth),
-            "pageHeight": \(pageHeight),
-            "scale": 40,
-            "adjustPageHeight": true,
-            "font": "Leipzig",
-            "fontFallback": "Leipzig",
-            "svgCss": "path { stroke: #000000; }"
-        }
-        """
-        var result = vrvToolkit_setOptions(toolkit, options)
-       
-        // Load MEI data into Verovio
-        let success1 = vrvToolkit_loadData(toolkit, meiXML)
-        guard success1 else {
-            print("Failed to load MEI data into Verovio")
-            vrvToolkit_destructor(toolkit)
-            return nil
-        }
-        
-        let generateClasses = true
-        let svgPtr = vrvToolkit_renderToSVG(toolkit, 1, generateClasses) // page 1, no XML declaration
-        guard let svgPtr = svgPtr else {
-            print("Failed to generate SVG")
-            vrvToolkit_destructor(toolkit)
-            return nil
-        }
-        
-        let svgString = String(cString: svgPtr)
-
-        // Debug preview of SVG content
-//        if svgString.count > 100 {
-//            let preview = String(svgString.prefix(200))
-//            print("SVG preview: \(preview)...")
-//        }
-        let svgStringPostProcessed = postProcessSvgString(svgString)
-//        let svgStringPostProcessed = svgString
-
-        vrvToolkit_destructor(toolkit)
-        return svgStringPostProcessed
-    }
-
 
     /// Post-processes a Verovio-generated SVG string by dynamically resizing instrument
     /// labels based on a scaling factor.
@@ -209,6 +137,6 @@ class Verovio {
           </music>
         </mei>        
         """
-        return svgFromMEI(meiXML, 2200, 2200)
+        return VerovioManager.shared.svg(from: meiXML, pageWidth: 2200, pageHeight: 2200)
     }
 }
