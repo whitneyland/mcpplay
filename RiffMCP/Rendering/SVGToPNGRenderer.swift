@@ -19,7 +19,7 @@ struct SVGToPNGRenderer: NSViewRepresentable {
 
         // ── extract width / height from the <svg> tag, if any ──────────────
         var intrinsicSize: CGSize? = nil
-        if let (w, h) = Util.extractDimensions(from: svgString) {
+        if let (w, h) = SVGToPNGRenderer.extractDimensions(from: svgString) {
             intrinsicSize = CGSize(width: w, height: h)
 //            print(String(format: "SD:svgString   : %04d x %04d", w, h))
         }
@@ -35,10 +35,23 @@ struct SVGToPNGRenderer: NSViewRepresentable {
 
     // Convenience for views that need the SVG’s own size
     static func intrinsicSize(of svgString: String) -> CGSize? {
-        if let (w, h) = Util.extractDimensions(from: svgString) {
+        if let (w, h) = SVGToPNGRenderer.extractDimensions(from: svgString) {
             return CGSize(width: w, height: h)
         }
         return nil
+    }
+
+    static func extractDimensions(from svg: String) -> (width: Int, height: Int)? {
+        let pattern = #"width="(\d+)[a-zA-Z]*"\s+height="(\d+)[a-zA-Z]*""#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: svg, range: NSRange(svg.startIndex..., in: svg)),
+              let widthRange = Range(match.range(at: 1), in: svg),
+              let heightRange = Range(match.range(at: 2), in: svg),
+              let width = Int(svg[widthRange]),
+              let height = Int(svg[heightRange]) else {
+            return nil
+        }
+        return (width, height)
     }
 
     func makeNSView(context: Context) -> WKWebView {
@@ -120,8 +133,8 @@ struct SVGToPNGRenderer: NSViewRepresentable {
             webView.takeSnapshot(with: config) { [weak self] image, error in
                 guard let self else { return }
 
-                if let error { print("❌ Snapshot failed: \(error)"); return }
-                guard let image else { print("❌ Snapshot failed: no image"); return }
+                if let error { Log.io.error("❌ Snapshot failed: \(error.localizedDescription, privacy: .public)"); return }
+                guard let image else { Log.io.error("❌ Snapshot failed: no image"); return }
 
                 // Update SwiftUI view
                 self.pngImage?.wrappedValue = image
@@ -150,7 +163,7 @@ struct SVGToPNGRenderer: NSViewRepresentable {
         let renderSize: CGSize
         if let providedSize = size {
             renderSize = providedSize
-        } else if let (w, h) = Util.extractDimensions(from: svgString) {
+        } else if let (w, h) = SVGToPNGRenderer.extractDimensions(from: svgString) {
             renderSize = CGSize(width: w, height: h)
         } else {
             renderSize = CGSize(width: 1700, height: 2200) // Default fallback
@@ -258,7 +271,7 @@ struct SVGImageView: View {
 
     // compute once per View
     private var intrinsicSize: CGSize {
-        if let (w, h) = Util.extractDimensions(from: svgString) {
+        if let (w, h) = SVGToPNGRenderer.extractDimensions(from: svgString) {
             return CGSize(width: w, height: h)
         }
         return CGSize(width: 1700, height: 2200)   // fallback

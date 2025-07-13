@@ -38,7 +38,7 @@ struct RiffMCPApp: App {
         do {
             try await httpServer.start()
         } catch {
-            print("❌ Failed to start HTTP server: \(error)")
+            Log.server.error("❌ Failed to start HTTP server: \(error.localizedDescription, privacy: .public)")
         }
     }    
 }

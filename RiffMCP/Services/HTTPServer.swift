@@ -58,19 +58,19 @@ class HTTPServer: ObservableObject {
                     switch state {
                     case .ready:
                         self?.isRunning = true
-                        print("🚀 HTTP Server started on \(self?.host ?? "127.0.0.1"):\(self?.port ?? 27272)")
+                        Log.server.info("🚀 HTTP Server started on \(self?.host ?? "127.0.0.1", privacy: .public):\(self?.port ?? 27272, privacy: .public)")
                         ActivityLog.shared.updateServerStatus(online: true)
                         ActivityLog.shared.add(message: "Server listening on port \(self?.port ?? 0)", type: .success)
                         try? await self?.writeConfigFile()
                     case .failed(let error):
                         self?.lastError = "Server failed: \(error.localizedDescription)"
                         self?.isRunning = false
-                        print("❌ HTTP Server failed: \(error.localizedDescription)")
+                        Log.server.error("❌ HTTP Server failed: \(error.localizedDescription, privacy: .public)")
                         ActivityLog.shared.updateServerStatus(online: false)
                         ActivityLog.shared.add(message: "Server failed: \(error.localizedDescription)", type: .error)
                     case .cancelled:
                         self?.isRunning = false
-                        print("🛑 HTTP Server stopped")
+                        Log.server.info("🛑 HTTP Server stopped")
                         ActivityLog.shared.updateServerStatus(online: false)
                         ActivityLog.shared.add(message: "Server stopped", type: .success)
                     default:
@@ -101,7 +101,7 @@ class HTTPServer: ObservableObject {
                 if let data = data, !data.isEmpty {
                     await self?.processHTTPRequest(data, connection: connection)
                 } else if let error = error {
-                    print("❌ Connection error: \(error)")
+                    Log.server.error("❌ Connection error: \(error.localizedDescription, privacy: .public)")
                 }
                 if isComplete {
                     connection.cancel()
@@ -112,7 +112,7 @@ class HTTPServer: ObservableObject {
 
     private func processHTTPRequest(_ data: Data, connection: NWConnection) async {
         let requestStartTime = Date()
-        Util.logLatency("🌐", "HTTP request received")
+        Log.server.info("🌐 HTTP request received")
 
         guard let httpString = String(data: data, encoding: .utf8) else {
             await sendHTTPResponse(connection: connection, statusCode: 400, body: "Bad Request")
@@ -136,7 +136,7 @@ class HTTPServer: ObservableObject {
             .components(separatedBy: ":").dropFirst().joined(separator: ":").trimmingCharacters(in: .whitespaces) ?? "Unknown"
         let bodySize = body.data(using: .utf8)?.count ?? 0
 
-        Util.logLatency("🚦", "Request routing - \(method) \(path)", since: requestStartTime)
+        Log.server.latency("🚦 Request routing - \(method) \(path)", since: requestStartTime)
 
         switch (method, path) {
         case ("POST", "/"): await handleJSONRPC(body: body, connection: connection, userAgent: userAgent, bodySize: bodySize)
@@ -164,7 +164,7 @@ class HTTPServer: ObservableObject {
             let fileData = try Data(contentsOf: fileURL)
             await sendHTTPResponse(connection: connection, statusCode: 200, headers: ["Content-Type": "image/png"], bodyData: fileData)
         } catch {
-            print("❌ Could not read image file: \(fileURL.path). Error: \(error)")
+            Log.io.error("❌ Could not read image file: \(fileURL.path, privacy: .public). Error: \(error.localizedDescription, privacy: .public)")
             await sendHTTPResponse(connection: connection, statusCode: 404, body: "Not Found")
         }
     }
@@ -173,7 +173,7 @@ class HTTPServer: ObservableObject {
 
     private func handleJSONRPC(body: String, connection: NWConnection, userAgent: String, bodySize: Int) async {
         let jsonRpcStartTime = Date()
-        Util.logLatency("📄", "JSON-RPC processing started")
+        Log.server.info("📄 JSON-RPC processing started")
 
         do {
             guard let bodyData = body.data(using: .utf8) else { throw JSONRPCError.parseError }
@@ -200,7 +200,7 @@ class HTTPServer: ObservableObject {
 
             ActivityLog.shared.add(message: "POST /\(request.method)\(toolNameDetail) (\(bodySize) bytes)", type: eventType, requestData: body)
 
-            Util.logLatency("🔍", "JSON-RPC parsed - method: \(request.method)", since: jsonRpcStartTime)
+            Log.server.latency("🔍 JSON-RPC parsed - method: \(request.method)", since: jsonRpcStartTime)
 
             let response: JSONRPCResponse
             switch request.method {
@@ -235,7 +235,7 @@ class HTTPServer: ObservableObject {
                     ActivityLog.shared.updateLastEventWithResponse(responseString)
                 }
             } catch {
-                print("Failed to encode response for logging: \(error)")
+                Log.server.error("Failed to encode response for logging: \(error.localizedDescription, privacy: .public)")
             }
         } catch let error as JSONRPCError {
             let errorResponse = JSONRPCResponse(error: error, id: nil)
@@ -248,7 +248,7 @@ class HTTPServer: ObservableObject {
                     ActivityLog.shared.updateLastEventWithResponse(responseString)
                 }
             } catch {
-                print("Failed to encode error response for logging: \(error)")
+                Log.server.error("Failed to encode error response for logging: \(error.localizedDescription, privacy: .public)")
             }
         } catch is DecodingError {
             let parseErrorResponse = JSONRPCResponse(error: .parseError, id: nil)
@@ -261,7 +261,7 @@ class HTTPServer: ObservableObject {
                     ActivityLog.shared.updateLastEventWithResponse(responseString)
                 }
             } catch {
-                print("Failed to encode parse error response for logging: \(error)")
+                Log.server.error("Failed to encode parse error response for logging: \(error.localizedDescription, privacy: .public)")
             }
         } catch {
             let internalErrorResponse = JSONRPCResponse(error: .internalError, id: nil)
@@ -274,20 +274,20 @@ class HTTPServer: ObservableObject {
                     ActivityLog.shared.updateLastEventWithResponse(responseString)
                 }
             } catch {
-                print("Failed to encode internal error response for logging: \(error)")
+                Log.server.error("Failed to encode internal error response for logging: \(error.localizedDescription, privacy: .public)")
             }
         }
     }
 
     private func handleToolCall(_ request: JSONRPCRequest) async throws -> JSONRPCResponse {
         let toolCallStartTime = Date()
-        Util.logLatency("🔧", "Tool call processing started")
+        Log.server.info("🔧 Tool call processing started")
 
         guard let params = request.params, let toolName = params.objectValue?["name"]?.stringValue else {
             return JSONRPCResponse(error: .invalidParams, id: request.id)
         }
 
-        Util.logLatency("🎯", "Tool identified: \(toolName)", since: toolCallStartTime)
+        Log.server.latency("🎯 Tool identified: \(toolName)", since: toolCallStartTime)
 
         do {
             let result: MCPResult
@@ -300,7 +300,7 @@ class HTTPServer: ObservableObject {
             case "play":
                 let sequenceDecodeStart = Date()
                 let sequence = try decoder.decode(MusicSequence.self, from: data)
-                Util.logLatency("🎼", "Sequence decoded", since: sequenceDecodeStart)
+                Log.server.latency("🎼 Sequence decoded", since: sequenceDecodeStart)
                 result = try await handlePlaySequence(sequence: sequence)
             case "engrave":
                 let sequence = try decoder.decode(MusicSequence.self, from: data)
@@ -310,18 +310,18 @@ class HTTPServer: ObservableObject {
             }
             return JSONRPCResponse(result: try encodeToJSONValue(result), id: request.id)
         } catch let error as DecodingError {
-            print("Decoding error: \(error)")
+            Log.server.error("Decoding error: \(error.localizedDescription, privacy: .public)")
             switch error {
             case .typeMismatch(let type, let context):
-                print("Type mismatch for type \(type) at \(context.codingPath): \(context.debugDescription)")
+                Log.server.error("Type mismatch for type \(type, privacy: .public) at \(context.codingPath, privacy: .public): \(context.debugDescription, privacy: .public)")
             case .valueNotFound(let type, let context):
-                print("Value of type \(type) not found at \(context.codingPath): \(context.debugDescription)")
+                Log.server.error("Value of type \(type, privacy: .public) not found at \(context.codingPath, privacy: .public): \(context.debugDescription, privacy: .public)")
             case .keyNotFound(let key, let context):
-                print("Key '\(key)' not found at \(context.codingPath): \(context.debugDescription)")
+                Log.server.error("Key '\(key.stringValue, privacy: .public)' not found at \(context.codingPath, privacy: .public): \(context.debugDescription, privacy: .public)")
             case .dataCorrupted(let context):
-                print("Data corrupted at \(context.codingPath): \(context.debugDescription)")
+                Log.server.error("Data corrupted at \(context.codingPath, privacy: .public): \(context.debugDescription, privacy: .public)")
             @unknown default:
-                print("Unknown decoding error: \(error)")
+                Log.server.error("Unknown decoding error: \(error.localizedDescription, privacy: .public)")
             }
             return JSONRPCResponse(error: .invalidParams, id: request.id)
         } catch let error as JSONRPCError {
@@ -336,14 +336,14 @@ class HTTPServer: ObservableObject {
 
     private func handlePlaySequence(sequence: MusicSequence) async throws -> MCPResult {
         let playSequenceStartTime = Date()
-        Util.logLatency("🎵", "handlePlaySequence started")
+        Log.server.info("🎵 handlePlaySequence started")
 
         let validInstruments = Instruments.getInstrumentNames()
         for track in sequence.tracks where !validInstruments.contains(track.instrument) {
             throw JSONRPCError.serverError("Invalid instrument \"\(track.instrument)\". Check the instrument enum in the schema for valid options.")
         }
 
-        Util.logLatency("✅", "Instrument validation completed", since: playSequenceStartTime)
+        Log.server.latency("✅ Instrument validation completed", since: playSequenceStartTime)
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted]
@@ -352,9 +352,9 @@ class HTTPServer: ObservableObject {
             throw JSONRPCError.serverError("Failed to serialize sequence for audio manager.")
         }
 
-        Util.logLatency("📝", "Sequence serialized")
+        Log.server.info("📝 Sequence serialized")
 
-        Util.logLatency("🎶", "Calling AudioManager.playSequenceFromJSON")
+        Log.server.info("🎶 Calling AudioManager.playSequenceFromJSON")
         audioManager.playSequenceFromJSON(jsonString)
 
         let totalEvents = sequence.tracks.reduce(0) { $0 + $1.events.count }
@@ -374,32 +374,32 @@ class HTTPServer: ObservableObject {
     }
 
     private func handleEngraveSequence(sequence: MusicSequence) async throws -> MCPResult {
-        Util.logLatency("🎼", "handleEngraveSequence started")
+        Log.server.info("🎼 handleEngraveSequence started")
 
         // 1. Validate instruments
-        Util.logLatency("✅", "Starting instrument validation")
+        Log.server.info("✅ Starting instrument validation")
         let validInstruments = Instruments.getInstrumentNames()
         for track in sequence.tracks where !validInstruments.contains(track.instrument) {
             throw JSONRPCError.serverError("Invalid instrument \"\(track.instrument)\". Check the instrument enum in the schema for valid options.")
         }
-        Util.logLatency("✅", "Instrument validation completed")
+        Log.server.info("✅ Instrument validation completed")
 
         // 2. Convert sequence to MEI -> SVG -> PNG
         do {
             let sequenceData = try JSONEncoder().encode(sequence)
-            Util.logLatency("🔄", "JSON encoding completed")
+            Log.server.info("🔄 JSON encoding completed")
 
             let meiXML = try JSONToMEIConverter.convert(from: sequenceData)
-            Util.logLatency("🎵", "MEI conversion completed")
+            Log.io.info("🎵 MEI conversion completed")
 
             guard let svgString = Verovio.svg(from: meiXML) else {
-                print("❌ Verovio.svgFromMEI returned nil")
+                Log.io.error("❌ Verovio.svgFromMEI returned nil")
                 throw JSONRPCError.serverError("Failed to generate SVG from MEI.")
             }
-            Util.logLatency("🖼️", "SVG generation completed")
+            Log.io.info("🖼️ SVG generation completed")
 
             let pngData = try await SVGToPNGRenderer.renderToPNG(svgString: svgString)
-            Util.logLatency("🖼️", "PNG rendering completed")
+            Log.io.info("🖼️ PNG rendering completed")
 
             // 3. Save PNG to temp directory
             let pngUUID = UUID().uuidString
@@ -408,7 +408,7 @@ class HTTPServer: ObservableObject {
             try pngData.write(to: pngURL)
             let resourceURI = "http://\(host):\(port)/images/\(pngFileName)"
 
-            Util.logLatency("", "PNG saved to disk")
+            Log.io.info("PNG saved to disk")
 
             // 4. Make .png Base-64 (Claude still needs type:"image")
             let base64PNG   = pngData.base64EncodedString()
@@ -417,24 +417,24 @@ class HTTPServer: ObservableObject {
                 mimeType: "image/png"
             )
 
-            print(" Image link points to: \(resourceURI)")
-            print(" PNG file saved at: \(pngURL.path)")
+            Log.io.info(" Image link points to: \(resourceURI, privacy: .public)")
+            Log.io.info(" PNG file saved at: \(pngURL.path, privacy: .public)")
 
             // 6. Log the activity
             if let jsonString = String(data: sequenceData, encoding: .utf8) {
                 ActivityLog.shared.add(message: "Engrave \(sequence.title ?? "Untitled")", type: .generation, sequenceData: jsonString)
             }
-            Util.logLatency("✅", "engraveSequence completed successfully")
+            Log.server.info("✅ engraveSequence completed successfully")
 
             // 7. Return the result
             return MCPResult(content: [imageItem])
 //            return MCPResult(content: [imageItem, markdownLink])
 
         } catch let error as JSONRPCError {
-            print("❌ JSONRPCError in handleEngraveSequence: \(error.message)")
+            Log.server.error("❌ JSONRPCError in handleEngraveSequence: \(error.message, privacy: .public)")
             throw error
         } catch {
-            print("❌ Unexpected error in handleEngraveSequence: \(error.localizedDescription)")
+            Log.server.error("❌ Unexpected error in handleEngraveSequence: \(error.localizedDescription, privacy: .public)")
             throw JSONRPCError.serverError("Engraving failed: \(error.localizedDescription)")
         }
     }
@@ -553,11 +553,11 @@ class HTTPServer: ObservableObject {
                 let attributes = try fileURL.resourceValues(forKeys: [.creationDateKey])
                 if let creationDate = attributes.creationDate, creationDate < cutoffDate {
                     try fileManager.removeItem(at: fileURL)
-                    print("🗑️ Cleaned up old PNG file: \(fileURL.lastPathComponent)")
+                    Log.io.info("🗑️ Cleaned up old PNG file: \(fileURL.lastPathComponent, privacy: .public)")
                 }
             }
         } catch {
-            print("⚠️ Failed to cleanup old PNG files: \(error.localizedDescription)")
+            Log.io.error("⚠️ Failed to cleanup old PNG files: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -574,7 +574,7 @@ class HTTPServer: ObservableObject {
         let config: [String: Any] = ["port": port, "host": host, "status": "running", "pid": ProcessInfo.processInfo.processIdentifier]
         let jsonData = try JSONSerialization.data(withJSONObject: config, options: .prettyPrinted)
         try jsonData.write(to: configPath)
-        print("📝 Config written to: \(configPath.path)")
+        Log.server.info("📝 Config written to: \(configPath.path, privacy: .public)")
     }
 
     private func removeConfigFile() async throws {
@@ -595,7 +595,7 @@ class HTTPServer: ObservableObject {
         guard let promptsURL = Bundle.main.url(forResource: "prompts", withExtension: "json", subdirectory: "mcp"),
               let promptsData = try? Data(contentsOf: promptsURL),
               let promptsArray = try? JSONSerialization.jsonObject(with: promptsData) as? [[String: Any]] else {
-            print("❌ Failed to load prompts.json, falling back to empty array")
+            Log.server.error("❌ Failed to load prompts.json, falling back to empty array")
             return []
         }
 
@@ -613,7 +613,7 @@ class HTTPServer: ObservableObject {
         guard let toolsURL = Bundle.main.url(forResource: "tools", withExtension: "json", subdirectory: "MCP"),
               let toolsData = try? Data(contentsOf: toolsURL),
               let toolsArray = try? JSONSerialization.jsonObject(with: toolsData) as? [[String: Any]] else {
-            print("❌ Failed to load tools.json, falling back to empty array")
+            Log.server.error("❌ Failed to load tools.json, falling back to empty array")
             return []
         }
 

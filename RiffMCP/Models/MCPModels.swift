@@ -80,7 +80,7 @@ struct MCPTool: Codable, Sendable {
             let jsonValue = try JSONDecoder().decode(JSONValue.self, from: schemaData)
             self.inputSchema = jsonValue.objectValue ?? [:]
         } catch {
-            print("❌ Failed to parse inputSchema for tool \(name): \(error)")
+            Log.server.error("❌ Failed to parse inputSchema for tool \(name, privacy: .public): \(error.localizedDescription, privacy: .public)")
             return nil
         }
     }

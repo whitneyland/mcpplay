@@ -181,17 +181,17 @@ struct NoteNameConverter {
     static func toMIDI(_ noteName: String) -> Int {
         let cleanName = noteName.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         guard cleanName.count >= 2 else { 
-            print("⚠️ Invalid note name: '\(noteName)' - too short")
+            Log.audio.info("⚠️ Invalid note name: '\(noteName, privacy: .public)' - too short")
             return 60 
         }
         let lastChar = String(cleanName.last!)
         guard let octave = Int(lastChar) else { 
-            print("⚠️ Invalid note name: '\(noteName)' - no octave number")
+            Log.audio.info("⚠️ Invalid note name: '\(noteName, privacy: .public)' - no octave number")
             return 60 
         }
         let notePart = String(cleanName.dropLast())
         guard let noteOffset = noteMap[notePart] else { 
-            print("⚠️ Invalid note name: '\(noteName)' - unknown note '\(notePart)'")
+            Log.audio.info("⚠️ Invalid note name: '\(noteName, privacy: .public)' - unknown note '\(notePart, privacy: .public)'")
             return 60 
         }
         let midiNote = octave * 12 + noteOffset

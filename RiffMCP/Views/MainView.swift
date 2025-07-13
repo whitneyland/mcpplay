@@ -71,7 +71,7 @@ struct MainView: View {
                                     .fill(Color.black.opacity(0.2))
                                     .frame(width: 200, height: 30)
                                     .cornerRadius(6)
-                                Text("\(Util.formatTime(audioManager.elapsedTime)) / \(Util.formatTime(audioManager.totalDuration))")
+                                Text("\(formatTime(audioManager.elapsedTime)) / \(formatTime(audioManager.totalDuration))")
                                     .font(.body.monospaced())
                             }
                         }
@@ -133,7 +133,7 @@ struct MainView: View {
     
     private func loadPresetToInput() {
         guard let preset = presetManager.getPreset(by: selectedPresetId) else {
-            print("Could not find preset with id: \(selectedPresetId)")
+            Log.app.error("Could not find preset with id: \(selectedPresetId, privacy: .public)")
             return
         }
         
@@ -159,7 +159,7 @@ struct MainView: View {
     
     private func updateNotationImage() {
         guard let currentSequence = currentSequence else {
-            print("No current sequence available, using fallback notation")
+            Log.app.info("No current sequence available, using fallback notation")
             let svg = Verovio.svgFromSimpleTestXml()
             notationSVG = svg
             return
@@ -178,7 +178,7 @@ struct MainView: View {
             let svg = Verovio.svg(from: meiXML)
             notationSVG = svg
         } catch {
-            print("Error converting sequence to notation: \(error)")
+            Log.app.error("Error converting sequence to notation: \(error.localizedDescription, privacy: .public)")
             // Fall back to simple test notation
             let svg = Verovio.svgFromSimpleTestXml()
             notationSVG = svg
@@ -210,7 +210,7 @@ struct MainView: View {
         do {
             jsonInput = try MusicSequenceJSONSerializer.prettyPrint(updatedSequence)
         } catch {
-            print("Error encoding updated sequence: \(error)")
+            Log.app.error("Error encoding updated sequence: \(error.localizedDescription, privacy: .public)")
         }
         
         // Update local state
@@ -220,13 +220,22 @@ struct MainView: View {
         }
     }
     
-    private func ensureTrackSelectionsCount() {
+    func ensureTrackSelectionsCount() {
         let trackCount = currentSequence?.tracks.count ?? 0
         if trackInstrumentSelections.count != trackCount {
             trackInstrumentSelections = Array(0..<trackCount).map { index in
                 currentSequence?.tracks[index].instrument
             }
         }
+    }
+
+    private func formatTime(_ seconds: Double) -> String {
+        guard seconds.isFinite && seconds >= 0 else {
+            return "0:00.0"
+        }
+        let minutes = Int(seconds) / 60
+        let remainingSeconds = seconds.truncatingRemainder(dividingBy: 60.0)
+        return String(format: "%d:%04.1f", minutes, remainingSeconds)
     }
 }
 

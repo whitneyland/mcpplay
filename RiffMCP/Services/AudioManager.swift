@@ -71,7 +71,7 @@ class AudioManager: ObservableObject {
         sampler = AVAudioUnitSampler()
         sequencer = AVAudioSequencer(audioEngine: audioEngine)
         setupAudioEngine()
-        Util.logTiming("AudioManager init completed")
+        Log.audio.info("AudioManager init completed")
     }
 
     private func setupAudioEngine() {
@@ -100,7 +100,7 @@ class AudioManager: ObservableObject {
 
     func playSequenceFromJSON(_ rawJSON: String) {
         let startTime = Date()
-        Util.logTiming("AudioManager.playSequenceFromJSON started")
+        Log.audio.info("AudioManager.playSequenceFromJSON started")
 
         stopSequence()                     // cancel anything already playing
         playbackState = .loading
@@ -110,7 +110,7 @@ class AudioManager: ObservableObject {
                 // ── 1. Parse / validate ───────────────────────────────
                 let sequence = try MusicSequenceJSONSerializer.decode(rawJSON)
                 let decodeTime = Date().timeIntervalSince(startTime) * 1000
-                Util.logTiming("JSON processed in \(String(format: "%.1f", decodeTime))ms, calling scheduleSequence")
+                Log.audio.latency("JSON processed", since: startTime)
 
                 // ── 2. Duration & UI fields ───────────────────────────
                 currentTempo = sequence.tempo
@@ -128,7 +128,7 @@ class AudioManager: ObservableObject {
                 playbackStartTicks = CACurrentMediaTime()
                 try scheduleSequence(sequence)
                 startElapsedTimeUpdates()
-                Util.logLatency("🎶", "Audio playback started")
+                Log.audio.info("🎶 Audio playback started")
                 playbackState = .playing
 
                 // ── 4. Publish prettified JSON to the editor pane ─────
@@ -145,7 +145,7 @@ class AudioManager: ObservableObject {
     }
 
     private func scheduleSequence(_ sequence: MusicSequence) throws {
-        Util.logTiming("Sequence scheduling started, tempo=\(sequence.tempo)")
+        Log.audio.info("Sequence scheduling started, tempo=\(sequence.tempo)")
 
         // Stop and clear any existing sequencer
         sequencer.stop()
@@ -186,13 +186,13 @@ class AudioManager: ObservableObject {
             audioEngine.connect(trackSampler, to: audioEngine.mainMixerNode, format: nil)
             
             let program = instrumentPrograms[track.instrument] ?? 0
-            print("🎵 Track \(index): Loading \(track.instrument) (program \(program))")
+            Log.audio.info("🎵 Track \(index): Loading \(track.instrument, privacy: .public) (program \(program, privacy: .public))")
             
             do {
                 try trackSampler.loadSoundBankInstrument(at: soundFontURL, program: program, bankMSB: 0x79, bankLSB: 0)
-                print("🎵 Track \(index): Successfully loaded soundbank")
+                Log.audio.info("🎵 Track \(index, privacy: .public): Successfully loaded soundbank")
             } catch {
-                print("🎵 Track \(index): Failed to load instrument \(track.instrument): \(error)")
+                Log.audio.error("🎵 Track \(index, privacy: .public): Failed to load instrument \(track.instrument, privacy: .public): \(error.localizedDescription, privacy: .public)")
                 throw AudioError.instrumentLoadFailed(track.instrument, error.localizedDescription)
             }
             trackSamplers.append(trackSampler)
@@ -205,7 +205,7 @@ class AudioManager: ObservableObject {
             
             // Connect the sequencer track to our sampler
             sequencerTrack.destinationAudioUnit = trackSampler
-            print("🎵 Track \(trackIndex): Connected to \(track.instrument) sampler, \(track.events.count) events")
+            Log.audio.info("🎵 Track \(trackIndex, privacy: .public): Connected to \(track.instrument, privacy: .public) sampler, \(track.events.count, privacy: .public) events")
             
             var eventCount = 0
             for event in track.events {
@@ -231,7 +231,7 @@ class AudioManager: ObservableObject {
                     eventCount += 1
                 }
             }
-            print("🎵 Track \(trackIndex): Added \(eventCount) MIDI events, length \(String(format: "%.3f", sequencerTrack.lengthInBeats)) beats")
+            Log.audio.info("🎵 Track \(trackIndex, privacy: .public): Added \(eventCount, privacy: .public) MIDI events, length \(String(format: "%.3f", sequencerTrack.lengthInBeats), privacy: .public) beats")
         }
         
         // Prepare and start the sequencer
@@ -242,9 +242,9 @@ class AudioManager: ObservableObject {
 
         do {
             try sequencer.start()
-            Util.logLatency("🎶", "AVAudioSequencer started")
+            Log.audio.info("🎶 AVAudioSequencer started")
         } catch {
-            print("🎵 Sequencer: Failed to start - \(error.localizedDescription)")
+            Log.audio.error("🎵 Sequencer: Failed to start - \(error.localizedDescription, privacy: .public)")
             throw AudioError.sequencerStartFailed(error.localizedDescription)
         }
     }
