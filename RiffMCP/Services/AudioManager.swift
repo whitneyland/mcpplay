@@ -109,7 +109,6 @@ class AudioManager: ObservableObject {
             do {
                 // ── 1. Parse / validate ───────────────────────────────
                 let sequence = try MusicSequenceJSONSerializer.decode(rawJSON)
-                let decodeTime = Date().timeIntervalSince(startTime) * 1000
                 Log.audio.latency("JSON processed", since: startTime)
 
                 // ── 2. Duration & UI fields ───────────────────────────
