@@ -10,43 +10,30 @@ import Foundation
 
 @main
 struct RiffMCPApp: App {
-    @StateObject private var audioManager = AudioManager()
-    @StateObject private var httpServer: HTTPServer
+    @StateObject private var appServices: AppServices
     
     init() {
-        let manager = AudioManager()
-        let server: HTTPServer
-
         do {
-            server = try HTTPServer(audioManager: manager)
+            let services = try AppServices()
+            _appServices = StateObject(wrappedValue: services)
         } catch {
-            fatalError("🚨 Failed to create HTTPServer: \(error)")
+            fatalError("🚨 Failed to initialize app services: \(error)")
         }
-        _audioManager = StateObject(wrappedValue: manager)
-        _httpServer   = StateObject(wrappedValue: server)
     }
 
     var body: some Scene {
         WindowGroup {
             MainView()
-                .environmentObject(audioManager)
-                .environmentObject(httpServer)
+                .environmentObject(appServices.audioManager)
+                .environmentObject(appServices.httpServer)
                 .task {
-                    await startHTTPServer()
+                    await appServices.startServices()
                 }
         }
         .commands {
             AboutCommands()
         }
     }
-
-    private func startHTTPServer() async {
-        do {
-            try await httpServer.start()
-        } catch {
-            Log.server.error("❌ Failed to start HTTP server: \(error.localizedDescription, privacy: .public)")
-        }
-    }    
 }
 
 struct AboutCommands: Commands {
