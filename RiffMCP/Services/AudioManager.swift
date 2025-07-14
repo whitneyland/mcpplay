@@ -40,9 +40,15 @@ enum AudioError: LocalizedError {
     }
 }
 
+protocol AudioManaging {
+    @MainActor
+    func playSequenceFromJSON(_ raw: String)
+}
+
 // @MainActor guarantees all properties and methods are accessed on the main thread.
 @MainActor
-class AudioManager: ObservableObject {
+class AudioManager: AudioManaging, ObservableObject {
+
     // MARK: - Published Properties
     @Published var playbackState: PlaybackState = .idle
     @Published var progress: Double = 0.0
@@ -53,7 +59,6 @@ class AudioManager: ObservableObject {
     @Published var lastError: AudioError?
     @Published var receivedJSON: String = ""
     
-    // Computed property for backward compatibility
     var isPlaying: Bool { playbackState == .playing }
 
     // MARK: - Private Properties
@@ -105,41 +110,39 @@ class AudioManager: ObservableObject {
         stopSequence()                     // cancel anything already playing
         playbackState = .loading
 
-        Task {
-            do {
-                // ── 1. Parse / validate ───────────────────────────────
-                let sequence = try MusicSequenceJSONSerializer.decode(rawJSON)
-                Log.audio.latency("JSON processed", since: startTime)
+        do {
+            // ── 1. Parse / validate ───────────────────────────────
+            let sequence = try MusicSequenceJSONSerializer.decode(rawJSON)
+            Log.audio.latency("JSON processed", since: startTime)
 
-                // ── 2. Duration & UI fields ───────────────────────────
-                currentTempo = sequence.tempo
-                let beat = 60.0 / sequence.tempo
-                let maxEndBeat = sequence.tracks
-                    .flatMap { $0.events.map { $0.time + $0.dur } }
-                    .max() ?? 0
-                sequenceLength = maxEndBeat * beat
-                totalDuration  = sequenceLength
+            // ── 2. Duration & UI fields ───────────────────────────
+            currentTempo = sequence.tempo
+            let beat = 60.0 / sequence.tempo
+            let maxEndBeat = sequence.tracks
+                .flatMap { $0.events.map { $0.time + $0.dur } }
+                .max() ?? 0
+            sequenceLength = maxEndBeat * beat
+            totalDuration  = sequenceLength
 
-                currentlyPlayingTitle       = sequence.title ?? "Untitled Sequence"
-                currentlyPlayingInstrument  = sequence.tracks.first?.instrument
+            currentlyPlayingTitle       = sequence.title ?? "Untitled Sequence"
+            currentlyPlayingInstrument  = sequence.tracks.first?.instrument
 
-                // ── 3. Schedule & start ───────────────────────────────
-                playbackStartTicks = CACurrentMediaTime()
-                try scheduleSequence(sequence)
-                startElapsedTimeUpdates()
-                Log.audio.info("🎶 Audio playback started")
-                playbackState = .playing
+            // ── 3. Schedule & start ───────────────────────────────
+            playbackStartTicks = CACurrentMediaTime()
+            try scheduleSequence(sequence)
+            startElapsedTimeUpdates()
+            Log.audio.info("🎶 Audio playback started")
+            playbackState = .playing
 
-                // ── 4. Publish prettified JSON to the editor pane ─────
-                receivedJSON = try MusicSequenceJSONSerializer.prettyPrint(sequence)
+            // ── 4. Publish prettified JSON to the editor pane ─────
+            receivedJSON = try MusicSequenceJSONSerializer.prettyPrint(sequence)
 
-            } catch let audioError as AudioError {
-                lastError = audioError
-                playbackState = .idle
-            } catch {
-                lastError = .jsonDecodeFailed(error.localizedDescription)
-                playbackState = .idle
-            }
+        } catch let audioError as AudioError {
+            lastError = audioError
+            playbackState = .idle
+        } catch {
+            lastError = .jsonDecodeFailed(error.localizedDescription)
+            playbackState = .idle
         }
     }
 

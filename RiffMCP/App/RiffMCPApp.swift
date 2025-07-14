@@ -15,9 +15,15 @@ struct RiffMCPApp: App {
     
     init() {
         let manager = AudioManager()
-        let server = HTTPServer(audioManager: manager)
+        let server: HTTPServer
+
+        do {
+            server = try HTTPServer(audioManager: manager)
+        } catch {
+            fatalError("🚨 Failed to create HTTPServer: \(error)")
+        }
         _audioManager = StateObject(wrappedValue: manager)
-        _httpServer = StateObject(wrappedValue: server)
+        _httpServer   = StateObject(wrappedValue: server)
     }
 
     var body: some Scene {

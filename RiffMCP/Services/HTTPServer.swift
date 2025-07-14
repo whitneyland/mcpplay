@@ -2,30 +2,71 @@
 //  HTTPServer.swift
 //  RiffMCP
 //
-//  Simple HTTP server to handle Model Context Protocol requests
+//  Simple HTTP server to handle Model Context Protocol requests without requiring a heavy external dependency
 //
 
 import Foundation
 import Network
 
-@MainActor
-class HTTPServer: ObservableObject {
-    private var listener: NWListener?
-    private let port: UInt16 = 3001
-    private let host = "127.0.0.1"
-    private let audioManager: AudioManager
+class HTTPServer: ObservableObject, @unchecked Sendable {
+
+    static let defaultHost = "127.0.0.1"
+    static let defaultPort: UInt16 = 3001
+    
+    private let listener: NWListener
+    private let requestedPort: UInt16
+    private let host: String
+    private let audioManager: AudioManaging
     private let tempDirectory: URL
+    private let toolsURL: URL?
+    private let promptsURL: URL?
     private var cachedTools: [MCPTool]?
     private var cachedPrompts: [MCPPrompt]?
 
     @Published var isRunning = false
     @Published var lastError: String?
+    private(set) var resolvedPort: UInt16?
 
-    init(audioManager: AudioManager) {
-        self.audioManager = audioManager
-        // Use app's container directory for sandboxed apps
+    static var defaultTempDir: URL {
         let containerURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        self.tempDirectory = containerURL.appendingPathComponent("RiffMCP/SheetMusic")
+        return containerURL.appendingPathComponent("RiffMCP/SheetMusic")
+    }
+    
+    var baseURL: URL? {
+        guard let port = resolvedPort else { return nil }
+        return URL(string: "http://\(host):\(port)")
+    }
+
+    init(
+        audioManager: AudioManaging,
+        host: String = HTTPServer.defaultHost,
+        port: UInt16 = HTTPServer.defaultPort,
+        tempDirectory: URL? = nil,
+        toolsURL: URL? = Bundle.main.url(forResource: "tools", withExtension: "json", subdirectory: "MCP"),
+        promptsURL: URL? = Bundle.main.url(forResource: "prompts", withExtension: "json", subdirectory: "mcp")
+    ) throws {
+        self.audioManager = audioManager
+        self.host = host
+        self.requestedPort = port
+        self.tempDirectory = tempDirectory ?? Self.defaultTempDir
+        self.toolsURL = toolsURL
+        self.promptsURL = promptsURL
+
+        let parameters = NWParameters.tcp
+        parameters.allowLocalEndpointReuse = true
+        parameters.includePeerToPeer       = false
+
+        self.listener = try NWListener(
+            using: parameters,
+            on: NWEndpoint.Port(rawValue: port)!
+        )
+
+        self.listener.newConnectionHandler = { [weak self] conn in
+            Task { await self?.handleConnection(conn) }
+        }
+        self.listener.stateUpdateHandler = { [weak self] state in
+            Task { @Sendable [weak self] in await self?.handleStateChange(state) }
+        }
     }
 
     func start() async throws {
@@ -41,54 +82,15 @@ class HTTPServer: ObservableObject {
         _ = getToolDefinitions()
         _ = getPromptDefinitions()
 
-        let parameters = NWParameters.tcp
-        parameters.allowLocalEndpointReuse = true
-        parameters.includePeerToPeer = false
-
-        do {
-            listener = try NWListener(using: parameters, on: NWEndpoint.Port(rawValue: port)!)
-            guard let listener = listener else { throw NSError(domain: "HTTPServer", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to create listener"]) }
-
-            listener.newConnectionHandler = { [weak self] connection in
-                Task { @MainActor in await self?.handleConnection(connection) }
-            }
-
-            listener.stateUpdateHandler = { [weak self] state in
-                Task { @MainActor in
-                    switch state {
-                    case .ready:
-                        self?.isRunning = true
-                        Log.server.info("🚀 HTTP Server started on \(self?.host ?? "127.0.0.1", privacy: .public):\(self?.port ?? 27272, privacy: .public)")
-                        ActivityLog.shared.updateServerStatus(online: true)
-                        ActivityLog.shared.add(message: "Server listening on port \(self?.port ?? 0)", type: .success)
-                        try? await self?.writeConfigFile()
-                    case .failed(let error):
-                        self?.lastError = "Server failed: \(error.localizedDescription)"
-                        self?.isRunning = false
-                        Log.server.error("❌ HTTP Server failed: \(error.localizedDescription, privacy: .public)")
-                        ActivityLog.shared.updateServerStatus(online: false)
-                        ActivityLog.shared.add(message: "Server failed: \(error.localizedDescription)", type: .error)
-                    case .cancelled:
-                        self?.isRunning = false
-                        Log.server.info("🛑 HTTP Server stopped")
-                        ActivityLog.shared.updateServerStatus(online: false)
-                        ActivityLog.shared.add(message: "Server stopped", type: .success)
-                    default:
-                        break
-                    }
-                }
-            }
-            listener.start(queue: .global(qos: .userInitiated))
-        } catch {
-            lastError = "Failed to start server: \(error.localizedDescription)"
-            throw error
-        }
+        listener.start(queue: .global(qos: .userInitiated))
     }
 
     func stop() async {
-        listener?.cancel()
-        listener = nil
-        isRunning = false
+        listener.cancel()
+        resolvedPort = nil
+        await MainActor.run {
+            isRunning = false
+        }
         try? await removeConfigFile()
     }
 
@@ -97,7 +99,7 @@ class HTTPServer: ObservableObject {
     private func handleConnection(_ connection: NWConnection) async {
         connection.start(queue: .global(qos: .userInitiated))
         connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
-            Task { @MainActor in
+            Task {
                 if let data = data, !data.isEmpty {
                     await self?.processHTTPRequest(data, connection: connection)
                 } else if let error = error {
@@ -107,6 +109,34 @@ class HTTPServer: ObservableObject {
                     connection.cancel()
                 }
             }
+        }
+    }
+
+    @MainActor  // Sync state changes on MainActor for UI updates
+    private func handleStateChange(_ state: NWListener.State) async {
+        switch state {
+        case .ready:
+            resolvedPort = listener.port?.rawValue
+            isRunning = true
+            lastError = nil
+            Log.server.info("🚀 HTTP Server started on \(self.host):\(self.resolvedPort!)")
+            ActivityLog.shared.updateServerStatus(online: true)
+            try? await writeConfigFile()
+
+        case .failed(let error):
+            isRunning = false
+            lastError = "Server failed: \(error.localizedDescription)"
+            Log.server.error("❌ \(error.localizedDescription)")
+            ActivityLog.shared.updateServerStatus(online: false)
+
+        case .cancelled:
+            resolvedPort = nil
+            isRunning = false
+            Log.server.info("🛑 HTTP Server stopped")
+            ActivityLog.shared.updateServerStatus(online: false)
+
+        default:
+            break
         }
     }
 
@@ -140,7 +170,7 @@ class HTTPServer: ObservableObject {
 
         switch (method, path) {
         case ("POST", "/"): await handleJSONRPC(body: body, connection: connection, userAgent: userAgent, bodySize: bodySize)
-        case ("GET", "/health"): await sendHTTPResponse(connection: connection, statusCode: 200, headers: ["Content-Type": "application/json"], body: #"{"status":"healthy","port":\#(port)}"#)
+        case ("GET", "/health"): await sendHTTPResponse(connection: connection, statusCode: 200, headers: ["Content-Type": "application/json"], body: #"{"status":"healthy","port":\#(resolvedPort ?? requestedPort)}"#)
         case ("GET", let p) where p.starts(with: "/images/"): await handleImageRequest(path: p, connection: connection)
         default: await sendHTTPResponse(connection: connection, statusCode: 404, body: "Not Found")
         }
@@ -198,7 +228,7 @@ class HTTPServer: ObservableObject {
             default: eventType = .request
             }
 
-            ActivityLog.shared.add(message: "POST /\(request.method)\(toolNameDetail) (\(bodySize) bytes)", type: eventType, requestData: body)
+            await ActivityLog.shared.add(message: "POST /\(request.method)\(toolNameDetail) (\(bodySize) bytes)", type: eventType, requestData: body)
 
             Log.server.latency("🔍 JSON-RPC parsed - method: \(request.method)", since: jsonRpcStartTime)
 
@@ -232,7 +262,7 @@ class HTTPServer: ObservableObject {
             do {
                 let responseData = try JSONEncoder().encode(response)
                 if let responseString = String(data: responseData, encoding: .utf8) {
-                    ActivityLog.shared.updateLastEventWithResponse(responseString)
+                    await ActivityLog.shared.updateLastEventWithResponse(responseString)
                 }
             } catch {
                 Log.server.error("Failed to encode response for logging: \(error.localizedDescription, privacy: .public)")
@@ -245,7 +275,7 @@ class HTTPServer: ObservableObject {
             do {
                 let responseData = try JSONEncoder().encode(errorResponse)
                 if let responseString = String(data: responseData, encoding: .utf8) {
-                    ActivityLog.shared.updateLastEventWithResponse(responseString)
+                    await ActivityLog.shared.updateLastEventWithResponse(responseString)
                 }
             } catch {
                 Log.server.error("Failed to encode error response for logging: \(error.localizedDescription, privacy: .public)")
@@ -258,7 +288,7 @@ class HTTPServer: ObservableObject {
             do {
                 let responseData = try JSONEncoder().encode(parseErrorResponse)
                 if let responseString = String(data: responseData, encoding: .utf8) {
-                    ActivityLog.shared.updateLastEventWithResponse(responseString)
+                    await ActivityLog.shared.updateLastEventWithResponse(responseString)
                 }
             } catch {
                 Log.server.error("Failed to encode parse error response for logging: \(error.localizedDescription, privacy: .public)")
@@ -271,7 +301,7 @@ class HTTPServer: ObservableObject {
             do {
                 let responseData = try JSONEncoder().encode(internalErrorResponse)
                 if let responseString = String(data: responseData, encoding: .utf8) {
-                    ActivityLog.shared.updateLastEventWithResponse(responseString)
+                    await ActivityLog.shared.updateLastEventWithResponse(responseString)
                 }
             } catch {
                 Log.server.error("Failed to encode internal error response for logging: \(error.localizedDescription, privacy: .public)")
@@ -355,7 +385,7 @@ class HTTPServer: ObservableObject {
         Log.server.info("📝 Sequence serialized")
 
         Log.server.info("🎶 Calling AudioManager.playSequenceFromJSON")
-        audioManager.playSequenceFromJSON(jsonString)
+        await audioManager.playSequenceFromJSON(jsonString)
 
         let totalEvents = sequence.tracks.reduce(0) { $0 + $1.events.count }
         let summary = "Playing \(sequence.title ?? "") at \(Int(sequence.tempo)) BPM with \(totalEvents) event\(totalEvents == 1 ? "" : "s")."
@@ -368,7 +398,7 @@ class HTTPServer: ObservableObject {
         if let insturment = sequence.tracks.first?.instrument {
             forInstrument = " for \(insturment)"
         }
-        ActivityLog.shared.add(message: "Play \(titleWith) \(totalEvents) notes\(forInstrument)", type: .generation, sequenceData: jsonString)
+        await ActivityLog.shared.add(message: "Play \(titleWith) \(totalEvents) notes\(forInstrument)", type: .generation, sequenceData: jsonString)
 
         return MCPResult(content: [.text(summary)])
     }
@@ -392,7 +422,7 @@ class HTTPServer: ObservableObject {
             let meiXML = try JSONToMEIConverter.convert(from: sequenceData)
             Log.io.info("🎵 MEI conversion completed")
 
-            guard let svgString = Verovio.svg(from: meiXML) else {
+            guard let svgString = await Verovio.svg(from: meiXML) else {
                 Log.io.error("❌ Verovio.svgFromMEI returned nil")
                 throw JSONRPCError.serverError("Failed to generate SVG from MEI.")
             }
@@ -406,7 +436,7 @@ class HTTPServer: ObservableObject {
             let pngFileName = "\(pngUUID).png"
             let pngURL = tempDirectory.appendingPathComponent(pngFileName)
             try pngData.write(to: pngURL)
-            let resourceURI = "http://\(host):\(port)/images/\(pngFileName)"
+            let resourceURI = "http://\(host):\(resolvedPort ?? requestedPort)/images/\(pngFileName)"
 
             Log.io.info("PNG saved to disk")
 
@@ -422,7 +452,7 @@ class HTTPServer: ObservableObject {
 
             // 6. Log the activity
             if let jsonString = String(data: sequenceData, encoding: .utf8) {
-                ActivityLog.shared.add(message: "Engrave \(sequence.title ?? "Untitled")", type: .generation, sequenceData: jsonString)
+                await ActivityLog.shared.add(message: "Engrave \(sequence.title ?? "Untitled")", type: .generation, sequenceData: jsonString)
             }
             Log.server.info("✅ engraveSequence completed successfully")
 
@@ -571,7 +601,7 @@ class HTTPServer: ObservableObject {
     private func writeConfigFile() async throws {
         let configPath = getConfigFilePath()
         try FileManager.default.createDirectory(at: configPath.deletingLastPathComponent(), withIntermediateDirectories: true)
-        let config: [String: Any] = ["port": port, "host": host, "status": "running", "pid": ProcessInfo.processInfo.processIdentifier]
+        let config: [String: Any] = ["port": resolvedPort ?? requestedPort, "host": host, "status": "running", "pid": ProcessInfo.processInfo.processIdentifier]
         let jsonData = try JSONSerialization.data(withJSONObject: config, options: .prettyPrinted)
         try jsonData.write(to: configPath)
         Log.server.info("📝 Config written to: \(configPath.path, privacy: .public)")
@@ -591,8 +621,8 @@ class HTTPServer: ObservableObject {
             return cachedPrompts
         }
 
-        // Load prompt definitions from prompts.json file
-        guard let promptsURL = Bundle.main.url(forResource: "prompts", withExtension: "json", subdirectory: "mcp"),
+        // Load prompt definitions from injected prompts URL
+        guard let promptsURL = promptsURL,
               let promptsData = try? Data(contentsOf: promptsURL),
               let promptsArray = try? JSONSerialization.jsonObject(with: promptsData) as? [[String: Any]] else {
             Log.server.error("❌ Failed to load prompts.json, falling back to empty array")
@@ -609,8 +639,8 @@ class HTTPServer: ObservableObject {
             return cachedTools
         }
 
-        // Load tool definitions from clean JSON file instead of ugly Swift code
-        guard let toolsURL = Bundle.main.url(forResource: "tools", withExtension: "json", subdirectory: "MCP"),
+        // Load tool definitions from injected tools URL
+        guard let toolsURL = toolsURL,
               let toolsData = try? Data(contentsOf: toolsURL),
               let toolsArray = try? JSONSerialization.jsonObject(with: toolsData) as? [[String: Any]] else {
             Log.server.error("❌ Failed to load tools.json, falling back to empty array")
@@ -622,3 +652,6 @@ class HTTPServer: ObservableObject {
         return tools
     }
 }
+
+
+

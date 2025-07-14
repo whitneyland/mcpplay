@@ -10,32 +10,21 @@ import Foundation
 import Network
 @testable import RiffMCP
 
-// MARK: - Mock AudioManager
+// MARK: - Dummy AudioManager
 
-/// Mock implementation of AudioManager for testing HTTPServer
-@MainActor
-class MockAudioManager: AudioManager {
+/// Simple dummy audio manager for testing that just records calls
+actor DummyAudioManager: AudioManaging {
     // Track calls for testing
-    var playSequenceCalls: [String] = []
-    var stopSequenceCalls: Int = 0
-    var calculateDurationCalls: [String] = []
+    private(set) var playSequenceCalls: [String] = []
     
-    override func playSequenceFromJSON(_ rawJSON: String) async {
+    nonisolated func playSequenceFromJSON(_ rawJSON: String) {
+        Task {
+            await recordCall(rawJSON)
+        }
+    }
+    
+    private func recordCall(_ rawJSON: String) {
         playSequenceCalls.append(rawJSON)
-        receivedJSON = rawJSON
-        playbackState = .playing
-        await super.playSequenceFromJSON(rawJSON)
-    }
-    
-    override func stopSequence() {
-        stopSequenceCalls += 1
-        super.stopSequence()
-    }
-    
-    override func calculateDurationFromJSON(_ jsonString: String) {
-        calculateDurationCalls.append(jsonString)
-        totalDuration = 120.0 // Mock duration
-        super.calculateDurationFromJSON(jsonString)
     }
 }
 
@@ -44,21 +33,85 @@ class MockAudioManager: AudioManager {
 @Suite("HTTP Server Tests")
 struct HTTPServerTests {
     
+    // MARK: - Test Helpers
+    
+    static func createTestServer() -> (server: HTTPServer, audioManager: DummyAudioManager) {
+        let dummyAudioManager = DummyAudioManager()
+        let tempDir = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("RiffMCPTest-\(UUID().uuidString)")
+        
+        // Create minimal test fixtures
+        let testToolsData = """
+        [
+            {
+                "name": "play",
+                "description": "Play a music sequence",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "tempo": {"type": "number"},
+                        "tracks": {"type": "array"}
+                    }
+                }
+            },
+            {
+                "name": "engrave",
+                "description": "Generate sheet music",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "tempo": {"type": "number"},
+                        "tracks": {"type": "array"}
+                    }
+                }
+            }
+        ]
+        """.data(using: .utf8)!
+        
+        let testPromptsData = """
+        [
+            {
+                "name": "test-prompt",
+                "description": "A test prompt"
+            }
+        ]
+        """.data(using: .utf8)!
+        
+        // Write test fixtures to temp files
+        let toolsURL = tempDir.appendingPathComponent("tools.json")
+        let promptsURL = tempDir.appendingPathComponent("prompts.json")
+        
+        try! FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        try! testToolsData.write(to: toolsURL)
+        try! testPromptsData.write(to: promptsURL)
+
+        let server: HTTPServer
+        do {
+            server = try HTTPServer(
+                audioManager: dummyAudioManager,
+                host: "127.0.0.1",
+                port: 0, // Let kernel pick a free port
+                tempDirectory: tempDir,
+                toolsURL: toolsURL,
+                promptsURL: promptsURL)
+        } catch {
+            fatalError("🚨 Failed to create HTTPServer: \(error)")
+        }
+
+        return (server: server, audioManager: dummyAudioManager)
+    }
+    
     // MARK: - Basic Tests
     
-    @Test("Mock AudioManager works")
-    @MainActor
-    func mockAudioManagerWorks() async throws {
-        let mockAudioManager = MockAudioManager()
-        await mockAudioManager.playSequenceFromJSON("{}")
-        #expect(mockAudioManager.playSequenceCalls.count == 1)
+    @Test("Dummy AudioManager works")
+    func dummyAudioManagerWorks() async throws {
+        let dummyAudioManager = DummyAudioManager()
+        dummyAudioManager.playSequenceFromJSON("{}")
+        #expect(await dummyAudioManager.playSequenceCalls.count == 1)
     }
     
     @Test("Server can be created")
-    @MainActor
     func serverCanBeCreated() async throws {
-        let mockAudioManager = MockAudioManager()
-        let server = HTTPServer(audioManager: mockAudioManager)
+        let (server, _) = Self.createTestServer()
         #expect(!server.isRunning)
         #expect(server.lastError == nil)
     }
@@ -66,10 +119,8 @@ struct HTTPServerTests {
     // MARK: - Basic Server Lifecycle Tests
     
     @Test("Server starts and stops correctly")
-    @MainActor
     func serverStartsAndStops() async throws {
-        let mockAudioManager = MockAudioManager()
-        let server = HTTPServer(audioManager: mockAudioManager)
+        let (server, _) = Self.createTestServer()
         
         // Server should start successfully
         try await server.start()
@@ -82,10 +133,8 @@ struct HTTPServerTests {
     }
     
     @Test("Server doesn't start twice")
-    @MainActor
     func serverDoesntStartTwice() async throws {
-        let mockAudioManager = MockAudioManager()
-        let server = HTTPServer(audioManager: mockAudioManager)
+        let (server, _) = Self.createTestServer()
         
         try await server.start()
         #expect(server.isRunning)
@@ -100,17 +149,15 @@ struct HTTPServerTests {
     // MARK: - HTTP Endpoint Tests
     
     @Test("Health endpoint returns healthy status")
-    @MainActor
     func healthEndpointReturnsHealthyStatus() async throws {
-        let mockAudioManager = MockAudioManager()
-        let server = HTTPServer(audioManager: mockAudioManager)
+        let (server, _) = Self.createTestServer()
         
         try await server.start()
         
         // Test health endpoint
         let healthResponse = try await makeHTTPRequest(
             host: "127.0.0.1",
-            port: 3001,
+            port: server.resolvedPort!,
             method: "GET",
             path: "/health"
         )
@@ -118,22 +165,20 @@ struct HTTPServerTests {
         #expect(healthResponse.statusCode == 200)
         #expect(healthResponse.headers["Content-Type"] == "application/json")
         #expect(healthResponse.body.contains("\"status\":\"healthy\""))
-        #expect(healthResponse.body.contains("\"port\":3001"))
+        #expect(healthResponse.body.contains("\"port\":\(server.resolvedPort!)"))
         
         await server.stop()
     }
     
     @Test("Unknown endpoints return 404")
-    @MainActor
     func unknownEndpointsReturn404() async throws {
-        let mockAudioManager = MockAudioManager()
-        let server = HTTPServer(audioManager: mockAudioManager)
+        let (server, _) = Self.createTestServer()
         
         try await server.start()
         
         let response = try await makeHTTPRequest(
             host: "127.0.0.1",
-            port: 3001,
+            port: server.resolvedPort!,
             method: "GET",
             path: "/nonexistent"
         )
@@ -147,10 +192,8 @@ struct HTTPServerTests {
     // MARK: - JSON-RPC Tests
     
     @Test("JSON-RPC initialize request works")
-    @MainActor
     func jsonRpcInitializeWorks() async throws {
-        let mockAudioManager = MockAudioManager()
-        let server = HTTPServer(audioManager: mockAudioManager)
+        let (server, _) = Self.createTestServer()
         
         try await server.start()
         
@@ -169,7 +212,7 @@ struct HTTPServerTests {
         
         let response = try await makeHTTPRequest(
             host: "127.0.0.1",
-            port: 3001,
+            port: server.resolvedPort!,
             method: "POST",
             path: "/",
             body: initRequest,
@@ -185,10 +228,8 @@ struct HTTPServerTests {
     }
     
     @Test("JSON-RPC tools/list request works")
-    @MainActor
     func jsonRpcToolsListWorks() async throws {
-        let mockAudioManager = MockAudioManager()
-        let server = HTTPServer(audioManager: mockAudioManager)
+        let (server, _) = Self.createTestServer()
         
         try await server.start()
         
@@ -202,7 +243,7 @@ struct HTTPServerTests {
         
         let response = try await makeHTTPRequest(
             host: "127.0.0.1",
-            port: 3001,
+            port: server.resolvedPort!,
             method: "POST",
             path: "/",
             body: toolsRequest,
@@ -216,10 +257,8 @@ struct HTTPServerTests {
     }
     
     @Test("JSON-RPC play tool call works")
-    @MainActor
     func jsonRpcPlayToolWorks() async throws {
-        let mockAudioManager = MockAudioManager()
-        let server = HTTPServer(audioManager: mockAudioManager)
+        let (server, dummyAudioManager) = Self.createTestServer()
         
         try await server.start()
         
@@ -249,7 +288,7 @@ struct HTTPServerTests {
         
         let response = try await makeHTTPRequest(
             host: "127.0.0.1",
-            port: 3001,
+            port: server.resolvedPort!,
             method: "POST",
             path: "/",
             body: playRequest,
@@ -260,17 +299,15 @@ struct HTTPServerTests {
         #expect(response.body.contains("\"result\""))
         
         // Verify audio manager was called
-        #expect(mockAudioManager.playSequenceCalls.count == 1)
-        #expect(mockAudioManager.playSequenceCalls[0].contains("Test Song"))
-        
+        #expect(await dummyAudioManager.playSequenceCalls.count == 1)
+        #expect(await dummyAudioManager.playSequenceCalls[0].contains("Test Song"))
+
         await server.stop()
     }
     
     @Test("JSON-RPC engrave tool is recognized")
-    @MainActor
     func jsonRpcEngraveToolIsRecognized() async throws {
-        let mockAudioManager = MockAudioManager()
-        let server = HTTPServer(audioManager: mockAudioManager)
+        let (server, dummyAudioManager) = Self.createTestServer()
         
         try await server.start()
         
@@ -285,7 +322,7 @@ struct HTTPServerTests {
         
         let toolsResponse = try await makeHTTPRequest(
             host: "127.0.0.1",
-            port: 3001,
+            port: server.resolvedPort!,
             method: "POST",
             path: "/",
             body: toolsListRequest,
@@ -322,7 +359,7 @@ struct HTTPServerTests {
         
         let response = try await makeHTTPRequest(
             host: "127.0.0.1",
-            port: 3001,
+            port: server.resolvedPort!,
             method: "POST",
             path: "/",
             body: engraveRequest,
@@ -339,16 +376,14 @@ struct HTTPServerTests {
         #expect(!responseBody.contains("Unknown tool"))
         
         // Verify audio manager was NOT called for engrave (it's sheet music only)
-        #expect(mockAudioManager.playSequenceCalls.count == 0)
-        
+        #expect(await dummyAudioManager.playSequenceCalls.count == 0)
+
         await server.stop()
     }
     
     @Test("JSON-RPC engrave tool creates accessible image")
-    @MainActor
     func jsonRpcEngraveToolCreatesAccessibleImage() async throws {
-        let mockAudioManager = MockAudioManager()
-        let server = HTTPServer(audioManager: mockAudioManager)
+        let (server, _) = Self.createTestServer()
         
         try await server.start()
         
@@ -379,7 +414,7 @@ struct HTTPServerTests {
         
         let engraveResponse = try await makeHTTPRequest(
             host: "127.0.0.1",
-            port: 3001,
+            port: server.resolvedPort!,
             method: "POST",
             path: "/",
             body: engraveRequest,
@@ -398,7 +433,7 @@ struct HTTPServerTests {
         // even if we can't extract the exact UUID filename from the response
         let testImageResponse = try await makeHTTPRequest(
             host: "127.0.0.1",
-            port: 3001,
+            port: server.resolvedPort!,
             method: "GET",
             path: "/images/nonexistent.png"
         )
@@ -410,10 +445,8 @@ struct HTTPServerTests {
     }
     
     @Test("Image endpoint security prevents path traversal")
-    @MainActor
     func imageEndpointSecurityPreventsPathTraversal() async throws {
-        let mockAudioManager = MockAudioManager()
-        let server = HTTPServer(audioManager: mockAudioManager)
+        let (server, _) = Self.createTestServer()
         
         try await server.start()
         
@@ -427,7 +460,7 @@ struct HTTPServerTests {
         for path in pathTraversalAttempts {
             let response = try await makeHTTPRequest(
                 host: "127.0.0.1",
-                port: 3001,
+                port: server.resolvedPort!,
                 method: "GET",
                 path: path
             )
@@ -441,17 +474,15 @@ struct HTTPServerTests {
     }
     
     @Test("JSON-RPC invalid requests return errors")
-    @MainActor
     func jsonRpcInvalidRequestsReturnErrors() async throws {
-        let mockAudioManager = MockAudioManager()
-        let server = HTTPServer(audioManager: mockAudioManager)
+        let (server, _) = Self.createTestServer()
         
         try await server.start()
         
         // Test invalid JSON
         let invalidJsonResponse = try await makeHTTPRequest(
             host: "127.0.0.1",
-            port: 3001,
+            port: server.resolvedPort!,
             method: "POST",
             path: "/",
             body: "invalid json",
@@ -473,7 +504,7 @@ struct HTTPServerTests {
         
         let unknownMethodResponse = try await makeHTTPRequest(
             host: "127.0.0.1",
-            port: 3001,
+            port: server.resolvedPort!,
             method: "POST",
             path: "/",
             body: unknownMethodRequest,
@@ -490,10 +521,8 @@ struct HTTPServerTests {
     // MARK: - Error Handling Tests
     
     @Test("Server handles invalid tool parameters gracefully")
-    @MainActor
     func serverHandlesInvalidToolParameters() async throws {
-        let mockAudioManager = MockAudioManager()
-        let server = HTTPServer(audioManager: mockAudioManager)
+        let (server, _) = Self.createTestServer()
         
         try await server.start()
         
@@ -513,7 +542,7 @@ struct HTTPServerTests {
         
         let response = try await makeHTTPRequest(
             host: "127.0.0.1",
-            port: 3001,
+            port: server.resolvedPort!,
             method: "POST",
             path: "/",
             body: invalidPlayRequest,
