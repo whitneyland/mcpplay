@@ -7,13 +7,26 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9B7948FD2E2484E200DA0B1A /* Testing in Frameworks */ = {isa = PBXBuildFile; productRef = 9B7948FC2E2484E200DA0B1A /* Testing */; };
 		9BA506EB2E01DC00000EFB3E /* lib/libverovio.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BA506EC2E01DC00000EFB3E /* lib/libverovio.a */; };
 		9BAECE312E0F04620054DBE2 /* CREDITS.md in Resources */ = {isa = PBXBuildFile; fileRef = 9BAECE302E0F04620054DBE2 /* CREDITS.md */; };
 		9BAECF222E0F07880054DBE2 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 9BA506F22E01DE00000EFB3E /* MarkdownUI */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		9B7949062E24873600DA0B1A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9B5BB7762DF4AF03003EC64C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9B5BB77D2DF4AF03003EC64C;
+			remoteInfo = RiffMCP;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		9B5BB77E2DF4AF03003EC64C /* RiffMCP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RiffMCP.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9B7949022E24873600DA0B1A /* RiffMCPTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RiffMCPTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9B7949112E2490E100DA0B1A /* RiffMCP.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = RiffMCP.xctestplan; sourceTree = "<group>"; };
 		9BA506EC2E01DC00000EFB3E /* lib/libverovio.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = lib/libverovio.a; sourceTree = "<group>"; };
 		9BAECE302E0F04620054DBE2 /* CREDITS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CREDITS.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -29,6 +42,11 @@
 			path = RiffMCP;
 			sourceTree = "<group>";
 		};
+		9B7949032E24873600DA0B1A /* RiffMCPTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = RiffMCPTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -36,8 +54,16 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9B7948FD2E2484E200DA0B1A /* Testing in Frameworks */,
 				9BAECF222E0F07880054DBE2 /* MarkdownUI in Frameworks */,
 				9BA506EB2E01DC00000EFB3E /* lib/libverovio.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9B7948FF2E24873600DA0B1A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -47,8 +73,10 @@
 		9B5BB7752DF4AF03003EC64C = {
 			isa = PBXGroup;
 			children = (
+				9B7949112E2490E100DA0B1A /* RiffMCP.xctestplan */,
 				9BAECE302E0F04620054DBE2 /* CREDITS.md */,
 				9B5BB7802DF4AF03003EC64C /* RiffMCP */,
+				9B7949032E24873600DA0B1A /* RiffMCPTests */,
 				9B5BB77F2DF4AF03003EC64C /* Products */,
 				9BA506EE2E01DC10000EFB3E /* Frameworks */,
 			);
@@ -58,6 +86,7 @@
 			isa = PBXGroup;
 			children = (
 				9B5BB77E2DF4AF03003EC64C /* RiffMCP.app */,
+				9B7949022E24873600DA0B1A /* RiffMCPTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -92,10 +121,34 @@
 			name = RiffMCP;
 			packageProductDependencies = (
 				9BA506F22E01DE00000EFB3E /* MarkdownUI */,
+				9B7948FC2E2484E200DA0B1A /* Testing */,
 			);
 			productName = RiffMCP;
 			productReference = 9B5BB77E2DF4AF03003EC64C /* RiffMCP.app */;
 			productType = "com.apple.product-type.application";
+		};
+		9B7949012E24873600DA0B1A /* RiffMCPTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9B7949082E24873600DA0B1A /* Build configuration list for PBXNativeTarget "RiffMCPTests" */;
+			buildPhases = (
+				9B7948FE2E24873600DA0B1A /* Sources */,
+				9B7948FF2E24873600DA0B1A /* Frameworks */,
+				9B7949002E24873600DA0B1A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9B7949072E24873600DA0B1A /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				9B7949032E24873600DA0B1A /* RiffMCPTests */,
+			);
+			name = RiffMCPTests;
+			packageProductDependencies = (
+			);
+			productName = RiffMCPTests;
+			productReference = 9B7949022E24873600DA0B1A /* RiffMCPTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -110,6 +163,10 @@
 					9B5BB77D2DF4AF03003EC64C = {
 						CreatedOnToolsVersion = 16.4;
 					};
+					9B7949012E24873600DA0B1A = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = 9B5BB77D2DF4AF03003EC64C;
+					};
 				};
 			};
 			buildConfigurationList = 9B5BB7792DF4AF03003EC64C /* Build configuration list for PBXProject "RiffMCP" */;
@@ -123,6 +180,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				9BA506F12E01DE00000EFB3E /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
+				9B7948FB2E2484E200DA0B1A /* XCRemoteSwiftPackageReference "swift-testing" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9B5BB77F2DF4AF03003EC64C /* Products */;
@@ -130,6 +188,7 @@
 			projectRoot = "";
 			targets = (
 				9B5BB77D2DF4AF03003EC64C /* RiffMCP */,
+				9B7949012E24873600DA0B1A /* RiffMCPTests */,
 			);
 		};
 /* End PBXProject section */
@@ -140,6 +199,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				9BAECE312E0F04620054DBE2 /* CREDITS.md in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9B7949002E24873600DA0B1A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -174,7 +240,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		9B7948FE2E24873600DA0B1A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		9B7949072E24873600DA0B1A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9B5BB77D2DF4AF03003EC64C /* RiffMCP */;
+			targetProxy = 9B7949062E24873600DA0B1A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		9B5BB7882DF4AF05003EC64C /* Debug */ = {
@@ -375,6 +456,40 @@
 			};
 			name = Release;
 		};
+		9B7949092E24873600DA0B1A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = XVCKDWA745;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.whitneyland.RiffMCPTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RiffMCP.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RiffMCP";
+			};
+			name = Debug;
+		};
+		9B79490A2E24873600DA0B1A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = XVCKDWA745;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.whitneyland.RiffMCPTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RiffMCP.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RiffMCP";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -396,9 +511,26 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		9B7949082E24873600DA0B1A /* Build configuration list for PBXNativeTarget "RiffMCPTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9B7949092E24873600DA0B1A /* Debug */,
+				9B79490A2E24873600DA0B1A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		9B7948FB2E2484E200DA0B1A /* XCRemoteSwiftPackageReference "swift-testing" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-testing";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.1.1;
+			};
+		};
 		9BA506F12E01DE00000EFB3E /* XCRemoteSwiftPackageReference "swift-markdown-ui" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/gonzalezreal/swift-markdown-ui";
@@ -410,6 +542,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		9B7948FC2E2484E200DA0B1A /* Testing */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9B7948FB2E2484E200DA0B1A /* XCRemoteSwiftPackageReference "swift-testing" */;
+			productName = Testing;
+		};
 		9BA506F22E01DE00000EFB3E /* MarkdownUI */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 9BA506F12E01DE00000EFB3E /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;

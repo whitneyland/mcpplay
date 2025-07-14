@@ -1,0 +1,29 @@
+{
+  "configurations" : [
+    {
+      "id" : "BE7BCB21-136C-4A3F-945B-0BC75F875859",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:RiffMCP.xcodeproj",
+      "identifier" : "9B5BB77D2DF4AF03003EC64C",
+      "name" : "RiffMCP"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:RiffMCP.xcodeproj",
+        "identifier" : "9B7949012E24873600DA0B1A",
+        "name" : "RiffMCPTests"
+      }
+    }
+  ],
+  "version" : 1
+}

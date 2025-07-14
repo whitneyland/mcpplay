@@ -2,7 +2,7 @@
 //  HTTPServer.swift
 //  RiffMCP
 //
-//  Foundation-based HTTP server to handle Model Context Protocol requests
+//  Simple HTTP server to handle Model Context Protocol requests
 //
 
 import Foundation

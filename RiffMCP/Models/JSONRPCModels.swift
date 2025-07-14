@@ -99,4 +99,10 @@ enum JSONValue: Codable, Sendable {
     }
     var arrayValue: [JSONValue]? { if case .array(let v) = self { return v }; return nil }
     var objectValue: [String: JSONValue]? { if case .object(let v) = self { return v }; return nil }
+
+    /// Converts the JSONValue enum back into a Data object for decoding into a specific type.
+    func toData() throws -> Data {
+        let encoder = JSONEncoder()
+        return try encoder.encode(self)
+    }
 }
