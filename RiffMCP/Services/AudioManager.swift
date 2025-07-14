@@ -336,21 +336,21 @@ class AudioManager: AudioManaging, ObservableObject {
 
     private func updateElapsedTime() {
         guard isPlaying, sequenceLength > 0 else { return }
-        
-        let currentBeats = sequencer.currentPositionInBeats
-        let beatDuration = 60.0 / currentTempo
-        elapsedTime = currentBeats * beatDuration
 
-        // Stop sequence when we've exceeded the total duration + tail time
-        if elapsedTime >= sequenceLength + playbackTailTime {
+        // Raw time since playback began
+        let beatDuration   = 60.0 / currentTempo
+        let actualElapsed  = sequencer.currentPositionInBeats * beatDuration
+
+        // Musical time the user should see (capped at the score’s length)
+        let musicalElapsed = min(actualElapsed, sequenceLength)
+        elapsedTime        = musicalElapsed            // <-- what MainView shows
+
+        // Progress bar (already ignores the tail)
+        progress           = musicalElapsed / sequenceLength
+
+        // Stop after the tail has finished ringing out
+        if actualElapsed >= sequenceLength + playbackTailTime {
             stopSequence()
-            return
-        }
-
-        if totalDuration > 0 {
-            // Calculate progress based on musical length, not including the tail
-            let musicalElapsedTime = min(elapsedTime, sequenceLength)
-            progress = musicalElapsedTime / sequenceLength
         }
     }
 }
