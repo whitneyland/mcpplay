@@ -1,302 +1,205 @@
+//
+//  SVGToPNGRenderer.swift
+//  RiffMCP
+//
+//  Created by Lee Whitney on 6/8/25.
+//
+
 import Foundation
 import WebKit
 import AppKit
 import SwiftUI
 
 // Headless SVG rendering that we can use to serve images without UI
-struct SVGToPNGRenderer: NSViewRepresentable {
-    let svgString: String
-    @Binding var pngImage: NSImage?
-    let renderSize: CGSize                // concrete size chosen once
+struct SVGToPNGRenderer {
 
-    /// Init: caller size ▶︎ SVG intrinsic ▶︎ fallback
-    init(_ svgString: String,
-         _ pngImage: Binding<NSImage?>,
-         requestedSize: CGSize? = nil)
+    // MARK: Public entry point
+    @MainActor
+    static func renderToPNG(svgString: String,
+                            size: CGSize? = nil) async throws -> Data
     {
-        self.svgString  = svgString
-        self._pngImage  = pngImage
+        let renderSize = Self.computeRenderSize(from: svgString,
+                                                requestedOverride: size)
 
-        // ── extract width / height from the <svg> tag, if any ──────────────
-        var intrinsicSize: CGSize? = nil
-        if let (w, h) = SVGToPNGRenderer.extractDimensions(from: svgString) {
-            intrinsicSize = CGSize(width: w, height: h)
-//            print(String(format: "SD:svgString   : %04d x %04d", w, h))
+        // Off-screen WebKit snapshot
+        let webView = WKWebView(frame: CGRect(origin: .zero, size: renderSize))
+
+        return try await withCheckedThrowingContinuation { continuation in
+            // Keep delegate alive for the snapshot life-cycle
+            let coordinator = HeadlessCoordinator(
+                svgString: svgString,
+                renderSize: renderSize,
+                continuation: continuation
+            )
+
+            webView.navigationDelegate = coordinator
+            objc_setAssociatedObject(webView,
+                                     "headlessCoordinator",
+                                     coordinator,
+                                     .OBJC_ASSOCIATION_RETAIN)
+
+            webView.loadHTMLString(Self.htmlTemplate(for: svgString),
+                                   baseURL: nil)
         }
-
-        // ── final render size decision ─────────────────────────────────────
-        self.renderSize =
-              requestedSize                       // caller override
-           ?? intrinsicSize                       // SVG says so
-           ?? CGSize(width: 1700, height: 2200)   // last-ditch default
-
-//        print(String(format: "SD:SVGToPNG    : %.0f x %.0f", renderSize.width, renderSize.height))
     }
 
-    // Convenience for views that need the SVG’s own size
+    // MARK: Convenience helpers
     static func intrinsicSize(of svgString: String) -> CGSize? {
-        if let (w, h) = SVGToPNGRenderer.extractDimensions(from: svgString) {
+        if let (w, h) = Self.extractDimensions(from: svgString) {
             return CGSize(width: w, height: h)
         }
         return nil
     }
 
     static func extractDimensions(from svg: String) -> (width: Int, height: Int)? {
+        // NOTE: Still limited to explicit width/height attrs; viewBox parsing TBD.
         let pattern = #"width="(\d+)[a-zA-Z]*"\s+height="(\d+)[a-zA-Z]*""#
         guard let regex = try? NSRegularExpression(pattern: pattern),
-              let match = regex.firstMatch(in: svg, range: NSRange(svg.startIndex..., in: svg)),
-              let widthRange = Range(match.range(at: 1), in: svg),
+              let match = regex.firstMatch(in: svg,
+                                           range: NSRange(svg.startIndex..., in: svg)),
+              let widthRange  = Range(match.range(at: 1), in: svg),
               let heightRange = Range(match.range(at: 2), in: svg),
-              let width = Int(svg[widthRange]),
-              let height = Int(svg[heightRange]) else {
+              let width       = Int(svg[widthRange]),
+              let height      = Int(svg[heightRange]) else {
             return nil
         }
         return (width, height)
     }
 
-    func makeNSView(context: Context) -> WKWebView {
-        let webView = WKWebView(frame: CGRect(origin: .zero, size: renderSize))
-        webView.navigationDelegate = context.coordinator
-        // Don't set isHidden = true as it prevents proper rendering for snapshots
-        return webView
-    }
-    
-    func updateNSView(_ nsView: WKWebView, context: Context) {
-        context.coordinator.svgString = svgString
-        context.coordinator.pngImage = $pngImage
-        context.coordinator.renderSize = renderSize
-        context.coordinator.renderSVGToPNG(webView: nsView)
-    }
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator()
-    }
-    
-    class Coordinator: NSObject, WKNavigationDelegate {
-        var svgString: String = ""
-        var pngImage: Binding<NSImage?>?
-        var lastLoadedSVG: String = ""
-        var renderSize: CGSize = .zero
-        
-        func getRenderSize() -> CGSize {
-            return renderSize
-        }
-        
-        func renderSVGToPNG(webView: WKWebView) {
-            guard !svgString.isEmpty else { return }
-            
-            // Prevent unnecessary reloads
-            guard svgString != lastLoadedSVG else { return }
-            
-            lastLoadedSVG = svgString
-            
-            
-            let htmlContent = """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <style>
-                    * { margin: 0; padding: 0; box-sizing: border-box; }
-                    body { 
-                        background: white; 
-                        font-family: Arial, sans-serif;
-                        width: fit-content;
-                        height: fit-content;
-                    }
-                    svg { 
-                        display: block; 
-                        width: auto !important;
-                        height: auto !important;
-                    }
-                </style>
-            </head>
-            <body>
-                \(svgString)                
-            </body>
-            </html>
-            """
-            
-            webView.loadHTMLString(htmlContent, baseURL: nil)
-        }
-        
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            self.captureWebViewAsPNG(webView: webView)
-        }
-        
+    // MARK: Private implementation
+    private static let defaultPageSize = CGSize(width: 1700, height: 2200)
 
+    private static func computeRenderSize(from svg: String,
+                                          requestedOverride: CGSize?) -> CGSize
+    {
+        requestedOverride
+        ?? Self.intrinsicSize(of: svg)
+        ?? defaultPageSize
+    }
 
-        private func captureWebViewAsPNG(webView: WKWebView) {
+    private static func htmlTemplate(for svg: String) -> String {
+        """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { background: white; width: fit-content; height: fit-content; }
+                svg  { display: block; }
+            </style>
+        </head>
+        <body>
+        \(svg)
+        </body>
+        </html>
+        """
+    }
+
+    // MARK: Headless snapshot delegate
+    private class HeadlessCoordinator: NSObject, WKNavigationDelegate {
+        let svgString: String
+        let renderSize: CGSize
+        var continuation: CheckedContinuation<Data, Error>?
+
+        init(svgString: String,
+             renderSize: CGSize,
+             continuation: CheckedContinuation<Data, Error>)
+        {
+            self.svgString    = svgString
+            self.renderSize   = renderSize
+            self.continuation = continuation
+        }
+
+        func webView(_ webView: WKWebView,
+                     didFinish navigation: WKNavigation!)
+        {
             let config = WKSnapshotConfiguration()
             config.rect = CGRect(origin: .zero, size: renderSize)
 
             webView.takeSnapshot(with: config) { [weak self] image, error in
                 guard let self else { return }
 
-                if let error { Log.io.error("❌ Snapshot failed: \(error.localizedDescription, privacy: .public)"); return }
-                guard let image else { Log.io.error("❌ Snapshot failed: no image"); return }
+                if let error {
+                    self.continuation?.resume(throwing: error)
+                    self.continuation = nil
+                    return
+                }
 
-                // Update SwiftUI view
-                self.pngImage?.wrappedValue = image
+                guard
+                    let image            = image,
+                    let tiff            = image.tiffRepresentation,
+                    let bitmapImage     = NSBitmapImageRep(data: tiff),
+                    let pngData         = bitmapImage
+                        .representation(using: .png, properties: [:])
+                else {
+                    self.continuation?.resume(
+                        throwing: NSError(
+                            domain: "SVGToPNGRenderer",
+                            code: 1,
+                            userInfo: [
+                                NSLocalizedDescriptionKey:
+                                    "Failed to convert snapshot to PNG data."
+                            ]
+                        )
+                    )
+                    self.continuation = nil
+                    return
+                }
 
-                // ───── debug stuff ───
-//                let tmp = FileManager.default.temporaryDirectory
-//                let svgURL = tmp.appendingPathComponent("debug_output.svg")
-//                let pngURL = tmp.appendingPathComponent("debug_output.png")
-//
-//                try? self.svgString.write(to: svgURL, atomically: true, encoding: .utf8)
-//
-//                if let tiff = image.tiffRepresentation,
-//                   let rep  = NSBitmapImageRep(data: tiff),
-//                   let png  = rep.representation(using: .png, properties: [:])
-//                {
-//                    print("SD:PNG size: \(rep.pixelsWide) × \(rep.pixelsHigh)")
-//                    try? png.write(to: pngURL)
-//                }
+                self.continuation?.resume(returning: pngData)
+                self.continuation = nil
             }
         }
-    }
-    
-    @MainActor
-    static func renderToPNG(svgString: String, size: CGSize? = nil) async throws -> Data {
-        // Determine the rendering size
-        let renderSize: CGSize
-        if let providedSize = size {
-            renderSize = providedSize
-        } else if let (w, h) = SVGToPNGRenderer.extractDimensions(from: svgString) {
-            renderSize = CGSize(width: w, height: h)
-        } else {
-            renderSize = CGSize(width: 1700, height: 2200) // Default fallback
+
+        func webView(_ webView: WKWebView,
+                     didFail navigation: WKNavigation!,
+                     withError error: Error)
+        {
+            continuation?.resume(throwing: error)
+            continuation = nil
         }
 
-        // Create a web view offscreen
-        let webView = WKWebView(frame: CGRect(origin: .zero, size: renderSize))
-        
-        // Use a continuation to bridge the callback
-        return try await withCheckedThrowingContinuation { continuation in
-            // Create a coordinator to handle web view delegate methods
-            let coordinator = HeadlessCoordinator(
-                svgString: svgString,
-                renderSize: renderSize,
-                continuation: continuation
-            )
-            
-            webView.navigationDelegate = coordinator
-            
-            // Keep the coordinator alive
-            objc_setAssociatedObject(webView, "headlessCoordinator", coordinator, .OBJC_ASSOCIATION_RETAIN)
-
-            // Load the SVG content
-            let htmlContent = """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <style>
-                    * { margin: 0; padding: 0; box-sizing: border-box; }
-                    body { background: white; width: fit-content; height: fit-content; }
-                    svg { display: block; }
-                </style>
-            </head>
-            <body>
-                \(svgString)
-            </body>
-            </html>
-            """
-            webView.loadHTMLString(htmlContent, baseURL: nil)
+        func webView(_ webView: WKWebView,
+                     didFailProvisionalNavigation navigation: WKNavigation!,
+                     withError error: Error)
+        {
+            continuation?.resume(throwing: error)
+            continuation = nil
         }
     }
 }
 
-// A new coordinator class specifically for the headless operation
-private class HeadlessCoordinator: NSObject, WKNavigationDelegate {
-    let svgString: String
-    let renderSize: CGSize
-    var continuation: CheckedContinuation<Data, Error>?
-
-    init(svgString: String, renderSize: CGSize, continuation: CheckedContinuation<Data, Error>) {
-        self.svgString = svgString
-        self.renderSize = renderSize
-        self.continuation = continuation
-    }
-
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        let config = WKSnapshotConfiguration()
-        config.rect = CGRect(origin: .zero, size: renderSize)
-
-        webView.takeSnapshot(with: config) { [weak self] image, error in
-            guard let self = self else { return }
-            
-            if let error = error {
-                self.continuation?.resume(throwing: error)
-                self.continuation = nil
-                return
-            }
-            
-            guard let image = image else {
-                self.continuation?.resume(throwing: NSError(domain: "SVGToPNGRenderer", code: 1, userInfo: [NSLocalizedDescriptionKey: "Snapshot failed to produce an image."]))
-                self.continuation = nil
-                return
-            }
-
-            // Convert NSImage to PNG Data
-            guard let tiffRepresentation = image.tiffRepresentation,
-                  let bitmapImage = NSBitmapImageRep(data: tiffRepresentation),
-                  let pngData = bitmapImage.representation(using: .png, properties: [:]) else {
-                self.continuation?.resume(throwing: NSError(domain: "SVGToPNGRenderer", code: 2, userInfo: [NSLocalizedDescriptionKey: "Failed to convert NSImage to PNG data."]))
-                self.continuation = nil
-                return
-            }
-            
-            self.continuation?.resume(returning: pngData)
-            self.continuation = nil
-        }
-    }
-
-    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        continuation?.resume(throwing: error)
-        continuation = nil
-    }
-
-    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        continuation?.resume(throwing: error)
-        continuation = nil
-    }
-}
-
-// SwiftUI view that displays the PNG image
+// MARK: - SwiftUI convenience wrapper
 struct SVGImageView: View {
     let svgString: String
     @State private var pngImage: NSImage?
 
-    // compute once per View
-    private var intrinsicSize: CGSize {
-        if let (w, h) = SVGToPNGRenderer.extractDimensions(from: svgString) {
-            return CGSize(width: w, height: h)
-        }
-        return CGSize(width: 1700, height: 2200)   // fallback
-    }
-
     var body: some View {
-        GeometryReader { _ in
+        Group {
             if let img = pngImage {
                 Image(nsImage: img)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity,
+                           maxHeight: .infinity)
             } else {
                 ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity,
+                           maxHeight: .infinity)
             }
         }
-        .background(
-            SVGToPNGRenderer(svgString,
-                             $pngImage,
-                             requestedSize: nil)     // ← nil → use intrinsic
-                .frame(width: intrinsicSize.width,
-                       height: intrinsicSize.height)
-                .opacity(0.01)
-                .allowsHitTesting(false)
-        )
+        // ── Fire off rendering whenever svgString changes ────────────────
+        .task(id: svgString) {
+            do {
+                let pngData = try await SVGToPNGRenderer
+                    .renderToPNG(svgString: svgString)
+
+                self.pngImage = NSImage(data: pngData)
+            } catch {
+                Log.io.error("Failed to render SVG to PNG: \(error)")
+                self.pngImage = nil
+            }
+        }
     }
 }
