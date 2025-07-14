@@ -70,6 +70,7 @@ class AudioManager: AudioManaging, ObservableObject {
     private var displayTimer: Timer?
     private var playbackStartTicks: CFTimeInterval?
     private var sequencer: AVAudioSequencer
+    private let playbackTailTime: TimeInterval = 2.0
 
     init() {
         audioEngine = AVAudioEngine()
@@ -151,7 +152,12 @@ class AudioManager: AudioManaging, ObservableObject {
 
         // Stop and clear any existing sequencer
         sequencer.stop()
-        
+
+        // Clear old tracks
+        for track in sequencer.tracks where track != sequencer.tempoTrack {
+            sequencer.removeTrack(track)
+        }
+
         // 1. Get the tempo track
         let tempoTrack = sequencer.tempoTrack
         
@@ -335,9 +341,16 @@ class AudioManager: AudioManaging, ObservableObject {
         let beatDuration = 60.0 / currentTempo
         elapsedTime = currentBeats * beatDuration
 
-        // Stop sequence when we've exceeded the total duration
-        if elapsedTime >= sequenceLength {
+        // Stop sequence when we've exceeded the total duration + tail time
+        if elapsedTime >= sequenceLength + playbackTailTime {
             stopSequence()
+            return
+        }
+
+        if totalDuration > 0 {
+            // Calculate progress based on musical length, not including the tail
+            let musicalElapsedTime = min(elapsedTime, sequenceLength)
+            progress = musicalElapsedTime / sequenceLength
         }
     }
 }

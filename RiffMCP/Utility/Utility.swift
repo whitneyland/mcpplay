@@ -16,7 +16,6 @@ enum Log {
 }
 
 extension Logger {
-    /// Latency helper (replaces Util.logLatency)
     func latency(_ text: String, since start: Date) {
         let ms = (Date().timeIntervalSince(start) * 1000).rounded(.toNearestOrEven)
         info("\(text, privacy: .public) (\(ms, format: .fixed(precision: 1)) ms)")
