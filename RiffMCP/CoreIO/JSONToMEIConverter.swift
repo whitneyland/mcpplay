@@ -33,9 +33,9 @@ public enum JSONToMEIConverter {
     }
 
     public static func convert(from jsonData: Data) throws -> String {
-        let composition: Composition
+        let composition: MEIComposition
         do {
-            composition = try JSONDecoder().decode(Composition.self, from: jsonData)
+            composition = try JSONDecoder().decode(MEIComposition.self, from: jsonData)
         } catch {
             throw ConversionError.decodingFailed(error)
         }
@@ -61,7 +61,7 @@ public enum JSONToMEIConverter {
 // MARK: - XML building
 private extension JSONToMEIConverter {
 
-    static func buildMeiHead(for piece: Composition) throws -> XMLElement {
+    static func buildMeiHead(for piece: MEIComposition) throws -> XMLElement {
         let head = XMLElement(name: "meiHead")
         let fileDesc = XMLElement(name: "fileDesc")
 
@@ -79,7 +79,7 @@ private extension JSONToMEIConverter {
         return head
     }
 
-    static func buildMusic(for piece: Composition) throws -> XMLElement {
+    static func buildMusic(for piece: MEIComposition) throws -> XMLElement {
         let music  = XMLElement(name: "music")
         let body   = XMLElement(name: "body")
         let mdiv   = XMLElement(name: "mdiv")
@@ -172,7 +172,7 @@ private extension JSONToMEIConverter {
         return staffDef
     }
 
-    static func buildSection(for piece: Composition,
+    static func buildSection(for piece: MEIComposition,
                              processedTracks: [ProcessedTrack]) throws -> XMLElement {
 
         let section = XMLElement(name: "section")
@@ -213,7 +213,7 @@ private extension JSONToMEIConverter {
     }
 
     static func populateLayer(_ layer: XMLElement,
-                              events: [Event],
+                              events: [MEIEvent],
                               beatsPerMeasure: Double) throws {
         var beatCursor = 0.0
         for event in events.sorted(by: { $0.time < $1.time }) {
@@ -235,7 +235,7 @@ private extension JSONToMEIConverter {
 // MARK: - Element helpers
 private extension JSONToMEIConverter {
 
-    static func buildMusicalEventElement(event: Event) throws -> XMLElement {
+    static func buildMusicalEventElement(event: MEIEvent) throws -> XMLElement {
         if event.pitches.isEmpty {
             return XMLElement(name: "comment", stringValue: "Empty event")
         }
@@ -329,62 +329,12 @@ private extension JSONToMEIConverter {
 // MARK: - Data models & processing
 private extension JSONToMEIConverter {
 
-    // Codable JSON
-    struct Composition: Decodable {
-        let title: String?
-        let tempo: Double
-        let tracks: [Track]
-    }
-    struct Track: Decodable {
-        let instrument: String?
-        let events: [Event]
-    }
-    struct Event: Decodable {
-        let time: Double
-        let pitches: [PitchValue]
-        let dur: Double
-        let vel: Int?
-    }
-    enum PitchValue: Decodable {
-        case name(String)
-        case midi(Int)
-        init(from decoder: Decoder) throws {
-            let container = try decoder.singleValueContainer()
-            if let n = try? container.decode(Int.self) { self = .midi(n) }
-            else { self = .name(try container.decode(String.self)) }
-        }
-    }
-
-    // Internal processing
-    class ProcessedTrack {
-        let originalTrackIndex: Int
-        let staffIndex: Int
-        let instrumentName: String
-        let label: String
-        let midiProgram: Int
-        let clef: ClefInfo
-
-        init(originalTrackIndex: Int, staffIndex: Int,
-             instrumentName: String, label: String,
-             midiProgram: Int, clef: ClefInfo) {
-            self.originalTrackIndex = originalTrackIndex
-            self.staffIndex = staffIndex
-            self.instrumentName = instrumentName
-            self.label = label
-            self.midiProgram = midiProgram
-            self.clef = clef
-        }
-    }
-    struct ProcessedEvent {
-        let event: Event
-        let staffIndex: Int
-    }
 
     static func isPiano(_ processedTrack: ProcessedTrack) -> Bool {
         Instruments.isPianoInstrument(processedTrack.instrumentName)
     }
 
-    static func processAndCalculateMeasures(piece: Composition,
+    static func processAndCalculateMeasures(piece: MEIComposition,
                                             processedTracks: [ProcessedTrack])
         throws -> (sortedEvents:[ProcessedEvent], totalMeasures:Int) {
 
@@ -413,9 +363,9 @@ private extension JSONToMEIConverter {
     }
 
     static func groupEventsByMeasure(_ sortedEvents: [ProcessedEvent])
-        -> [Int:[Int:[Event]]] {
+        -> [Int:[Int:[MEIEvent]]] {
 
-        var measures: [Int:[Int:[Event]]] = [:]
+        var measures: [Int:[Int:[MEIEvent]]] = [:]
         let beatsPerMeasure = 4.0
 
         for processedEvent in sortedEvents {
@@ -426,7 +376,7 @@ private extension JSONToMEIConverter {
         return measures
     }
 
-    static func processTracks(_ tracks: [Track]) throws -> [ProcessedTrack] {
+    static func processTracks(_ tracks: [MEITrack]) throws -> [ProcessedTrack] {
         var processedTracks: [ProcessedTrack] = []
         var staffCount = 0
 
@@ -445,7 +395,7 @@ private extension JSONToMEIConverter {
                                    instrumentName: instrumentName,
                                    label: Instruments.getDisplayName(for: instrumentName) ?? instrumentName.replacingOccurrences(of: "_", with: " ").capitalized,
                                    midiProgram: midiProgram,
-                                   clef: clefFromString("treble")))
+                                   clef: ClefInfo.clefFromString("treble")))
                 staffCount += 1
                 processedTracks.append(
                     ProcessedTrack(originalTrackIndex: trackIndex,
@@ -453,7 +403,7 @@ private extension JSONToMEIConverter {
                                    instrumentName: instrumentName,
                                    label: "",
                                    midiProgram: midiProgram,
-                                   clef: clefFromString("bass")))
+                                   clef: ClefInfo.clefFromString("bass")))
             } else {
                 staffCount += 1
                 processedTracks.append(
@@ -462,7 +412,7 @@ private extension JSONToMEIConverter {
                                    instrumentName: instrumentName,
                                    label: Instruments.getDisplayName(for: instrumentName) ?? instrumentName.replacingOccurrences(of: "_", with: " ").capitalized,
                                    midiProgram: midiProgram,
-                                   clef: clefFromString(Instruments.getClef(for: instrumentName))))
+                                   clef: ClefInfo.clefFromString(Instruments.getClef(for: instrumentName))))
             }
         }
         return processedTracks
@@ -480,20 +430,6 @@ private extension JSONToMEIConverter {
     }
 }
 
-// MARK: - Clef Helper
-private extension JSONToMEIConverter {
-    struct ClefInfo { let shape: String; let line: Int }
-    
-    static func clefFromString(_ clefName: String) -> ClefInfo {
-        switch clefName {
-        case "treble": return ClefInfo(shape: "G", line: 2)
-        case "bass":   return ClefInfo(shape: "F", line: 4)
-        case "alto":   return ClefInfo(shape: "C", line: 3)
-        case "tenor":  return ClefInfo(shape: "C", line: 4)
-        default:       return ClefInfo(shape: "G", line: 2) // default to treble
-        }
-    }
-}
 
 // MARK: - XML attribute convenience
 fileprivate extension XMLElement {
