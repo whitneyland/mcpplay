@@ -107,7 +107,6 @@ struct MainView: View {
             Log.app.error("Could not find preset with id: \(selectedPresetId, privacy: .public)")
             return
         }
-        
         jsonInput = preset.content
     }
     
@@ -117,7 +116,6 @@ struct MainView: View {
             notationSVG = nil
             return
         }
-        
         do {
             currentSequence = try MusicSequenceJSONSerializer.decode(jsonInput)
             ensureTrackSelectionsCount()
@@ -139,11 +137,9 @@ struct MainView: View {
         do {
             // Convert current sequence to JSON
             let sequenceData = try JSONEncoder().encode(currentSequence)
-            // print("Encoded sequence data: \(sequenceData.count) bytes")
 
             // Convert JSON to MEI XML
             let meiXML = try JSONToMEIConverter.convert(from: sequenceData)
-            // print("Generated MEI XML: \(meiXML.count) characters")
 
             // Generate SVG from MEI
             let svg = Verovio.svg(from: meiXML)
@@ -199,9 +195,7 @@ struct MainView: View {
             }
         }
     }
-
 }
-
 
 #Preview {
     MainView()
