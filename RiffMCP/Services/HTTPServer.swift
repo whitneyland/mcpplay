@@ -17,7 +17,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
     private let requestedPort: UInt16
     private let host: String
     private let audioManager: AudioManaging
-    private let tempDirectory: URL
+    internal let tempDirectory: URL
     private let toolsURL: URL?
     private let promptsURL: URL?
     private var cachedTools: [MCPTool]?

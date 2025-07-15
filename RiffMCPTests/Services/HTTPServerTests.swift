@@ -554,6 +554,66 @@ struct HTTPServerTests {
         
         await server.stop()
     }
+
+    // MARK: - Concurrency Tests
+
+    @Test("Server handles concurrent engrave requests")
+    func testConcurrentEngraveRequests() async throws {
+        let (server, _) = Self.createTestServer()
+        try await server.start()
+
+        let requestCount = 5
+        
+        await withTaskGroup(of: HTTPResponse.self) { group in
+            for i in 0..<requestCount {
+                group.addTask { 
+                    let engraveRequest = """
+                    {
+                        "jsonrpc": "2.0",
+                        "id": \(i + 10),
+                        "method": "tools/call",
+                        "params": {
+                            "name": "engrave",
+                            "arguments": {
+                                "title": "Concurrent Test \(i)",
+                                "tempo": 120,
+                                "tracks": [{
+                                    "instrument": "grand_piano",
+                                    "events": [{"time": 0, "pitches": ["C4"], "dur": 1}]
+                                }]
+                            }
+                        }
+                    }
+                    """
+                    return try! await makeHTTPRequest(
+                        host: "127.0.0.1",
+                        port: server.resolvedPort!,
+                        method: "POST",
+                        path: "/",
+                        body: engraveRequest,
+                        headers: ["Content-Type": "application/json"]
+                    )
+                }
+            }
+
+            for await response in group {
+                #expect(response.statusCode == 200)
+            }
+        }
+
+        // Verify that the correct number of files were created
+        let tempDir = server.tempDirectory
+        let files = try FileManager.default.contentsOfDirectory(at: tempDir, includingPropertiesForKeys: nil)
+        let pngFiles = files.filter { $0.pathExtension == "png" }
+        #expect(pngFiles.count == requestCount)
+
+        // Verify the activity log
+        let activityLog = ActivityLog.shared
+        let engraveEvents = await activityLog.events.filter { $0.message.contains("engrave") }
+        #expect(engraveEvents.count >= requestCount)
+
+        await server.stop()
+    }
 }
 
 // MARK: - HTTP Client Helper
