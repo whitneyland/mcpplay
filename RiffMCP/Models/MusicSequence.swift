@@ -24,7 +24,7 @@ struct MusicSequence: Codable, Sendable {
         self.tracks = tracks
     }
 
-    // A helper struct for decoding arbitrary string keys, used in our legacy fallback.
+    // A helper struct for decoding arbitrary string keys
     private struct LegacyCodingKeys: CodingKey {
         var stringValue: String
         init?(stringValue: String) { self.stringValue = stringValue }
@@ -32,7 +32,7 @@ struct MusicSequence: Codable, Sendable {
         init?(intValue: Int) { self.init(stringValue: "\(intValue)"); self.intValue = intValue }
     }
 
-    // Custom decoder to support both multi-track and single-track (legacy) formats.
+    // Support both multi-track and single-track formats.
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         title = try container.decodeIfPresent(String.self, forKey: .title)
@@ -42,7 +42,7 @@ struct MusicSequence: Codable, Sendable {
         if let decodedTracks = try? container.decode([Track].self, forKey: .tracks) {
             tracks = decodedTracks
         } else {
-            // Fallback for legacy single-track format where events are at the top level.
+            // Fallback for single-track format where events are at the top level.
             let legacyContainer = try decoder.container(keyedBy: LegacyCodingKeys.self)
             let instrument = try legacyContainer.decodeIfPresent(String.self, forKey: .init(stringValue: "instrument")!) ?? "grand_piano"
             let events = try legacyContainer.decode([SequenceEvent].self, forKey: .init(stringValue: "events")!)

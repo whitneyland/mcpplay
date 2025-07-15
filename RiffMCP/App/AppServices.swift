@@ -13,28 +13,21 @@ import Foundation
 class AppServices: ObservableObject {
     let audioManager: AudioManager
     let httpServer: HTTPServer
-    
+
     init() throws {
-        // Create AudioManager first
+        // throw NSError(domain: "TestFailure", code: -1, userInfo: [NSLocalizedDescriptionKey: "🚧 Forced launch failure for testing"])
+
         let audioManager = AudioManager()
-        
-        // Create HTTPServer with AudioManager dependency
-        let httpServer = try HTTPServer(audioManager: audioManager)
-        
-        // Store references
+        let httpServer  = try HTTPServer(audioManager: audioManager)
+
         self.audioManager = audioManager
-        self.httpServer = httpServer
+        self.httpServer   = httpServer
     }
-    
-    /// Start all services that need to run at app launch
-    func startServices() async {
-        do {
-            try await httpServer.start()
-        } catch {
-            Log.server.error("❌ Failed to start HTTP server: \(error.localizedDescription, privacy: .public)")
-        }
+
+    func startServices() async throws {
+        try await httpServer.start()
     }
-    
+
     /// Clean shutdown of all services
     func stopServices() async {
         await httpServer.stop()
