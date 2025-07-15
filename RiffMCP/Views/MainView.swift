@@ -18,11 +18,8 @@ struct MainView: View {
 
     var body: some View {
         HSplitView {
-            // Left side: VSplit with JSON/Activity on top, Piano Roll on bottom
             VSplitView {
-                // Top section: JSON Editor and Server Activity
                 HSplitView {
-                    // Left: JSON Editor, presets, and transport controls
                     VStack(spacing: 12) {
                         TextEditor(text: $jsonInput)
                             .border(Color.gray, width: 1)
@@ -42,7 +39,6 @@ struct MainView: View {
                                     }
                                 }
                             )
-
                             Spacer()
 
                             PresetPicker(
@@ -55,13 +51,11 @@ struct MainView: View {
                     .frame(idealWidth: 200, maxWidth: 600)
                     .padding(12)
 
-                    // Right: Server Activity View
                     ServerActivityView()
                         .frame(minWidth: 100, idealWidth: 700)
                 }
                 .frame(minHeight: 300, idealHeight: 400)
 
-                // Bottom section: Piano Roll and Instrument list
                 VStack {
                     PianoRollView(
                         sequence: currentSequence,
