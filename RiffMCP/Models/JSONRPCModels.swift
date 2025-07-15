@@ -2,6 +2,8 @@
 //  JSONRPCModels.swift
 //  RiffMCP
 //
+//  Created by Lee Whitney on 6/8/25.
+//
 
 import Foundation
 
