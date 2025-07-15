@@ -1,0 +1,61 @@
+//
+//  TransportBar.swift
+//  RiffMCP
+//
+//  Created by Lee Whitney on 6/7/25.
+//
+
+import SwiftUI
+
+struct TransportBar: View {
+    let isPlaying: Bool
+    @Binding var jsonInput: String
+    let elapsedTime: Double
+    let totalDuration: Double
+    let onPlayStop: () -> Void
+    
+    var body: some View {
+        HStack {
+            Button(action: onPlayStop) {
+                HStack {
+                    Image(systemName: isPlaying ? "stop.fill" : "play.fill")
+                    Text(isPlaying ? "Stop" : "Play")
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+            }
+            .background(Color.gray30)
+            .cornerRadius(6)
+            .disabled(jsonInput.isEmpty)
+
+            ZStack {
+                Rectangle()
+                    .fill(Color.black.opacity(0.2))
+                    .frame(width: 200, height: 30)
+                    .cornerRadius(6)
+                Text("\(formatTime(elapsedTime)) / \(formatTime(totalDuration))")
+                    .font(.body.monospaced())
+            }
+        }
+    }
+    
+    private func formatTime(_ seconds: Double) -> String {
+        guard seconds.isFinite && seconds >= 0 else {
+            return "0:00.0"
+        }
+        let minutes = Int(seconds) / 60
+        let remainingSeconds = seconds.truncatingRemainder(dividingBy: 60.0)
+        return String(format: "%d:%04.1f", minutes, remainingSeconds)
+    }
+}
+
+#Preview {
+    TransportBar(
+        isPlaying: false,
+        jsonInput: .constant("test"),
+        elapsedTime: 45.5,
+        totalDuration: 120.0,
+        onPlayStop: {}
+    )
+}

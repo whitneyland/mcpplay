@@ -1,5 +1,5 @@
 //
-//  ColorCodedMenu.swift
+//  FlexibleMenu.swift
 //  RiffMCP
 //
 //  Created by Lee Whitney on 6/30/25.
@@ -13,10 +13,10 @@ struct Category: Identifiable {
     let items: [String]
 }
 
-struct ColorCodedMenu: View {
+struct FlexibleMenu: View {
     let categories: [Category]
     @Binding var selectedItem: String?
-    let color: Color
+    let color: Color?
 
     var direction: Edge = .bottom
     var menuWidth: CGFloat = 220
@@ -38,7 +38,7 @@ struct ColorCodedMenu: View {
         .background(Color.secondary.opacity(0.1))
         .cornerRadius(8)
         .overlay(alignment: .bottomLeading) {
-            if selectedItem != nil {
+            if selectedItem != nil, let color = color {
                 Rectangle()
                     .fill(color)
                     .frame(height: 2)
@@ -142,31 +142,31 @@ struct ColorCodedMenu: View {
             VStack(spacing: 40) {
                 HStack(spacing: 20) {
                     // this menu will scroll because content is long
-                    ColorCodedMenu(
+                    FlexibleMenu(
                         categories: longSample,
                         selectedItem: $selection1,
                         color: .green,
                         direction: .top
                     )
 
-                    ColorCodedMenu(
+                    FlexibleMenu(
                         categories: longSample,
                         selectedItem: $selection2,
                         color: .yellow,
                         direction: .bottom
                     )
 
-                    ColorCodedMenu(
+                    FlexibleMenu(
                         categories: longSample,
                         selectedItem: $selection3,
                         color: .orange,
                         direction: .top
                     )
 
-                    ColorCodedMenu(
+                    FlexibleMenu(
                        categories: sample, // Using the short list
                        selectedItem: .constant("Apple"),
-                       color: .red,
+                       color: nil, // No color bar
                        direction: .bottom
                    )
                 }

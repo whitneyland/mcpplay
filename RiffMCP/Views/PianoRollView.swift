@@ -1,5 +1,5 @@
 //
-//  PianoRoll.swift
+//  PianoRollView.swift
 //  RiffMCP
 //
 //  Created by Lee Whitney on 6/18/25.
@@ -43,15 +43,13 @@ struct PianoRollView: View {
                             .position(x: cursorX + 1, y: rollHeight / 2)
                     }
                 }
-//                // DEBUG
+                // DEBUG
 //                HStack {
 //                    VStack(alignment: .leading) {
-//                        Text("Elapsed:  \(elapsedTime, specifier: "%.2f")")
-//                        Text("Duration: \(duration,    specifier: "%.2f")")
-//                        if duration > 0 {
-//                            let cursorX = (elapsedTime / duration) * geometry.size.width
-//                            Text("cursorX:  \(cursorX,   specifier: "%.2f")")
-//                        }
+//                        let cgrect = geometry.frame(in: .global)
+//                        Text("GeometryReader width: \(geometry.size.width)")
+//                        Text("Parent size: \(geometry.frame(in: .local))")
+//                        Text("Global frame: \(cgrect.origin.x)")
 //                    }
 //                    Spacer()
 //                }

@@ -29,51 +29,28 @@ struct MainView: View {
                             .border(Color.gray, width: 1)
                             .frame(minHeight: 100)
 
-                        if !presetManager.presets.isEmpty {
-                            Picker("Presets", selection: $selectedPresetId) {
-                                ForEach(presetManager.presets, id: \.fileName) { preset in
-                                    Text(preset.displayName).tag(preset.fileName)
-                                }
-                            }
-                            .pickerStyle(SegmentedPickerStyle())
-                            .onChange(of: selectedPresetId) {
-                                loadPresetToInput()
-                            }
-                        } else {
-                            Text("No presets available")
-                                .foregroundColor(.secondary)
-                        }
-
                         HStack {
-                            Button(action: {
-                                if audioManager.isPlaying {
-                                    audioManager.stopSequence()
-                                } else {
-                                    audioManager.playSequenceFromJSON(jsonInput)
+                            TransportBar(
+                                isPlaying: audioManager.isPlaying,
+                                jsonInput: $jsonInput,
+                                elapsedTime: audioManager.elapsedTime,
+                                totalDuration: audioManager.totalDuration,
+                                onPlayStop: {
+                                    if audioManager.isPlaying {
+                                        audioManager.stopSequence()
+                                    } else {
+                                        audioManager.playSequenceFromJSON(jsonInput)
+                                    }
                                 }
-                            }) {
-                                HStack {
-                                    Image(systemName: audioManager.isPlaying ? "stop.fill" : "play.fill")
-                                    Text(audioManager.isPlaying ? "Stop" : "Play")
-                                }
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                            }
-                            .background(Color.gray30)
-                            .cornerRadius(6)
-                            .disabled(jsonInput.isEmpty)
+                            )
 
                             Spacer()
 
-                            ZStack {
-                                Rectangle()
-                                    .fill(Color.black.opacity(0.2))
-                                    .frame(width: 200, height: 30)
-                                    .cornerRadius(6)
-                                Text("\(formatTime(audioManager.elapsedTime)) / \(formatTime(audioManager.totalDuration))")
-                                    .font(.body.monospaced())
-                            }
+                            PresetPicker(
+                                presets: presetManager.presets,
+                                selectedPresetId: $selectedPresetId,
+                                onPresetSelected: loadPresetToInput
+                            )
                         }
                     }
                     .frame(idealWidth: 200, maxWidth: 600)
@@ -229,14 +206,6 @@ struct MainView: View {
         }
     }
 
-    private func formatTime(_ seconds: Double) -> String {
-        guard seconds.isFinite && seconds >= 0 else {
-            return "0:00.0"
-        }
-        let minutes = Int(seconds) / 60
-        let remainingSeconds = seconds.truncatingRemainder(dividingBy: 60.0)
-        return String(format: "%d:%04.1f", minutes, remainingSeconds)
-    }
 }
 
 struct TrackInstrument: View {
@@ -250,7 +219,7 @@ struct TrackInstrument: View {
     }
 
     var body: some View {
-        ColorCodedMenu(
+        FlexibleMenu(
             categories: Instruments.getInstrumentCategories(),
             selectedItem: Binding(
                 get: { Instruments.getDisplayName(for: currentInstrument) },
