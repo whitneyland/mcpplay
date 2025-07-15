@@ -34,8 +34,8 @@ final class VerovioManager {
     }
     
     func svg(from mei: String,
-             pageWidth: Int = 1700,
-             pageHeight: Int = 2200) -> String? {
+             pageWidth: Int = Constants.Verovio.defaultPageWidth,
+             pageHeight: Int = Constants.Verovio.defaultPageHeight) -> String? {
         
         let options = """
         {

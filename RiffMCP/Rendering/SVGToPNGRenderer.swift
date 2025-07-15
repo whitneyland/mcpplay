@@ -67,7 +67,7 @@ struct SVGToPNGRenderer {
     }
 
     // MARK: Private implementation
-    private static let defaultPageSize = CGSize(width: 1700, height: 2200)
+    private static let defaultPageSize = Constants.Verovio.defaultPageSize
 
     private static func computeRenderSize(from svg: String,
                                           requestedOverride: CGSize?) -> CGSize

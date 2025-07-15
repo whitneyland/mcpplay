@@ -9,7 +9,6 @@ import AVFoundation
 import Foundation
 import QuartzCore
 
-
 enum PlaybackState {
     case idle
     case loading

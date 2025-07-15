@@ -11,7 +11,7 @@ import AppKit
 @MainActor
 class Verovio {
 
-    static func svg(from meiXML: String, _ pageWidth: Int = 1700, _ pageHeight: Int = 2200) -> String? {
+    static func svg(from meiXML: String, _ pageWidth: Int = Constants.Verovio.defaultPageWidth, _ pageHeight: Int = Constants.Verovio.defaultPageHeight) -> String? {
         return VerovioManager.shared.svg(from: meiXML, pageWidth: pageWidth, pageHeight: pageHeight)
     }
 
@@ -137,6 +137,6 @@ class Verovio {
           </music>
         </mei>        
         """
-        return VerovioManager.shared.svg(from: meiXML, pageWidth: 2200, pageHeight: 2200)
+        return VerovioManager.shared.svg(from: meiXML, pageWidth: Constants.Verovio.defaultPageWidth, pageHeight: Constants.Verovio.defaultPageHeight)
     }
 }
