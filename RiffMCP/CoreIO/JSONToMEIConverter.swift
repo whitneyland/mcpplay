@@ -305,8 +305,8 @@ private extension JSONToMEIConverter {
     static func pitchToAttributes(_ pitch: PitchValue) throws -> [XMLNode] {
         let parsed: (pname: String, oct: Int, accid: String?)
         switch pitch {
-        case .name(let string): parsed = try noteNameToPitch(name: string)
-        case .midi(let number): parsed = midiToPitch(midi: number.clamped(to: 0...127))
+        case .name(let string): parsed = try NoteConverter.nameToPitch(string)
+        case .midi(let number): parsed = NoteConverter.midiToPitch(number.clamped(to: 0...127))
         }
 
         var attributes = [att("pname", parsed.pname), att("oct", "\(parsed.oct)")]
@@ -468,52 +468,14 @@ private extension JSONToMEIConverter {
         return processedTracks
     }
 
-    // MARK: pitch helpers
-    static func noteNameToPitch(name: String)
-        throws -> (pname: String, oct: Int, accid: String?) {
-
-        let regex = try! NSRegularExpression(pattern: #"^([A-Ga-g])([#sb]?)(-?\d+)$"#)
-        guard let match = regex.firstMatch(in: name, options: [],
-                                           range: NSRange(name.startIndex..., in: name)),
-              let pRange = Range(match.range(at:1), in: name),
-              let aRange = Range(match.range(at:2), in: name),
-              let oRange = Range(match.range(at:3), in: name)
-        else { throw ConversionError.unsupportedPitchFormat(name) }
-
-        let pname = String(name[pRange]).lowercased()
-        let accidentalStr = String(name[aRange])
-        let oct = Int(name[oRange]) ?? 4
-
-        let accid: String?
-        switch accidentalStr {
-        case "#", "s": accid = "s"
-        case "b":      accid = "f"
-        default:       accid = nil
-        }
-        return (pname, oct, accid)
-    }
-
-    static func midiToPitch(midi: Int)
-        -> (pname: String, oct: Int, accid: String?) {
-
-        let noteNames = ["c","c","d","d","e","f","f","g","g","a","a","b"]
-        let noteAccs  = [nil,"s",nil,"s",nil,nil,"s",nil,"s",nil,"s",nil]
-        let octave = (midi / 12) - 1
-        let idx = midi % 12
-        return (noteNames[idx], octave, noteAccs[idx])
-    }
+    
 
     static func pitchToMidi(_ pitch: PitchValue) throws -> Int {
         switch pitch {
         case .midi(let number):
             return number.clamped(to: 0...127)
         case .name(let name):
-            let p = try noteNameToPitch(name: name)
-            let base = ["c":0,"d":2,"e":4,"f":5,"g":7,"a":9,"b":11][p.pname]!
-            var midi = (p.oct + 1) * 12 + base
-            if p.accid == "s" { midi += 1 }
-            else if p.accid == "f" { midi -= 1 }
-            return midi.clamped(to: 0...127)
+            return try NoteConverter.nameToMIDI(name)
         }
     }
 }

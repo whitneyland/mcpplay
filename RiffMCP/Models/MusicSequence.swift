@@ -166,35 +166,13 @@ enum Pitch: Codable, Sendable {
     var midiValue: Int {
         switch self {
         case .int(let value): return value
-        case .name(let noteName): return NoteNameConverter.toMIDI(noteName)
+        case .name(let noteName):
+            do {
+                return try NoteConverter.nameToMIDI(noteName)
+            } catch {
+                Log.audio.warning("⚠️ Invalid note name: '\(noteName, privacy: .public)' - \(error.localizedDescription, privacy: .public). Defaulting to 60.")
+                return 60
+            }
         }
-    }
-}
-
-struct NoteNameConverter {
-    private static let noteMap: [String: Int] = [
-        "C": 0, "C#": 1, "DB": 1, "D": 2, "D#": 3, "EB": 3,
-        "E": 4, "F": 5, "F#": 6, "GB": 6, "G": 7, "G#": 8,
-        "AB": 8, "A": 9, "A#": 10, "BB": 10, "B": 11
-    ]
-
-    static func toMIDI(_ noteName: String) -> Int {
-        let cleanName = noteName.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        guard cleanName.count >= 2 else { 
-            Log.audio.info("⚠️ Invalid note name: '\(noteName, privacy: .public)' - too short")
-            return 60 
-        }
-        let lastChar = String(cleanName.last!)
-        guard let octave = Int(lastChar) else { 
-            Log.audio.info("⚠️ Invalid note name: '\(noteName, privacy: .public)' - no octave number")
-            return 60 
-        }
-        let notePart = String(cleanName.dropLast())
-        guard let noteOffset = noteMap[notePart] else { 
-            Log.audio.info("⚠️ Invalid note name: '\(noteName, privacy: .public)' - unknown note '\(notePart, privacy: .public)'")
-            return 60 
-        }
-        let midiNote = octave * 12 + noteOffset
-        return midiNote
     }
 }
