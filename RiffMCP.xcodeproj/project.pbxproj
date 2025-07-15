@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		9B13D4312E24A8A800D40B1A /* JSONToMEIConverterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B13D4302E24A8A800D40B1A /* JSONToMEIConverterTests.swift */; };
+		9B13D4332E24A8A800D40B1A /* MusicSequenceJSONSerializerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B13D4322E24A8A800D40B1A /* MusicSequenceJSONSerializerTests.swift */; };
 		9B13D42F2E24A8A800D40B1A /* RiffMCP/Utility/NoteConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B13D42E2E24A8A800D40B1A /* RiffMCP/Utility/NoteConverter.swift */; };
 		9B7948FD2E2484E200DA0B1A /* Testing in Frameworks */ = {isa = PBXBuildFile; productRef = 9B7948FC2E2484E200DA0B1A /* Testing */; };
 		9BA506EB2E01DC00000EFB3E /* lib/libverovio.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BA506EC2E01DC00000EFB3E /* lib/libverovio.a */; };
@@ -26,7 +26,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		9B13D4302E24A8A800D40B1A /* JSONToMEIConverterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiffMCPTests/CoreIO/JSONToMEIConverterTests.swift; sourceTree = "<group>"; };
+		9B13D4322E24A8A800D40B1A /* MusicSequenceJSONSerializerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiffMCPTests/CoreIO/MusicSequenceJSONSerializerTests.swift; sourceTree = "<group>"; };
 		9B13D42E2E24A8A800D40B1A /* RiffMCP/Utility/NoteConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiffMCP/Utility/NoteConverter.swift; sourceTree = "<group>"; };
 		9B5BB77E2DF4AF03003EC64C /* RiffMCP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RiffMCP.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9B7949022E24873600DA0B1A /* RiffMCPTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RiffMCPTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -49,7 +49,7 @@
 		9B7949032E24873600DA0B1A /* RiffMCPTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			children = (
-				9B13D4302E24A8A800D40B1A /* JSONToMEIConverterTests.swift */,
+				9B13D4322E24A8A800D40B1A /* MusicSequenceJSONSerializerTests.swift */,
 			);
 			path = RiffMCPTests;
 			sourceTree = "<group>";
@@ -261,7 +261,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9B13D4312E24A8A800D40B1A /* JSONToMEIConverterTests.swift in Sources */,
+				9B13D4332E24A8A800D40B1A /* MusicSequenceJSONSerializerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
