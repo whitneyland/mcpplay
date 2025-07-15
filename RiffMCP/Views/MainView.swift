@@ -7,7 +7,6 @@
 
 import SwiftUI
 
-
 struct MainView: View {
     @EnvironmentObject var audioManager: AudioManager
     @StateObject private var presetManager = PresetManager()
@@ -70,16 +69,11 @@ struct MainView: View {
                         duration: audioManager.totalDuration
                     )
                     
-                    HStack(spacing: 15) {
-                        ForEach(Array((currentSequence?.tracks ?? []).enumerated()), id: \.0) { index, track in
-                            TrackInstrument(
-                                trackIndex: index,
-                                track: track,
-                                trackInstrumentSelections: $trackInstrumentSelections,
-                                updateTrackInstrument: updateTrackInstrument
-                            )
-                        }
-                    }
+                    TrackInstrumentPickerBar(
+                        sequence: currentSequence,
+                        selections: $trackInstrumentSelections,
+                        onChange: updateTrackInstrument
+                    )
                 }
                 .frame(maxWidth: .infinity, idealHeight: 500, maxHeight: .infinity)
                 .padding(.horizontal, 12)
@@ -208,33 +202,6 @@ struct MainView: View {
 
 }
 
-struct TrackInstrument: View {
-    let trackIndex: Int
-    let track: Track
-    @Binding var trackInstrumentSelections: [String?]
-    let updateTrackInstrument: (Int, String?) -> Void
-    
-    private var currentInstrument: String {
-        trackIndex < trackInstrumentSelections.count ? (trackInstrumentSelections[trackIndex] ?? track.instrument) : track.instrument
-    }
-
-    var body: some View {
-        FlexibleMenu(
-            categories: Instruments.getInstrumentCategories(),
-            selectedItem: Binding(
-                get: { Instruments.getDisplayName(for: currentInstrument) },
-                set: { newDisplayName in
-                    guard let newDisplayName = newDisplayName,
-                          let instrumentName = Instruments.getInstrumentName(from: newDisplayName) else { return }
-                    updateTrackInstrument(trackIndex, instrumentName)
-                }
-            ),
-            color: PianoRollView.getTrackColor(trackIndex: trackIndex),
-            direction: .top     // Opens up
-        )
-        .frame(width: 190)
-    }
-}
 
 #Preview {
     MainView()
