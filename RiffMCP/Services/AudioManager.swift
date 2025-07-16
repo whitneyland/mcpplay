@@ -104,16 +104,16 @@ class AudioManager: AudioManaging, ObservableObject {
     }
 
     func playSequenceFromJSON(_ rawJSON: String) {
-        let startTime = Date()
-        Log.audio.info("AudioManager.playSequenceFromJSON started")
+        Log.audio.info("🎶 AudioManager.playSequenceFromJSON started")
 
         stopSequence()                     // cancel anything already playing
         playbackState = .loading
 
         do {
             // ── 1. Parse / validate ───────────────────────────────
+            // let startTime = Date()
             let sequence = try MusicSequenceJSONSerializer.decode(rawJSON)
-            Log.audio.latency("JSON processed", since: startTime)
+            // Log.audio.latency("JSON processed", since: startTime)
 
             // ── 2. Duration & UI fields ───────────────────────────
             currentTempo = sequence.tempo
@@ -147,31 +147,31 @@ class AudioManager: AudioManaging, ObservableObject {
     }
 
     private func scheduleSequence(_ sequence: MusicSequence) throws {
-        Log.audio.info("Sequence scheduling started, tempo=\(sequence.tempo)")
+        Log.audio.info("🎶 Sequence scheduling started, tempo=\(sequence.tempo)")
 
-        // Stop and clear any existing sequencer
         sequencer.stop()
 
-        // Clear old tracks
-        for track in sequencer.tracks where track != sequencer.tempoTrack {
+        // Clear old tracks (except tempo)
+        for track in sequencer.tracks.reversed()
+        where track != sequencer.tempoTrack {
             sequencer.removeTrack(track)
         }
 
-        // 1. Get the tempo track
+        // Get tempo track
         let tempoTrack = sequencer.tempoTrack
         
-        // 2. Remove any previous tempo events (skip if track is empty to avoid error -50)
+        // Remove any previous tempo events (skip if track is empty to avoid error -50)
         if tempoTrack.lengthInBeats > 0 {
             tempoTrack.clearEvents(in: AVMakeBeatRange(0, tempoTrack.lengthInBeats))
         }
         
-        // 3. Insert the new tempo event
+        // Insert the new tempo event
         tempoTrack.addEvent(
             AVExtendedTempoEvent(tempo: sequence.tempo),   // <-- <-- the right class
             at: AVMusicTimeStamp(0)
         )
         
-        // 4. Keep the global speed-multiplier at 1×
+        // Keep the global speed-multiplier at 1×
         sequencer.rate = 1.0
 
         // Detach previous track samplers
@@ -179,7 +179,7 @@ class AudioManager: AudioManaging, ObservableObject {
             audioEngine.detach(ts)
         }
         trackSamplers.removeAll()
-        
+
         // Create and setup samplers for each track
         guard let soundFontURL = loadSoundFont() else {
             throw AudioError.soundFontNotFound
@@ -193,11 +193,11 @@ class AudioManager: AudioManaging, ObservableObject {
             audioEngine.connect(trackSampler, to: audioEngine.mainMixerNode, format: nil)
             
             let program = instrumentPrograms[track.instrument] ?? 0
-            Log.audio.info("🎵 Track \(index): Loading \(track.instrument, privacy: .public) (program \(program, privacy: .public))")
-            
+            // Log.audio.info("🎵 Track \(index): Loading \(track.instrument, privacy: .public) (program \(program, privacy: .public))")
+
             do {
                 try trackSampler.loadSoundBankInstrument(at: soundFontURL, program: program, bankMSB: 0x79, bankLSB: 0)
-                Log.audio.info("🎵 Track \(index, privacy: .public): Successfully loaded soundbank")
+                // Log.audio.info("🎵 Track \(index, privacy: .public): Successfully loaded soundbank")
             } catch {
                 Log.audio.error("🎵 Track \(index, privacy: .public): Failed to load instrument \(track.instrument, privacy: .public): \(error.localizedDescription, privacy: .public)")
                 throw AudioError.instrumentLoadFailed(track.instrument, error.localizedDescription)
@@ -256,32 +256,6 @@ class AudioManager: AudioManaging, ObservableObject {
         }
     }
 
-    func stopSequence() {
-        playbackState = .stopped
-        progress = 0.0
-        elapsedTime = 0.0
-        currentTempo = 120.0
-        currentlyPlayingTitle = nil
-        currentlyPlayingInstrument = nil
-        
-        // Stop the sequencer
-        sequencer.stop()
-
-        // Send MIDI CC 123 (allNotesOff) to stop all notes efficiently
-        sampler.sendController(123, withValue: 0, onChannel: 0)
-        for ts in trackSamplers {
-            ts.sendController(123, withValue: 0, onChannel: 0)
-        }
-        
-        // Detach track samplers to free resources
-        for ts in trackSamplers {
-            audioEngine.detach(ts)
-        }
-        trackSamplers.removeAll()
-        
-        stopElapsedTimeUpdates()
-    }
-
     func playNote(midiNote: UInt8, velocity: UInt8 = 100) {
         sampler.startNote(midiNote, withVelocity: velocity, onChannel: 0)
     }
@@ -333,23 +307,59 @@ class AudioManager: AudioManaging, ObservableObject {
         displayTimer = nil
     }
 
+    // MARK: - Public API
+    func stopSequence() {
+        // User hit Stop – flip UI immediately, then clean up.
+        playbackState = .stopped
+        finishStopping()
+    }
+
+    // MARK: - Private helpers
+    /// Shared teardown routine used by both user-initiated stop and automatic tail completion.
+    private func finishStopping() {
+        progress = 0.0
+        elapsedTime = 0.0
+        currentTempo = 120.0
+        currentlyPlayingTitle = nil
+        currentlyPlayingInstrument = nil
+
+        sequencer.stop()
+        sampler.sendController(123, withValue: 0, onChannel: 0)
+        for ts in trackSamplers {
+            ts.sendController(123, withValue: 0, onChannel: 0)
+            audioEngine.detach(ts)
+        }
+        trackSamplers.removeAll()
+
+        stopElapsedTimeUpdates()
+    }
+
+    /// Called automatically once the tail has rung out.
+    private func tailCompleted() {
+        finishStopping()                // UI already in .stopped
+    }
+
+    // Keep running even after UI flips to .stopped so we can finish the tail.
     private func updateElapsedTime() {
-        guard isPlaying, sequenceLength > 0 else { return }
+        guard sequenceLength > 0 else { return }
 
-        // Raw time since playback began
-        let beatDuration   = 60.0 / currentTempo
-        let actualElapsed  = sequencer.currentPositionInBeats * beatDuration
+        let beatDuration  = 60.0 / currentTempo
+        let actualElapsed = sequencer.currentPositionInBeats * beatDuration
 
-        // Musical time the user should see (capped at the score’s length)
+        // Musical time exposed to the UI (cap at score length)
         let musicalElapsed = min(actualElapsed, sequenceLength)
-        elapsedTime        = musicalElapsed            // <-- what MainView shows
-
-        // Progress bar (already ignores the tail)
+        elapsedTime        = musicalElapsed
         progress           = musicalElapsed / sequenceLength
 
-        // Stop after the tail has finished ringing out
+        // As soon as the score is done, tell the UI we're stopped.
+        if playbackState == .playing, actualElapsed >= sequenceLength {
+            playbackState = .stopped
+            Log.audio.info("🎶 Playback completed \(self.sequenceLength.asTimeString) seconds")
+        }
+
+        // When the tail has fully decayed, finish teardown.
         if actualElapsed >= sequenceLength + playbackTailTime {
-            stopSequence()
+            tailCompleted()
         }
     }
 }

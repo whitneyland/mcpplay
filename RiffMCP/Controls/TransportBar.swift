@@ -34,18 +34,20 @@ struct TransportBar: View {
                     .fill(Color.black.opacity(0.2))
                     .frame(width: 200, height: 30)
                     .cornerRadius(6)
-                Text("\(formatTime(elapsedTime)) / \(formatTime(totalDuration))")
+                Text("\(elapsedTime.asTimeString) / \(totalDuration.asTimeString)")
                     .font(.body.monospaced())
             }
         }
     }
-    
-    private func formatTime(_ seconds: Double) -> String {
-        guard seconds.isFinite && seconds >= 0 else {
+}
+
+extension Double {
+    var asTimeString: String {
+        guard isFinite && self >= 0 else {
             return "0:00.0"
         }
-        let minutes = Int(seconds) / 60
-        let remainingSeconds = seconds.truncatingRemainder(dividingBy: 60.0)
+        let minutes = Int(self) / 60
+        let remainingSeconds = self.truncatingRemainder(dividingBy: 60.0)
         return String(format: "%d:%04.1f", minutes, remainingSeconds)
     }
 }
