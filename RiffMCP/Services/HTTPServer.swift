@@ -22,6 +22,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
     private let promptsURL: URL?
     private var cachedTools: [MCPTool]?
     private var cachedPrompts: [MCPPrompt]?
+    private let scoreStore = ScoreStore()
 
     @Published var isRunning = false
     @Published var lastError: String?
@@ -333,8 +334,8 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
                 Log.server.latency("🎼 Sequence decoded", since: sequenceDecodeStart)
                 result = try await handlePlaySequence(sequence: sequence)
             case "engrave":
-                let sequence = try decoder.decode(MusicSequence.self, from: data)
-                result = try await handleEngraveSequence(sequence: sequence)
+                let input = try decoder.decode(EngraveInput.self, from: data)
+                result = try await handleEngraveSequence(input: input)
             default:
                 throw JSONRPCError.serverError("Unknown tool: \(toolName)")
             }
@@ -387,8 +388,12 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         Log.server.info("🎶 Calling AudioManager.playSequenceFromJSON")
         await audioManager.playSequenceFromJSON(jsonString)
 
+        // Store the sequence with a unique ID
+        let scoreId = UUID().uuidString
+        await scoreStore.put(scoreId, sequence)
+
         let totalEvents = sequence.tracks.reduce(0) { $0 + $1.events.count }
-        let summary = "Playing \(sequence.title ?? "") at \(Int(sequence.tempo)) BPM with \(totalEvents) event\(totalEvents == 1 ? "" : "s")."
+        let summary = "Playing \(sequence.title ?? "Untitled") at \(Int(sequence.tempo)) BPM with \(totalEvents) event\(totalEvents == 1 ? "" : "s")."
 
         var titleWith = ""
         if let title = sequence.title {
@@ -400,13 +405,35 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         }
         await ActivityLog.shared.add(message: "Play \(titleWith) \(totalEvents) notes\(forInstrument)", type: .generation, sequenceData: jsonString)
 
-        return MCPResult(content: [.text(summary)])
+        return MCPResult(content: [
+            .text(summary),
+            .text("Score ID: \(scoreId)")
+        ])
     }
 
-    private func handleEngraveSequence(sequence: MusicSequence) async throws -> MCPResult {
+    private func handleEngraveSequence(input: EngraveInput) async throws -> MCPResult {
         Log.server.info("🎼 handleEngraveSequence started")
 
-        // 1. Validate instruments
+        // 1. Resolve the sequence from input
+        let sequence: MusicSequence
+        if let tempo = input.tempo, let tracks = input.tracks {
+            // Use inline notes
+            sequence = MusicSequence(title: input.title, tempo: tempo, tracks: tracks)
+        } else if let id = input.score_id {
+            // Use specific score ID
+            guard let cached = await scoreStore.get(id) else {
+                throw JSONRPCError.serverError("Score ID '\(id)' not found")
+            }
+            sequence = cached
+        } else {
+            // Use last played score
+            guard let cached = await scoreStore.get(nil) else {
+                throw JSONRPCError.serverError("No score available. Either provide notes or play a sequence first.")
+            }
+            sequence = cached
+        }
+
+        // 2. Validate instruments
         Log.server.info("✅ Starting instrument validation")
         let validInstruments = Instruments.getInstrumentNames()
         for track in sequence.tracks where !validInstruments.contains(track.instrument) {
@@ -414,7 +441,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         }
         Log.server.info("✅ Instrument validation completed")
 
-        // 2. Convert sequence to MEI -> SVG -> PNG
+        // 3. Convert sequence to MEI -> SVG -> PNG
         do {
             let sequenceData = try JSONEncoder().encode(sequence)
             Log.server.info("🔄 JSON encoding completed")

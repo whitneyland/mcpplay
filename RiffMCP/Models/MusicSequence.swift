@@ -176,3 +176,15 @@ enum Pitch: Codable, Sendable {
         }
     }
 }
+
+/// Helper struct for flexible engrave tool input decoding
+struct EngraveInput: Codable, Sendable {
+    let score_id: String?
+    let tempo: Double?
+    let tracks: [Track]?
+    let title: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case score_id, tempo, tracks, title
+    }
+}

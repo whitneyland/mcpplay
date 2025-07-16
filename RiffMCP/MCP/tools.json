@@ -68,11 +68,14 @@
   },
   {
     "name": "engrave",
-    "description": "Generate visual sheet music notation from a music sequence and return it as a PNG image. Use this tool when the user wants to see, view, display, show, or engrave sheet music notation. Not for audio playback.",
+    "description": "Generate sheet-music PNG. Prioritizes: score_id > inline notes > last session score. If no arguments are given, engraves the session's last-played score.",
     "inputSchema": {
       "type": "object",
-      "required": ["tempo", "tracks"],
       "properties": {
+        "score_id": {
+          "type": "string",
+          "description": "Reference to previously played score. Takes precedence over inline notes."
+        },
         "title": {
           "type": "string",
           "description": "Descriptive title for the music sequence (optional but recommended for better organization)"
@@ -130,7 +133,12 @@
             }
           }
         }
-      }
+      },
+      "anyOf": [
+        { "required": ["score_id"] },
+        { "required": ["tempo", "tracks"] },
+        { "properties": {}, "additionalProperties": false }
+      ]
     }
   }
 ]
