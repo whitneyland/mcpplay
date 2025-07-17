@@ -1,5 +1,5 @@
 
-Create an impressive multi-track composition. The piece should exciting, powerful, passionate, showcasing sophistication, dynamic shifts, and rhythmic complexity. Make sure its at least 15 seconds long, all as one piece.
+Create an impressive multi-track composition. The piece should exciting, passionate, showcasing sophistication, dynamic shifts, and rhythmic complexity. Make sure it's melodic. Make sure its at least 15 seconds long, all as one piece.
 
 Use the following JSON format exactly:
 

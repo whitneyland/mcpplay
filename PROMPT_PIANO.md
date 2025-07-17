@@ -1,4 +1,5 @@
-Create an impressive piano composition, around 15 seconds long. The piece should exciting, powerful, passionate, showcasing sophisticated chords, arpeggios, dynamic shifts, and rhythmic complexity. 
+
+Create an impressive piano composition. The piece should exciting, powerful, passionate, showcasing sophisticated chords, arpeggios, dynamic shifts, and rhythmic complexity. Make sure it's melodic. Make sure its at least 15 seconds long, all as one piece.
 
 Use the following JSON format exactly:
 
