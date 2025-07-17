@@ -39,7 +39,7 @@ enum AudioError: LocalizedError {
     }
 }
 
-protocol AudioManaging {
+protocol AudioManaging: Sendable {
     @MainActor
     func playSequenceFromJSON(_ raw: String)
 }

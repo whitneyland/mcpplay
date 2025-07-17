@@ -2,7 +2,8 @@
 //  HTTPServer.swift
 //  RiffMCP
 //
-//  Simple HTTP server to handle Model Context Protocol requests without requiring a heavy external dependency
+//  Simple HTTP server to handle Model Context Protocol requests.
+//  This class is a thin transport layer that delegates all logic to the MCPRequestHandler.
 //
 
 import Foundation
@@ -16,13 +17,8 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
     private let listener: NWListener
     private let requestedPort: UInt16
     private let host: String
-    private let audioManager: AudioManaging
+    private let mcpRequestHandler: MCPRequestHandler
     internal let tempDirectory: URL
-    private let toolsURL: URL?
-    private let promptsURL: URL?
-    private var cachedTools: [MCPTool]?
-    private var cachedPrompts: [MCPPrompt]?
-    private let scoreStore = ScoreStore()
 
     @Published var isRunning = false
     @Published var lastError: String?
@@ -39,19 +35,15 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
     }
 
     init(
-        audioManager: AudioManaging,
+        mcpRequestHandler: MCPRequestHandler,
         host: String = HTTPServer.defaultHost,
         port: UInt16 = HTTPServer.defaultPort,
-        tempDirectory: URL? = nil,
-        toolsURL: URL? = Bundle.main.url(forResource: "tools", withExtension: "json", subdirectory: "MCP"),
-        promptsURL: URL? = Bundle.main.url(forResource: "prompts", withExtension: "json", subdirectory: "mcp")
+        tempDirectory: URL? = nil
     ) throws {
-        self.audioManager = audioManager
+        self.mcpRequestHandler = mcpRequestHandler
         self.host = host
         self.requestedPort = port
         self.tempDirectory = tempDirectory ?? Self.defaultTempDir
-        self.toolsURL = toolsURL
-        self.promptsURL = promptsURL
 
         let parameters = NWParameters.tcp
         parameters.allowLocalEndpointReuse = true
@@ -72,16 +64,6 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
 
     func start() async throws {
         guard !isRunning else { return }
-
-        // Create temp directory for PNG files
-        try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
-
-        // Clean up old PNG files on startup
-        cleanupOldPNGFiles()
-
-        // Pre-warm the tool and prompt definition caches
-        _ = getToolDefinitions()
-        _ = getPromptDefinitions()
 
         listener.start(queue: .global(qos: .userInitiated))
     }
@@ -117,10 +99,14 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
     private func handleStateChange(_ state: NWListener.State) async {
         switch state {
         case .ready:
-            resolvedPort = listener.port?.rawValue
+            let port = listener.port?.rawValue
+            resolvedPort = port
             isRunning = true
             lastError = nil
-            Log.server.info("🚀 HTTP Server started on \(self.host):\(self.resolvedPort!)")
+            Log.server.info("🚀 HTTP Server started on \(self.host):\(port!)")
+            if let port {
+                await mcpRequestHandler.update(port: port) // Update the handler with the resolved port
+            }
             ActivityLog.shared.updateServerStatus(online: true)
             try? await writeConfigFile()
 
@@ -161,16 +147,12 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         }
 
         let (method, path, body) = (components[0], components[1], String(httpString[bodyStartIndex...]))
-
-        // Extract User-Agent from headers
-        let userAgent = lines.first(where: { $0.lowercased().starts(with: "user-agent:") })?
-            .components(separatedBy: ":").dropFirst().joined(separator: ":").trimmingCharacters(in: .whitespaces) ?? "Unknown"
         let bodySize = body.data(using: .utf8)?.count ?? 0
 
         Log.server.latency("🚦 Request routing - \(method) \(path)", since: requestStartTime)
 
         switch (method, path) {
-        case ("POST", "/"): await handleJSONRPC(body: body, connection: connection, userAgent: userAgent, bodySize: bodySize)
+        case ("POST", "/"): await handleJSONRPC(body: body, connection: connection, bodySize: bodySize)
         case ("GET", "/health"): await sendHTTPResponse(connection: connection, statusCode: 200, headers: ["Content-Type": "application/json"], body: #"{"status":"healthy","port":\#(resolvedPort ?? requestedPort)}"#)
         case ("GET", let p) where p.starts(with: "/images/"): await handleImageRequest(path: p, connection: connection)
         default: await sendHTTPResponse(connection: connection, statusCode: 404, body: "Not Found")
@@ -178,19 +160,14 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
     }
 
     private func handleImageRequest(path: String, connection: NWConnection) async {
-        // 1. Extract filename from path
         let filename = URL(fileURLWithPath: path).lastPathComponent
-
-        // 2. Construct the full, safe file path
         let fileURL = tempDirectory.appendingPathComponent(filename)
 
-        // 3. SECURITY CHECK: Ensure the resolved path is still inside our temp directory.
         guard fileURL.path.hasPrefix(tempDirectory.path) else {
             await sendHTTPResponse(connection: connection, statusCode: 403, body: "Forbidden")
             return
         }
 
-        // 4. Read file and send response
         do {
             let fileData = try Data(contentsOf: fileURL)
             await sendHTTPResponse(connection: connection, statusCode: 200, headers: ["Content-Type": "image/png"], bodyData: fileData)
@@ -202,7 +179,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
 
     // MARK: - JSON-RPC Handler
 
-    private func handleJSONRPC(body: String, connection: NWConnection, userAgent: String, bodySize: Int) async {
+    private func handleJSONRPC(body: String, connection: NWConnection, bodySize: Int) async {
         let jsonRpcStartTime = Date()
         Log.server.info("📄 JSON-RPC processing started")
 
@@ -211,329 +188,35 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
             let request = try JSONDecoder().decode(JSONRPCRequest.self, from: bodyData)
             guard request.jsonrpc == "2.0" else { throw JSONRPCError.invalidRequest }
 
-            // Detailed logging
-            var toolNameDetail = ""
-            if request.method == "tools/call",
-               let params = request.params,
-               let name = params.objectValue?["name"]?.stringValue {
-                toolNameDetail = " - \(name)"
-            }
-
-            let eventType: ActivityEvent.EventType
-            switch request.method {
-            case "notifications/initialized": eventType = .notification
-            case "tools/list": eventType = .toolsList
-            case "tools/call": eventType = .toolsCall
-            case "resources/list": eventType = .resourcesList
-            case "prompts/list": eventType = .promptsList
-            default: eventType = .request
-            }
-
-            await ActivityLog.shared.add(message: "POST /\(request.method)\(toolNameDetail) (\(bodySize) bytes)", type: eventType, requestData: body)
-
             Log.server.latency("🔍 JSON-RPC parsed - method: \(request.method)", since: jsonRpcStartTime)
 
-            let response: JSONRPCResponse
-            switch request.method {
-            case "initialize":
-                let capabilities = MCPCapabilities(tools: ["listChanged": .bool(true)], prompts: ["listChanged": .bool(true)], resources: ["listChanged": .bool(true)])
-                let initResult = MCPInitializeResult(protocolVersion: "2024-11-05", capabilities: capabilities, serverInfo: MCPServerInfo(name: "riff", version: "1.0.0"))
-                response = JSONRPCResponse(result: try encodeToJSONValue(initResult), id: request.id)
-            case "notifications/initialized":
+            // Delegate to the central handler with HTTP transport type
+            let response = await mcpRequestHandler.handle(
+                request: request,
+                transport: .http,
+                requestBody: body,
+                bodySize: bodySize
+            )
+            
+            // The `initialized` notification is special; it's one-way and requires an immediate empty HTTP response.
+            if request.method == "notifications/initialized" {
                 await sendHTTPResponse(connection: connection, statusCode: 200, body: "")
                 return
-            case "tools/list":
-                let result = MCPToolsResult(tools: getToolDefinitions())
-                response = JSONRPCResponse(result: try encodeToJSONValue(result), id: request.id)
-            case "tools/call":
-                response = try await handleToolCall(request)
-            case "resources/list":
-                response = JSONRPCResponse(result: .object(["resources": .array([])]), id: request.id)
-            case "resources/read":
-                response = try await handleResourceRead(request)
-            case "prompts/list":
-                let result = MCPPromptsResult(prompts: getPromptDefinitions())
-                response = JSONRPCResponse(result: try encodeToJSONValue(result), id: request.id)
-            default:
-                response = JSONRPCResponse(error: .methodNotFound, id: request.id)
             }
+
             await sendJSONRPCResponse(response, connection: connection)
 
-            // Update the last event with response data
-            do {
-                let responseData = try JSONEncoder().encode(response)
-                if let responseString = String(data: responseData, encoding: .utf8) {
-                    await ActivityLog.shared.updateLastEventWithResponse(responseString)
-                }
-            } catch {
-                Log.server.error("Failed to encode response for logging: \(error.localizedDescription, privacy: .public)")
-            }
         } catch let error as JSONRPCError {
             let errorResponse = JSONRPCResponse(error: error, id: nil)
             await sendJSONRPCResponse(errorResponse, connection: connection)
-
-            // Update with error response
-            do {
-                let responseData = try JSONEncoder().encode(errorResponse)
-                if let responseString = String(data: responseData, encoding: .utf8) {
-                    await ActivityLog.shared.updateLastEventWithResponse(responseString)
-                }
-            } catch {
-                Log.server.error("Failed to encode error response for logging: \(error.localizedDescription, privacy: .public)")
-            }
         } catch is DecodingError {
             let parseErrorResponse = JSONRPCResponse(error: .parseError, id: nil)
             await sendJSONRPCResponse(parseErrorResponse, connection: connection)
-
-            // Update with parse error response
-            do {
-                let responseData = try JSONEncoder().encode(parseErrorResponse)
-                if let responseString = String(data: responseData, encoding: .utf8) {
-                    await ActivityLog.shared.updateLastEventWithResponse(responseString)
-                }
-            } catch {
-                Log.server.error("Failed to encode parse error response for logging: \(error.localizedDescription, privacy: .public)")
-            }
         } catch {
             let internalErrorResponse = JSONRPCResponse(error: .internalError, id: nil)
             await sendJSONRPCResponse(internalErrorResponse, connection: connection)
-
-            // Update with internal error response
-            do {
-                let responseData = try JSONEncoder().encode(internalErrorResponse)
-                if let responseString = String(data: responseData, encoding: .utf8) {
-                    await ActivityLog.shared.updateLastEventWithResponse(responseString)
-                }
-            } catch {
-                Log.server.error("Failed to encode internal error response for logging: \(error.localizedDescription, privacy: .public)")
-            }
         }
     }
-
-    private func handleToolCall(_ request: JSONRPCRequest) async throws -> JSONRPCResponse {
-        let toolCallStartTime = Date()
-        Log.server.info("🔧 Tool call processing started")
-
-        guard let params = request.params, let toolName = params.objectValue?["name"]?.stringValue else {
-            return JSONRPCResponse(error: .invalidParams, id: request.id)
-        }
-
-        Log.server.latency("🎯 Tool identified: \(toolName)", since: toolCallStartTime)
-
-        do {
-            let result: MCPResult
-            let arguments = params.objectValue?["arguments"] ?? .object([:])
-
-            let data = try JSONEncoder().encode(arguments)
-            let decoder = JSONDecoder()
-
-            switch toolName {
-            case "play":
-                let sequenceDecodeStart = Date()
-                let sequence = try decoder.decode(MusicSequence.self, from: data)
-                Log.server.latency("🎼 Sequence decoded", since: sequenceDecodeStart)
-                result = try await handlePlaySequence(sequence: sequence)
-            case "engrave":
-                let input = try decoder.decode(EngraveInput.self, from: data)
-                result = try await handleEngraveSequence(input: input)
-            default:
-                throw JSONRPCError.serverError("Unknown tool: \(toolName)")
-            }
-            return JSONRPCResponse(result: try encodeToJSONValue(result), id: request.id)
-        } catch let error as DecodingError {
-            Log.server.error("Decoding error: \(error.localizedDescription, privacy: .public)")
-            switch error {
-            case .typeMismatch(let type, let context):
-                Log.server.error("Type mismatch for type \(type, privacy: .public) at \(context.codingPath, privacy: .public): \(context.debugDescription, privacy: .public)")
-            case .valueNotFound(let type, let context):
-                Log.server.error("Value of type \(type, privacy: .public) not found at \(context.codingPath, privacy: .public): \(context.debugDescription, privacy: .public)")
-            case .keyNotFound(let key, let context):
-                Log.server.error("Key '\(key.stringValue, privacy: .public)' not found at \(context.codingPath, privacy: .public): \(context.debugDescription, privacy: .public)")
-            case .dataCorrupted(let context):
-                Log.server.error("Data corrupted at \(context.codingPath, privacy: .public): \(context.debugDescription, privacy: .public)")
-            @unknown default:
-                Log.server.error("Unknown decoding error: \(error.localizedDescription, privacy: .public)")
-            }
-            return JSONRPCResponse(error: .invalidParams, id: request.id)
-        } catch let error as JSONRPCError {
-            return JSONRPCResponse(error: error, id: request.id)
-        } catch {
-            let serverError = JSONRPCError.serverError("Tool execution failed: \(error.localizedDescription)")
-            return JSONRPCResponse(error: serverError, id: request.id)
-        }
-    }
-
-    // MARK: - Tool Implementations
-
-    private func handlePlaySequence(sequence: MusicSequence) async throws -> MCPResult {
-        let playSequenceStartTime = Date()
-        Log.server.info("🎵 handlePlaySequence started")
-
-        let validInstruments = Instruments.getInstrumentNames()
-        for track in sequence.tracks where !validInstruments.contains(track.instrument) {
-            throw JSONRPCError.serverError("Invalid instrument \"\(track.instrument)\". Check the instrument enum in the schema for valid options.")
-        }
-
-        Log.server.latency("✅ Instrument validation completed", since: playSequenceStartTime)
-
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted]
-        let jsonData = try encoder.encode(sequence)
-        guard let jsonString = String(data: jsonData, encoding: .utf8) else {
-            throw JSONRPCError.serverError("Failed to serialize sequence for audio manager.")
-        }
-
-        Log.server.info("📝 Sequence serialized")
-
-        Log.server.info("🎶 Calling AudioManager.playSequenceFromJSON")
-        await audioManager.playSequenceFromJSON(jsonString)
-
-        // Store the sequence with a unique ID
-        let scoreId = UUID().uuidString
-        await scoreStore.put(scoreId, sequence)
-
-        let totalEvents = sequence.tracks.reduce(0) { $0 + $1.events.count }
-        let summary = "Playing \(sequence.title ?? "Untitled") at \(Int(sequence.tempo)) BPM with \(totalEvents) event\(totalEvents == 1 ? "" : "s")."
-
-        var titleWith = ""
-        if let title = sequence.title {
-            titleWith = title + " with"
-        }
-        var forInstrument = ""
-        if let insturment = sequence.tracks.first?.instrument {
-            forInstrument = " for \(insturment)"
-        }
-        await ActivityLog.shared.add(message: "Play \(titleWith) \(totalEvents) notes\(forInstrument)", type: .generation, sequenceData: jsonString)
-
-        return MCPResult(content: [
-            .text(summary),
-            .text("Score ID: \(scoreId)")
-        ])
-    }
-
-    private func handleEngraveSequence(input: EngraveInput) async throws -> MCPResult {
-        Log.server.info("🎼 handleEngraveSequence started")
-
-        // 1. Resolve the sequence from input
-        let sequence: MusicSequence
-        if let tempo = input.tempo, let tracks = input.tracks {
-            // Use inline notes
-            sequence = MusicSequence(title: input.title, tempo: tempo, tracks: tracks)
-        } else if let id = input.score_id {
-            // Use specific score ID
-            guard let cached = await scoreStore.get(id) else {
-                throw JSONRPCError.serverError("Score ID '\(id)' not found")
-            }
-            sequence = cached
-        } else {
-            // Use last played score
-            guard let cached = await scoreStore.get(nil) else {
-                throw JSONRPCError.serverError("No score available. Either provide notes or play a sequence first.")
-            }
-            sequence = cached
-        }
-
-        // 2. Validate instruments
-        Log.server.info("✅ Starting instrument validation")
-        let validInstruments = Instruments.getInstrumentNames()
-        for track in sequence.tracks where !validInstruments.contains(track.instrument) {
-            throw JSONRPCError.serverError("Invalid instrument \"\(track.instrument)\". Check the instrument enum in the schema for valid options.")
-        }
-        Log.server.info("✅ Instrument validation completed")
-
-        // 3. Convert sequence to MEI -> SVG -> PNG
-        do {
-            let sequenceData = try JSONEncoder().encode(sequence)
-            Log.server.info("🔄 JSON encoding completed")
-
-            let meiXML = try JSONToMEIConverter.convert(from: sequenceData)
-            Log.io.info("🎵 MEI conversion completed")
-
-            guard let svgString = await Verovio.svg(from: meiXML) else {
-                Log.io.error("❌ Verovio.svgFromMEI returned nil")
-                throw JSONRPCError.serverError("Failed to generate SVG from MEI.")
-            }
-            Log.io.info("🖼️ SVG generation completed")
-
-            let pngData = try await SVGToPNGRenderer.renderToPNG(svgString: svgString)
-            Log.io.info("🖼️ PNG rendering completed")
-
-            // 3. Save PNG to temp directory
-            let pngUUID = UUID().uuidString
-            let pngFileName = "\(pngUUID).png"
-            let pngURL = tempDirectory.appendingPathComponent(pngFileName)
-            try pngData.write(to: pngURL)
-            let resourceURI = "http://\(host):\(resolvedPort ?? requestedPort)/images/\(pngFileName)"
-
-            Log.io.info("PNG saved to disk")
-
-            // 4. Make .png Base-64 (Claude still needs type:"image")
-            let base64PNG   = pngData.base64EncodedString()
-            let imageItem   = MCPContentItem.image(
-                data:     base64PNG,
-                mimeType: "image/png"
-            )
-
-            Log.io.info(" Image link points to: \(resourceURI, privacy: .public)")
-            Log.io.info(" PNG file saved at: \(pngURL.path, privacy: .public)")
-
-            // 6. Log the activity
-            if let jsonString = String(data: sequenceData, encoding: .utf8) {
-                await ActivityLog.shared.add(message: "Engrave \(sequence.title ?? "Untitled")", type: .generation, sequenceData: jsonString)
-            }
-            Log.server.info("✅ engraveSequence completed successfully")
-
-            // 7. Return the result
-            return MCPResult(content: [imageItem])
-//            return MCPResult(content: [imageItem, markdownLink])
-
-        } catch let error as JSONRPCError {
-            Log.server.error("❌ JSONRPCError in handleEngraveSequence: \(error.message, privacy: .public)")
-            throw error
-        } catch {
-            Log.server.error("❌ Unexpected error in handleEngraveSequence: \(error.localizedDescription, privacy: .public)")
-            throw JSONRPCError.serverError("Engraving failed: \(error.localizedDescription)")
-        }
-    }
-
-    private func handleResourceRead(_ request: JSONRPCRequest) async throws -> JSONRPCResponse {
-        guard let params = request.params, let uri = params.objectValue?["uri"]?.stringValue else {
-            return JSONRPCResponse(error: .invalidParams, id: request.id)
-        }
-
-        // Extract file path from URI
-        guard uri.hasPrefix("file://") else {
-            return JSONRPCResponse(error: .serverError("Unsupported URI scheme"), id: request.id)
-        }
-
-        let filePath = String(uri.dropFirst(7)) // Remove "file://" prefix
-        let fileURL = URL(fileURLWithPath: filePath)
-
-        // Verify file is in our temp directory for security
-        guard fileURL.path.hasPrefix(tempDirectory.path) else {
-            return JSONRPCResponse(error: .serverError("Access denied"), id: request.id)
-        }
-
-        do {
-            let fileData = try Data(contentsOf: fileURL)
-            let base64Data = fileData.base64EncodedString()
-
-            let result: [String: JSONValue] = [
-                "contents": .array([
-                    .object([
-                        "uri": .string(uri),
-                        "mimeType": .string("image/png"),
-                        "blob": .string(base64Data)
-                    ])
-                ])
-            ]
-
-            return JSONRPCResponse(result: .object(result), id: request.id)
-        } catch {
-            return JSONRPCResponse(error: .serverError("Failed to read resource: \(error.localizedDescription)"), id: request.id)
-        }
-    }
-
 
     // MARK: - HTTP & JSON Helpers
 
@@ -582,39 +265,10 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         switch code {
         case 200: return "OK"
         case 400: return "Bad Request"
+        case 403: return "Forbidden"
         case 404: return "Not Found"
         case 500: return "Internal Server Error"
         default: return "Unknown"
-        }
-    }
-
-    private func encodeToJSONValue<T: Codable>(_ value: T) throws -> JSONValue {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted]
-        let data = try encoder.encode(value)
-        return try JSONDecoder().decode(JSONValue.self, from: data)
-    }
-
-    // MARK: - PNG Cleanup
-
-    private func cleanupOldPNGFiles() {
-        do {
-            let fileManager = FileManager.default
-            let files = try fileManager.contentsOfDirectory(at: tempDirectory, includingPropertiesForKeys: [.creationDateKey], options: [])
-
-            let cutoffDate = Date().addingTimeInterval(-24 * 60 * 60) // 24 hours ago
-
-            for fileURL in files {
-                guard fileURL.pathExtension == "png" else { continue }
-
-                let attributes = try fileURL.resourceValues(forKeys: [.creationDateKey])
-                if let creationDate = attributes.creationDate, creationDate < cutoffDate {
-                    try fileManager.removeItem(at: fileURL)
-                    Log.io.info("🗑️ Cleaned up old PNG file: \(fileURL.lastPathComponent, privacy: .public)")
-                }
-            }
-        } catch {
-            Log.io.error("⚠️ Failed to cleanup old PNG files: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -622,7 +276,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
 
     private func getConfigFilePath() -> URL {
         let supportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        return supportDir.appendingPathComponent("MCP Play/server.json")
+        return supportDir.appendingPathComponent("RiffMCP/server.json")
     }
 
     private func writeConfigFile() async throws {
@@ -640,45 +294,4 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
             try FileManager.default.removeItem(at: configPath)
         }
     }
-
-    // MARK: - Tool & Prompt Definitions
-
-    private func getPromptDefinitions() -> [MCPPrompt] {
-        if let cachedPrompts = cachedPrompts {
-            return cachedPrompts
-        }
-
-        // Load prompt definitions from injected prompts URL
-        guard let promptsURL = promptsURL,
-              let promptsData = try? Data(contentsOf: promptsURL),
-              let promptsArray = try? JSONSerialization.jsonObject(with: promptsData) as? [[String: Any]] else {
-            Log.server.error("❌ Failed to load prompts.json, falling back to empty array")
-            return []
-        }
-
-        let prompts = promptsArray.compactMap { MCPPrompt(from: $0) }
-        self.cachedPrompts = prompts
-        return prompts
-    }
-
-    private func getToolDefinitions() -> [MCPTool] {
-        if let cachedTools = cachedTools {
-            return cachedTools
-        }
-
-        // Load tool definitions from injected tools URL
-        guard let toolsURL = toolsURL,
-              let toolsData = try? Data(contentsOf: toolsURL),
-              let toolsArray = try? JSONSerialization.jsonObject(with: toolsData) as? [[String: Any]] else {
-            Log.server.error("❌ Failed to load tools.json, falling back to empty array")
-            return []
-        }
-
-        let tools = toolsArray.compactMap { MCPTool(from: $0) }
-        self.cachedTools = tools
-        return tools
-    }
 }
-
-
-

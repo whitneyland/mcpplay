@@ -2,15 +2,35 @@
 import Foundation
 import SwiftUI
 
-// 1. Data Model for a single event
+// Data model for a single event
 struct ActivityEvent: Identifiable, Hashable {
     let id = UUID()
     let timestamp: Date
     let message: String
     let type: EventType
+    let transport: TransportType
     let requestData: String?
     let sequenceData: String?
     let responseData: String?
+    
+    enum TransportType: String, CaseIterable {
+        case http = "HTTP"
+        case stdio = "STDIO"
+        
+        var icon: String {
+            switch self {
+            case .http: return "network"
+            case .stdio: return "terminal"
+            }
+        }
+        
+        var color: Color {
+            switch self {
+            case .http: return .blue
+            case .stdio: return .green
+            }
+        }
+    }
 
     enum EventType: String {
         case request = "network.arrow.down.left"
@@ -50,7 +70,7 @@ struct ActivityEvent: Identifiable, Hashable {
     }
 }
 
-// 2. View Model (ObservableObject) to manage and share the events
+// View Model (ObservableObject) to manage and share the events
 @MainActor
 class ActivityLog: ObservableObject {
     @Published private(set) var events: [ActivityEvent] = []
@@ -63,9 +83,9 @@ class ActivityLog: ObservableObject {
 
     private init() {} // Private initializer for singleton
 
-    func add(message: String, type: ActivityEvent.EventType, requestData: String? = nil, sequenceData: String? = nil, responseData: String? = nil) {
+    func add(message: String, type: ActivityEvent.EventType, transport: ActivityEvent.TransportType, requestData: String? = nil, sequenceData: String? = nil, responseData: String? = nil) {
         // Prepend new events to the top of the list
-        events.insert(ActivityEvent(timestamp: Date(), message: message, type: type, requestData: requestData, sequenceData: sequenceData, responseData: responseData), at: 0)
+        events.insert(ActivityEvent(timestamp: Date(), message: message, type: type, transport: transport, requestData: requestData, sequenceData: sequenceData, responseData: responseData), at: 0)
 
         // Keep the list from growing indefinitely
         if events.count > 100 {
@@ -85,6 +105,7 @@ class ActivityLog: ObservableObject {
             timestamp: lastEvent.timestamp,
             message: lastEvent.message,
             type: lastEvent.type,
+            transport: lastEvent.transport,
             requestData: lastEvent.requestData,
             sequenceData: lastEvent.sequenceData,
             responseData: responseData

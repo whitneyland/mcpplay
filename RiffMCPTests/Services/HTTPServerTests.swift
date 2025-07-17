@@ -86,13 +86,22 @@ struct HTTPServerTests {
 
         let server: HTTPServer
         do {
-            server = try HTTPServer(
+            // Create the MCPRequestHandler first
+            let mcpRequestHandler = MCPRequestHandler(
                 audioManager: dummyAudioManager,
                 host: "127.0.0.1",
-                port: 0, // Let kernel pick a free port
+                port: 0, // Will be updated by HTTP server
                 tempDirectory: tempDir,
                 toolsURL: toolsURL,
-                promptsURL: promptsURL)
+                promptsURL: promptsURL
+            )
+            
+            server = try HTTPServer(
+                mcpRequestHandler: mcpRequestHandler,
+                host: "127.0.0.1",
+                port: 0, // Let kernel pick a free port
+                tempDirectory: tempDir
+            )
         } catch {
             fatalError("🚨 Failed to create HTTPServer: \(error)")
         }
