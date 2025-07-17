@@ -1,11 +1,9 @@
-Using the .json format below -
+Create an impressive piano composition, around 15 seconds long. The piece should exciting, powerful, passionate, showcasing sophisticated chords, arpeggios, dynamic shifts, and rhythmic complexity. 
 
-Create an original, impressive piano composition. Total of 30 seconds or more in duration. Really show me what you can do.
-
+Use the following JSON format exactly:
 
 ---
 ## Instructions
-
 Use this JSON format for your music compositions:
 
 ### Root Object
@@ -14,7 +12,7 @@ Use this JSON format for your music compositions:
 - `tracks` (required): Array of track objects
 
 ### Track Object
-- `instrument` (optional): (defaults to "acoustic_grand_piano")
+- `instrument`: One of the available instruments below
 - `events` (required): Array of musical events
 
 ### Event Object
@@ -24,19 +22,7 @@ Use this JSON format for your music compositions:
 - `vel` (optional): Volume 0-127 (defaults to 100)
 
 ### Available Instruments
-**Piano**: acoustic_grand_piano, bright_acoustic_piano, electric_grand_piano, honky_tonk_piano, electric_piano_1, electric_piano_2, harpsichord, clavinet
-
-**Strings**: violin, viola, cello, contrabass, tremolo_strings, pizzicato_strings, orchestral_harp, string_ensemble_1, string_ensemble_2
-
-**Brass**: trumpet, trombone, tuba, muted_trumpet, french_horn, brass_section
-
-**Woodwinds**: flute, clarinet, oboe, bassoon, piccolo, recorder, soprano_sax, alto_sax, tenor_sax, baritone_sax
-
-**Guitar**: acoustic_guitar_nylon, acoustic_guitar_steel, electric_guitar_jazz, electric_guitar_clean, electric_guitar_muted, overdriven_guitar, distortion_guitar
-
-**Bass**: acoustic_bass, electric_bass_finger, electric_bass_pick, fretless_bass, slap_bass_1, slap_bass_2
-
-**Other**: celesta, glockenspiel, music_box, vibraphone, marimba, xylophone, tubular_bells, drawbar_organ, church_organ, accordion, harmonica, choir_aahs, voice_oohs
+grand_piano
 
 ### Key Points
 - Time values are in **beats**, not seconds

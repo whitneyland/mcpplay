@@ -1,8 +1,5 @@
 
-
-Command line options for running the HTTPServer tests:
-
-  Run All HTTPServer Tests
+  Run All Tests
 
   xcodebuild test -scheme RiffMCP -destination 'platform=macOS,arch=arm64'
 

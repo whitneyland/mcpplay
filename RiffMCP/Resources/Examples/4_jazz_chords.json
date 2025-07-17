@@ -1,0 +1,56 @@
+{
+  "tempo" : 120,
+  "title" : "12-Bar Jazz with Walking Bass",
+  "tracks" : [
+    {
+      "events": [
+        { "dur" : 4, "pitches" : [ "C4", "E4", "G4", "B4" ], "time" : 0, "vel" : 50 },
+        { "dur" : 4, "pitches" : [ "C4", "E4", "G4", "Bb4" ], "time" : 4, "vel" : 50 },
+        { "dur" : 4, "pitches" : [ "F3", "A3", "C4", "E4" ], "time" : 8, "vel" : 50 },
+        { "dur" : 4, "pitches" : [ "F3", "Ab3", "C4", "Eb4" ], "time" : 12, "vel" : 50 },
+        { "dur" : 4, "pitches" : [ "E3", "G3", "B3", "D4" ], "time" : 16, "vel" : 50 },
+        { "dur" : 4, "pitches" : [ "A3", "C#4", "E4", "G4" ], "time" : 20, "vel" : 50 },
+        { "dur" : 4, "pitches" : [ "D3", "F3", "A3", "C4" ], "time" : 24, "vel" : 50 },
+        { "dur" : 4, "pitches" : [ "G3", "B3", "D4", "F4" ], "time" : 28, "vel" : 50 }
+      ],
+      "instrument" : "electric_piano"
+    },
+    {
+      "events": [
+        { "dur" : 1, "pitches" : [ "C2" ], "time" : 0, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "E2" ], "time" : 1, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "G2" ], "time" : 2, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "Bb2" ], "time" : 3, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "C2" ], "time" : 4, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "E2" ], "time" : 5, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "G2" ], "time" : 6, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "Bb2" ], "time" : 7, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "F2" ], "time" : 8, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "A2" ], "time" : 9, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "C2" ], "time" : 10, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "Eb2" ], "time" : 11, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "F2" ], "time" : 12, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "Ab2" ], "time" : 13, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "C2" ], "time" : 14, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "Eb2" ], "time" : 15, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "E2" ], "time" : 16, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "G2" ], "time" : 17, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "B2" ], "time" : 18, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "C#3" ], "time" : 19, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "A2" ], "time" : 20, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "C#3" ], "time" : 21, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "E2" ], "time" : 22, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "G2" ], "time" : 23, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "D2" ], "time" : 24, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "F2" ], "time" : 25, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "A2" ], "time" : 26, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "B2" ], "time" : 27, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "G2" ], "time" : 28, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "B2" ], "time" : 29, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "D2" ], "time" : 30, "vel" : 95 },
+        { "dur" : 1, "pitches" : [ "F2" ], "time" : 31, "vel" : 95 }
+      ],
+      "instrument" : "acoustic_bass"
+    }
+  ]
+}

@@ -1,48 +1,70 @@
-Using the .json format below -
 
-Create an original, impressive multi-track composition. Total of 30 seconds or more in duration. Really show me what you can do.
+Create an impressive multi-track composition. The piece should exciting, powerful, passionate, showcasing sophistication, dynamic shifts, and rhythmic complexity. Make sure its at least 15 seconds long, all as one piece.
+
+Use the following JSON format exactly:
 
 
----
 ## Instructions
 
 Use this JSON format for your music compositions:
 
 ### Root Object
-- `title` (optional): Descriptive name for your piece
-- `tempo` (required): BPM (beats per minute)
-- `tracks` (required): Array of track objects
+- `title` (optional): Descriptive name for your piece  
+- `tempo` (required): BPM (beats per minute)  
+- `tracks` (required): Array of track objects  
 
 ### Track Object
-- `instrument` (optional): Choose from 70+ available instruments (defaults to "acoustic_grand_piano")
-- `events` (required): Array of musical events
+- `instrument` One of the available instruments below
+- `events` (required): Array of musical events  
 
 ### Event Object
-- `time` (required): When to play in beats from start (0.0 = beginning)
-- `pitches` (required): Array of notes - use note names like "C4", "F#3" or MIDI numbers like 60
-- `dur` (required): Length in beats (1.0 = quarter note at current tempo)
-- `vel` (optional): Volume 0-127 (defaults to 100)
+- `time` (required): When to play, in **beats** from start (0.0 = beginning)  
+- `pitches` (required): Array of notes — use note names like `"C4"`, `"F#3"` or MIDI numbers like `60`  
+- `dur` (required): Length in beats (1.0 = quarter-note at current tempo)  
+- `vel` (optional): Volume 0–127 (defaults to 100)  
 
 ### Available Instruments
-**Piano**: acoustic_grand_piano, bright_acoustic_piano, electric_grand_piano, honky_tonk_piano, electric_piano_1, electric_piano_2, harpsichord, clavinet
+**Piano**  
+`grand_piano`, `electric_piano`, `harpsichord`, `clavinet`
 
-**Strings**: violin, viola, cello, contrabass, tremolo_strings, pizzicato_strings, orchestral_harp, string_ensemble_1, string_ensemble_2
+**Percussion**  
+`celesta`, `glockenspiel`, `music_box`, `vibraphone`, `marimba`, `xylophone`,  
+`tubular_bells`, `timpani`, `agogo`, `steel_drums`, `woodblock`, `taiko_drum`,  
+`castanets`, `concert_bass_drum`, `melodic_tom`, `synth_drum`
 
-**Brass**: trumpet, trombone, tuba, muted_trumpet, french_horn, brass_section
+**Organ**  
+`drawbar_organ`, `percussive_organ`, `rock_organ`, `church_organ`,  
+`reed_organ`, `accordian`, `harmonica`, `bandoneon`
 
-**Woodwinds**: flute, clarinet, oboe, bassoon, piccolo, recorder, soprano_sax, alto_sax, tenor_sax, baritone_sax
+**Guitar**  
+`nylon_string_guitar`, `steel_string_guitar`, `jazz_guitar`,  
+`clean_guitar`, `distortion_guitar`
 
-**Guitar**: acoustic_guitar_nylon, acoustic_guitar_steel, electric_guitar_jazz, electric_guitar_clean, electric_guitar_muted, overdriven_guitar, distortion_guitar
+**Bass**  
+`acoustic_bass`, `fingered_bass`, `picked_bass`, `synth_bass`
 
-**Bass**: acoustic_bass, electric_bass_finger, electric_bass_pick, fretless_bass, slap_bass_1, slap_bass_2
+**Strings**  
+`violin`, `viola`, `cello`, `contrabass`, `tremolo`, `pizzicato_section`,  
+`harp`, `strings`, `slow_strings`
 
-**Other**: celesta, glockenspiel, music_box, vibraphone, marimba, xylophone, tubular_bells, drawbar_organ, church_organ, accordion, harmonica, choir_aahs, voice_oohs
+**Choir**  
+`ahh_choir`, `ohh_voices`, `orchestra_hit`
+
+**Brass**  
+`trumpet`, `trombone`, `tuba`, `muted_trumpet`, `french_horns`, `brass_section`
+
+**Woodwinds**  
+`soprano_sax`, `alto_sax`, `tenor_sax`, `baritone_sax`, `oboe`, `english_horn`,  
+`bassoon`, `clarinet`, `piccolo`, `flute`, `recorder`, `pan_flute`,  
+`bottle_chiff`, `shakuhachi`, `whistle`, `ocarina`
+
+**World**  
+`sitar`, `banjo`, `shamisen`, `koto`, `kalimba`, `bagpipe`,  
+`fiddle`, `shenai`, `tinker_bell`
 
 ### Key Points
-- Time values are in **beats**, not seconds
-- Multiple notes at the same time = chord (multiple pitches in same event)
-- Multiple tracks = different instruments playing simultaneously
-- Note names use octave numbers (C4 = middle C, C5 = octave above)
-- MIDI numbers: 60 = C4, 61 = C#4, 72 = C5
-
-
+- **Time values are in beats** — not seconds.  
+- Multiple pitches in the same event (same `time`) create a chord.  
+- Multiple tracks let different instruments play simultaneously.  
+- Note names follow scientific-pitch notation (`C4` = middle C).  
+- MIDI numbers: `60` = C4, `61` = C#4/Db4, `72` = C5.
