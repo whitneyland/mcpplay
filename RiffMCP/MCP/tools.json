@@ -133,12 +133,7 @@
             }
           }
         }
-      },
-      "anyOf": [
-        { "required": ["score_id"] },
-        { "required": ["tempo", "tracks"] },
-        { "properties": {}, "additionalProperties": false }
-      ]
+      }
     }
   }
 ]
