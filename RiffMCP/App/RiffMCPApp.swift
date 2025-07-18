@@ -13,38 +13,35 @@ struct RiffMCPApp: App {
     @State private var services: AppServices?
     @State private var launchError: Error?
     
-    // This gets checked before the UI is ever created.
+    // This is set to false only if we must terminate due to a duplicate instance.
     private static var shouldLaunchUI: Bool = true
 
     init() {
-        // If the --stdio flag is present, we might need to act as a proxy
-        // instead of launching the full app.
+        // CASE 1: Launched with --stdio. This path takes over the process and never returns.
         if CommandLine.arguments.contains("--stdio") {
-            // IMPORTANT: StdioProxy.runAsProxyAndExitIfNeeded() NEVER returns!
-            // It always calls exit() after running the proxy or launching the GUI.
-            // The return value and subsequent code exist only to satisfy the compiler
-            // and prevent the SwiftUI.App from attempting to launch its UI.
-            if StdioProxy.runAsProxyAndExitIfNeeded() {
-                // This code path is unreachable - the process has already exited.
-                // The return value is only here to satisfy the function signature.
-                RiffMCPApp.shouldLaunchUI = false
-            }
+            // The compiler knows this function is `-> Never`, meaning it will not
+            // return. The process will be terminated within this call.
+            // The SwiftUI App body will never be initialized.
+            StdioProxy.runAsProxyAndExitIfNeeded()
+        }
+
+        // CASE 2: Normal GUI Launch. This code is only reached if --stdio is NOT present.
+        // Check for an existing instance of the GUI app.
+        if let existingInstance = checkForExistingGUIInstance() {
+            Log.server.info("🔍 Found existing GUI instance: port \(existingInstance.port), pid \(existingInstance.pid)")
+
+            // Bring existing window to front.
+            bringExistingWindowToFront()
+
+            // This new, redundant instance should not launch its UI and should terminate.
+            RiffMCPApp.shouldLaunchUI = false
+            Log.server.info("🏁 Terminating duplicate instance.")
+            NSApp.terminate(nil) // Gracefully terminates this redundant process.
+
         } else {
-            // Normal GUI launch - check for existing instance
-            if let existingInstance = checkForExistingGUIInstance() {
-                Log.server.info("🔍 Found existing GUI instance: port \(existingInstance.port), pid \(existingInstance.pid)")
-                
-                // Bring existing window to front and terminate this instance
-                bringExistingWindowToFront()
-                
-                Log.server.info("🏁 Terminating duplicate instance")
-                RiffMCPApp.shouldLaunchUI = false
-                
-                // Terminate this instance
-                NSApp.terminate(nil)    // Prefer this over exit(0) which macOS instruments can report as a crash “CUI exit during initialization”
-            } else {
-                Log.server.info("✅ No existing GUI instance found - proceeding with normal launch")
-            }
+            // No existing GUI instance was found. Proceed with a normal launch.
+            // `shouldLaunchUI` remains its default `true` value.
+            Log.server.info("✅ No existing GUI instance found - proceeding with normal launch")
         }
     }
 

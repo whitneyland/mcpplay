@@ -30,39 +30,39 @@ struct StdioProxy {
         self.session = URLSession(configuration: config)
     }
 
-    /// The main entry point for --stdio mode. This function NEVER returns normally.
-    /// 
+    /// Main entry point for --stdio mode. This function NEVER returns.
+    ///
     /// Behavior:
-    /// 1. If a server is running: Becomes a proxy to it, then calls exit(0)
-    /// 2. If no server found: Launches GUI app, waits for it, becomes proxy, then calls exit(0)
-    /// 3. If any error occurs: Calls exit(1)
-    /// 
-    /// - Returns: Bool (dummy return to satisfy compiler - this code path is never reached)
+    ///   1. If a server is running: Becomes a proxy to it, then calls exit(0)
+    ///   2. If no server found: Launches GUI app, waits for it, becomes proxy, then calls exit(0)
+    ///   3. If any error occurs: Calls exit(1)
+    ///
     /// - Warning: This function always terminates the process via exit()
-    @discardableResult
-    static func runAsProxyAndExitIfNeeded() -> Bool {
+    static func runAsProxyAndExitIfNeeded() -> Never {
         Log.server.info("🔍 StdioProxy: Checking for running server...")
-        
+
         // Check for existing server first
         if let config = findRunningServer() {
-            startProxyAndExit(port: config.port)
+            startProxyAndExit(port: config.port) // This call is `-> Never`
         }
-        
+
         // If we reach here, no server is running. Launch the GUI app and wait for it.
         Log.server.info("🚀 StdioProxy: No server running, launching GUI app...")
-        
+
         do {
+            // This function is designed to either throw an error or call
+            // a `Never`-returning function (`startProxyAndExit`) internally.
+            // It should never return control to this point.
             try launchGUIAppAndWait()
         } catch {
-            Log.server.error("Failed to launch GUI app: \(error.localizedDescription)")
-            exit(1)
+            // If launchGUIAppAndWait throws, we log the error and exit.
+            Log.server.error("❌ Failed to launch GUI app: \(error.localizedDescription)")
+            exit(1) // This call is `-> Never`
         }
-        
-        // UNREACHABLE: This line should never execute because launchGUIAppAndWait() calls exit()
-        // The return value exists only to satisfy the compiler
-        return true
-    }
 
+        // The logic of launchGUIAppAndWait dictates that we should never reach this point.
+        fatalError("StdioProxy.runAsProxyAndExitIfNeeded reached an unreachable state. Terminating.")
+    }
 
     /// Runs the proxy loop, blocking the current thread until stdin is closed.
     func runBlocking() throws {
