@@ -90,16 +90,15 @@ struct StdioProxy {
         var headerData = Data()
 
         // Read from stdin until we see the terminator
-        while headerData.count < terminator.count ||
-              !headerData.suffix(terminator.count).elementsEqual(terminator) {
-
-            guard let byte = try readSingleByte() else {
+        while !headerData.contains(terminator) {
+            guard let chunk = try readChunk() else {
                 Log.server.info("📤 EOF detected while reading header")
                 return nil  // EOF
             }
-            headerData.append(byte)
+            headerData.append(chunk)
         }
 
+        // Once the terminator is found, parse the header
         guard let headerString = String(data: headerData, encoding: .ascii) else {
             throw ProxyError.invalidHeader("Could not decode header.")
         }
@@ -122,34 +121,25 @@ struct StdioProxy {
         receivedData.reserveCapacity(byteCount)
         
         while receivedData.count < byteCount {
-            guard let byte = try readSingleByte() else {
+            let need = min(4096, byteCount - receivedData.count)
+            guard let chunk = try readChunk(max: need) else {
                 Log.server.error("📤 EOF detected while reading message body (expected \(byteCount) bytes, got \(receivedData.count))")
                 throw ProxyError.unexpectedEndOfStream
             }
-            receivedData.append(byte)
+            receivedData.append(chunk)
         }
         
         return receivedData
     }
     
-    // Read a single byte from stdin, returns nil on EOF
-    // Note:
-    //  Byte-wise stdin reads are only about ~200 KB/s on fast Macs
-    //  Perf should be fine for our needs, if it becomes an issue read 4 kB chunks/move to a small ring buffer
-    private func readSingleByte() throws -> UInt8? {
-        var byte: UInt8 = 0
-        let result = read(stdinFd, &byte, 1)
-        
-        if result == 0 {
-            // EOF
-            return nil
-        } else if result == -1 {
-            // Error
-            throw ProxyError.stdinReadError(String(cString: strerror(errno)))
-        } else {
-            // Successfully read 1 byte
-            return byte
-        }
+    /// Read at most `max` bytes; return nil on EOF.
+    @inline(__always)
+    private func readChunk(max: Int = 4096) throws -> Data? {
+        var buf = [UInt8](repeating: 0, count: max)
+        let n = Darwin.read(stdinFd, &buf, max)
+        if n == 0 { return nil }                 // EOF
+        if n == -1 { throw POSIXError(.EIO) }
+        return Data(bytes: buf, count: n)
     }
     
     // Forward the request via HTTP synchronously

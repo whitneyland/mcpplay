@@ -60,11 +60,11 @@ class StdioServer: @unchecked Sendable {
         var headerData = Data()
 
         // Read from stdin until we see the terminator
-        while headerData.count < terminator.count ||
-              !headerData.suffix(terminator.count).elementsEqual(terminator) {
-
-            guard let byte = try stdin.read(upToCount: 1) else { return nil } // EOF
-            headerData.append(byte)
+        while !headerData.contains(terminator) {
+            guard let chunk = try stdin.read(upToCount: 4096), !chunk.isEmpty else {
+                return nil // EOF or error
+            }
+            headerData.append(chunk)
         }
 
         guard let headerString = String(data: headerData, encoding: .ascii) else {
@@ -85,13 +85,17 @@ class StdioServer: @unchecked Sendable {
 
     /// Reads the specified number of bytes from stdin to get the JSON message body.
     private func readMessage(byteCount: Int) async throws -> Data {
-        guard let data = try stdin.read(upToCount: byteCount) else {
-            throw StdioError.unexpectedEndOfStream
+        var body = Data()
+        body.reserveCapacity(byteCount)
+
+        while body.count < byteCount {
+            let need = byteCount - body.count
+            guard let chunk = try stdin.read(upToCount: need), !chunk.isEmpty else {
+                throw StdioError.unexpectedEndOfStream
+            }
+            body.append(chunk)
         }
-        if data.count != byteCount {
-            throw StdioError.incompleteMessage
-        }
-        return data
+        return body
     }
 
     /// Processes the received JSON data, sends it to the handler, and writes the response.
