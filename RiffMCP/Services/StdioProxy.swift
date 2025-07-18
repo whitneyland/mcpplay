@@ -68,80 +68,28 @@ struct StdioProxy {
     func runBlocking() throws {
         Log.server.info("🔄 Starting stdio proxy loop...")
         
-        while true {
-            // Read the Content-Length header
-            guard let contentLength = try readHeader() else {
-                // EOF reached, client disconnected
-                Log.server.info("📤 Client disconnected, proxy shutting down.")
-                break
-            }
-            
-            // Read the JSON message body
-            let jsonData = try readMessage(byteCount: contentLength)
-            
-            // Forward the request via HTTP and write the response
-            try forwardRequestSync(data: jsonData)
-        }
-    }
-    
-    // Read the Content-Length header from stdin
-    private func readHeader() throws -> Int? {
-        var headerData = Data()
-        let terminator = Data([0x0D, 0x0A, 0x0D, 0x0A]) // \r\n\r\n
-
-        // Read from stdin until the last 4 bytes equal the terminator
-        while headerData.count < terminator.count ||
-              !headerData.suffix(terminator.count).elementsEqual(terminator) {
-
-            guard let chunk = try readChunk() else {
-                Log.server.info("📤 EOF detected while reading header")
-                return nil          // EOF before full header
-            }
-            headerData.append(chunk)
-        }
-
-        // Once the terminator is found, parse the header
-        guard let headerString = String(data: headerData, encoding: .ascii) else {
-            throw ProxyError.invalidHeader("Could not decode header.")
-        }
-
-        let lines = headerString.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: "\r\n")
-        for line in lines {
-            let parts = line.split(separator: ":", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
-            if parts.count == 2 && parts[0].lowercased() == "content-length" {
-                if let length = Int(parts[1]) {
-                    return length
+        readLoop: while true {
+            let contentLength: Int
+            do {
+                // Returns nil on clean EOF before any header bytes
+                guard let len = try StdioIO.readHeader(fd: stdinFd) else {
+                    Log.server.info("📤 EOF before header (clean disconnect); proxy shutting down.")
+                    break readLoop
                 }
+                contentLength = len
+            } catch {
+                Log.server.error("Header read failed: \(error)")
+                throw error
+            }
+
+            do {
+                let jsonData = try StdioIO.readBody(fd: stdinFd, length: contentLength)
+                try forwardRequestSync(data: jsonData)
+            } catch {
+                Log.server.error("Body read failed (expected \(contentLength) bytes): \(error)")
+                throw error
             }
         }
-        throw ProxyError.invalidHeader("Content-Length not found.")
-    }
-    
-    // Read the specified number of bytes from stdin
-    private func readMessage(byteCount: Int) throws -> Data {
-        var receivedData = Data()
-        receivedData.reserveCapacity(byteCount)
-        
-        while receivedData.count < byteCount {
-            let need = min(4096, byteCount - receivedData.count)
-            guard let chunk = try readChunk(max: need) else {
-                Log.server.error("📤 EOF detected while reading message body (expected \(byteCount) bytes, got \(receivedData.count))")
-                throw ProxyError.unexpectedEndOfStream
-            }
-            receivedData.append(chunk)
-        }
-        
-        return receivedData
-    }
-    
-    /// Read at most `max` bytes; return nil on EOF.
-    @inline(__always)
-    private func readChunk(max: Int = 4096) throws -> Data? {
-        var buf = [UInt8](repeating: 0, count: max)
-        let n = Darwin.read(stdinFd, &buf, max)
-        if n == 0 { return nil }                 // EOF
-        if n == -1 { throw POSIXError(.EIO) }
-        return Data(bytes: buf, count: n)
     }
     
     // Forward the request via HTTP synchronously
