@@ -86,14 +86,16 @@ struct StdioProxy {
     
     // Read the Content-Length header from stdin
     private func readHeader() throws -> Int? {
-        let terminator = Data([0x0D, 0x0A, 0x0D, 0x0A])   // \r\n\r\n
         var headerData = Data()
+        let terminator = Data([0x0D, 0x0A, 0x0D, 0x0A]) // \r\n\r\n
 
-        // Read from stdin until we see the terminator
-        while !headerData.contains(terminator) {
+        // Read from stdin until the last 4 bytes equal the terminator
+        while headerData.count < terminator.count ||
+              !headerData.suffix(terminator.count).elementsEqual(terminator) {
+
             guard let chunk = try readChunk() else {
                 Log.server.info("📤 EOF detected while reading header")
-                return nil  // EOF
+                return nil          // EOF before full header
             }
             headerData.append(chunk)
         }
@@ -310,25 +312,28 @@ struct StdioProxy {
     
     // MARK: - Helper Functions
     
-    /// Finds a running server by checking config and process existence
-    /// - Returns: Server config if found and process is running, nil otherwise
+    /// Return a live `ServerConfig` if the GUI server is confirmed running.
     private static func findRunningServer() -> ServerConfigUtils.ServerConfig? {
-        guard let config = ServerConfigUtils.readServerConfig() else {
-            Log.server.info("❌ StdioProxy: No server config found")
+
+        // 1. read file
+        guard let cfg = ServerConfigUtils.readServerConfig() else {
+            Log.server.info("❌ StdioProxy: no server.json found")
             return nil
         }
-        
-        Log.server.info("✅ StdioProxy: Found config - port: \(config.port), pid: \(config.pid)")
-        
-        guard ServerConfigUtils.isProcessRunning(pid: config.pid) else {
-            Log.server.info("❌ StdioProxy: Process \(config.pid) is not running (stale config)")
+        Log.server.info("📄 StdioProxy: config says port \(cfg.port), pid \(cfg.pid)")
+
+        // 2. verify PID alive
+        guard ServerConfigUtils.isProcessRunning(pid: cfg.pid) else {
+            Log.server.info("⚠️  StdioProxy: process \(cfg.pid) is dead – removing stale server.json")
+            try? FileManager.default.removeItem(at: ServerConfigUtils.getConfigFilePath())
             return nil
         }
-        
-        Log.server.info("✅ StdioProxy: Process \(config.pid) is running")
-        return config
+
+        // 3. success
+        Log.server.info("✅ StdioProxy: process \(cfg.pid) is running; using existing server")
+        return cfg
     }
-    
+
     /// Starts the proxy and exits the process (never returns)
     /// - Parameter port: The port to proxy to
     private static func startProxyAndExit(port: UInt16) -> Never {

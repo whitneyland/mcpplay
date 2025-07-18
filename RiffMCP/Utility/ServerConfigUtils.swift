@@ -17,56 +17,53 @@ enum ServerConfigUtils {
         let pid: pid_t
         let host: String
         let status: String
-        let timestamp: Date
+        let instance: String
+        let timestamp: Double   // epoch seconds
     }
     
-    /// Reads server configuration from the JSON file
-    /// - Returns: ServerConfig if found and valid, nil otherwise
+    /// Reads server.json, validates it, and enforces a 1-hour staleness limit.
+    /// - Returns: `ServerConfig` when the file exists *and* the PID/timestamp look valid; otherwise `nil`.
     static func readServerConfig() -> ServerConfig? {
-        // Use single canonical path inside the sandbox container
         let configPath = getConfigFilePath()
-        
-        guard FileManager.default.fileExists(atPath: configPath.path) else {
-            return nil
-        }
-        
-        do {
-            let data = try Data(contentsOf: configPath)
-            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-            
-            guard let port = json?["port"] as? UInt16,
-                  let pid = json?["pid"] as? pid_t,
-                  let host = json?["host"] as? String,
-                  let status = json?["status"] as? String,
-                  status == "running" else {
-                // Invalid or incomplete config data - remove it
-                try? FileManager.default.removeItem(at: configPath)
-                return nil
-            }
-            
-            // Parse timestamp (if missing, assume very old)
-            var timestamp = Date.distantPast
-            if let timestampString = json?["timestamp"] as? String {
-                let formatter = ISO8601DateFormatter()
-                timestamp = formatter.date(from: timestampString) ?? Date.distantPast
-            }
-            
-            // Ignore configs older than 1 hour (PID recycling protection)
-            let configAge = Date().timeIntervalSince(timestamp)
-            if configAge > 3600 { // 1 hour
-                Log.server.info("⏰ ServerConfig: Ignoring stale config (age: \(Int(configAge))s)")
-                try? FileManager.default.removeItem(at: configPath)
-                return nil
-            }
-            
-            return ServerConfig(port: port, pid: pid, host: host, status: status, timestamp: timestamp)
-        } catch {
-            // Corrupted config file - remove it
+
+        guard FileManager.default.fileExists(atPath: configPath.path) else { return nil }
+
+        guard let data = try? Data(contentsOf: configPath) else { return nil }
+
+        // Best-effort JSON parse (don’t crash on bad types)
+        guard
+            let json  = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let port  = json["port"]  as? UInt16 ?? (json["port"] as? Int).map(UInt16.init),
+            let pid   = json["pid"]   as? Int,
+            let host  = json["host"]  as? String,
+            let status = json["status"] as? String,
+            let instance = json["instance"] as? String
+        else {
+            Log.server.error("⚠️  ServerConfig: missing/invalid keys – deleting")
             try? FileManager.default.removeItem(at: configPath)
             return nil
         }
+
+        // Reject anything but a “running” status
+        guard status == "running" else { return nil }
+
+        // ----- age check (1 hour) ------------------------------------------------
+        let epoch   = json["timestamp"] as? TimeInterval ?? 0         // 0 = distant past
+        let age     = Date().timeIntervalSince1970 - epoch
+        if age > 3600 {
+            Log.server.info("⏰ ServerConfig: stale (age \(Int(age)) s) – deleting")
+            try? FileManager.default.removeItem(at: configPath)
+            return nil
+        }
+
+        return ServerConfig(port: port,
+                            pid:  pid_t(pid),
+                            host: host,
+                            status: status,
+                            instance: instance,
+                            timestamp: epoch)
     }
-    
+
     /// Checks if a process with the given PID is still running
     /// - Parameter pid: The process ID to check
     /// - Returns: true if the process is running, false otherwise

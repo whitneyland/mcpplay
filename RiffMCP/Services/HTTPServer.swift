@@ -293,19 +293,24 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         let configPath = getConfigFilePath()
         try FileManager.default.createDirectory(at: configPath.deletingLastPathComponent(), withIntermediateDirectories: true)
         
-        // Add timestamp to prevent PID recycling issues
-        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let instanceUUID = UUID().uuidString
         let config: [String: Any] = [
             "port": resolvedPort ?? requestedPort,
             "host": host,
             "status": "running",
             "pid": ProcessInfo.processInfo.processIdentifier,
-            "timestamp": timestamp
+            "instance": instanceUUID,
+            "timestamp": Date().timeIntervalSince1970
         ]
         
         let jsonData = try JSONSerialization.data(withJSONObject: config, options: .prettyPrinted)
-        try jsonData.write(to: configPath)
+        try jsonData.write(to: configPath, options: .atomic)
         Log.server.info("📝 Config written to: \(configPath.path, privacy: .public)")
+
+        // Sanity-check the write
+        guard let echo = ServerConfigUtils.readServerConfig(), echo.instance == instanceUUID else {
+            throw NSError(domain: "RiffMCP", code: 1, userInfo: [NSLocalizedDescriptionKey: "Server config write verification failed"])
+        }
     }
 
     private func removeConfigFile() async throws {
