@@ -41,7 +41,7 @@ struct RiffMCPApp: App {
                 RiffMCPApp.shouldLaunchUI = false
                 
                 // Terminate this instance
-                exit(0)     // safe at init time
+                NSApp.terminate(nil)    // Prefer this over exit(0) which macOS instruments can report as a crash “CUI exit during initialization”
             } else {
                 Log.server.info("✅ No existing GUI instance found - proceeding with normal launch")
             }
