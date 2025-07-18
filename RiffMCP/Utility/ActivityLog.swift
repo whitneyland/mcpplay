@@ -1,3 +1,9 @@
+//
+//  ActivityLog.swift
+//  RiffMCP
+//
+//  Created by Lee Whitney on 6/7/25.
+//
 
 import Foundation
 import SwiftUI
@@ -33,7 +39,7 @@ struct ActivityEvent: Identifiable, Hashable {
     }
 
     enum EventType: String {
-        case request = "network.arrow.down.left"
+        case request = "arrow.up.message"
         case generation = "music.quarternote.3"
         case success = "checkmark.circle.fill"
         case error = "xmark.circle.fill"

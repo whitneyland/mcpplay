@@ -53,6 +53,7 @@ struct ServerActivityView: View {
                     Button(action: {
                         activityLog.clearLog()
                         selectedEvent = nil
+                        Log.app.info("Activity log cleared")
                     }) {
                         Image(systemName: "trash")
                             .font(.title2)

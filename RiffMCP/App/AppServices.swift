@@ -11,7 +11,7 @@ import Combine
 /// A container for the application's core services.
 ///
 /// This class is responsible for initializing and managing the lifecycle of the main
-/// services, including the `MCPRequestHandler`, `HTTPServer`, and `StdioServer`.
+/// services, including the `MCPRequestHandler` and `HTTPServer`.
 /// It ensures that all components are wired together correctly upon application startup.
 @MainActor
 class AppServices: ObservableObject {
@@ -20,7 +20,6 @@ class AppServices: ObservableObject {
     let audioManager: AudioManager
     let mcpRequestHandler: MCPRequestHandler
     let httpServer: HTTPServer
-    let stdioServer: StdioServer
     let presetManager: PresetManager
 
     // MARK: - Published Properties
@@ -48,9 +47,7 @@ class AppServices: ObservableObject {
             mcpRequestHandler: mcpRequestHandler,
             tempDirectory: tempDir
         )
-        
-        self.stdioServer = StdioServer(mcpRequestHandler: mcpRequestHandler)
-        
+              
         // 4. Set up observation
         setupBindings()
     }
@@ -74,15 +71,10 @@ class AppServices: ObservableObject {
                 Log.server.error("❌ Failed to start HTTP server: \(error.localizedDescription)")
             }
         }
-
-        if CommandLine.arguments.contains("--stdio") {    // Only start stdio server if command-line arg is present.
-            stdioServer.start()
-        }
     }
 
     /// Stops all running services gracefully.
     func stopServices() async {
         await httpServer.stop()
-        stdioServer.stop()
     }
 }

@@ -74,7 +74,11 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         await MainActor.run {
             isRunning = false
         }
-        try? await removeConfigFile()
+        do {
+            try await removeConfigFile()
+        } catch {
+            Log.server.error("❌ Failed to remove server config: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - Connection Handling
@@ -108,7 +112,11 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
                 await mcpRequestHandler.update(port: port) // Update the handler with the resolved port
             }
             ActivityLog.shared.updateServerStatus(online: true)
-            try? await writeConfigFile()
+            do {
+                try await writeConfigFile()
+            } catch {
+                Log.server.error("❌ Failed to write server config: \(error.localizedDescription)")
+            }
 
         case .failed(let error):
             isRunning = false
@@ -149,6 +157,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         let (method, path, body) = (components[0], components[1], String(httpString[bodyStartIndex...]))
         let bodySize = body.data(using: .utf8)?.count ?? 0
 
+        Log.server.info("🔄 HTTP Server received: \(data.count) total bytes, body: \(bodySize) bytes")
         Log.server.latency("🚦 Request routing - \(method) \(path)", since: requestStartTime)
 
         switch (method, path) {
@@ -184,7 +193,9 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         Log.server.info("📄 JSON-RPC processing started")
 
         do {
-            guard let bodyData = body.data(using: .utf8) else { throw JSONRPCError.parseError }
+            guard let bodyData = body.data(using: .utf8) else {
+                throw JSONRPCError.parseError
+            }
             let request = try JSONDecoder().decode(JSONRPCRequest.self, from: bodyData)
             guard request.jsonrpc == "2.0" else { throw JSONRPCError.invalidRequest }
 
@@ -209,7 +220,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         } catch let error as JSONRPCError {
             let errorResponse = JSONRPCResponse(error: error, id: nil)
             await sendJSONRPCResponse(errorResponse, connection: connection)
-        } catch is DecodingError {
+        } catch let error as DecodingError {
             let parseErrorResponse = JSONRPCResponse(error: .parseError, id: nil)
             await sendJSONRPCResponse(parseErrorResponse, connection: connection)
         } catch {
@@ -275,14 +286,23 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
     // MARK: - Configuration File
 
     private func getConfigFilePath() -> URL {
-        let supportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        return supportDir.appendingPathComponent("RiffMCP/server.json")
+        return ServerConfigUtils.getConfigFilePath()
     }
 
     private func writeConfigFile() async throws {
         let configPath = getConfigFilePath()
         try FileManager.default.createDirectory(at: configPath.deletingLastPathComponent(), withIntermediateDirectories: true)
-        let config: [String: Any] = ["port": resolvedPort ?? requestedPort, "host": host, "status": "running", "pid": ProcessInfo.processInfo.processIdentifier]
+        
+        // Add timestamp to prevent PID recycling issues
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let config: [String: Any] = [
+            "port": resolvedPort ?? requestedPort,
+            "host": host,
+            "status": "running",
+            "pid": ProcessInfo.processInfo.processIdentifier,
+            "timestamp": timestamp
+        ]
+        
         let jsonData = try JSONSerialization.data(withJSONObject: config, options: .prettyPrinted)
         try jsonData.write(to: configPath)
         Log.server.info("📝 Config written to: \(configPath.path, privacy: .public)")
