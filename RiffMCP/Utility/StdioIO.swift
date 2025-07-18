@@ -1,4 +1,3 @@
-
 //
 //  StdioIO.swift
 //  RiffMCP
@@ -71,8 +70,8 @@ enum StdioIO {
     // MARK: Writing (shared)
     static func write(_ data: Data, to handle: FileHandle) throws {
         let header = "Content-Length: \(data.count)\r\n\r\n"
-        guard let headerData = header.data(using: .utf8) else {
-            throw StdioError.responseEncodingError        // or ProxyError
+        guard let headerData = header.data(using: .ascii) else {     // HTTP specs are defined on an ASCII not utf8
+            throw StdioError.responseEncodingError
         }
         try handle.write(contentsOf: headerData)
         try handle.write(contentsOf: data)
