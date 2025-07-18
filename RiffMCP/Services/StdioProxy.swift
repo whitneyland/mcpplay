@@ -218,13 +218,7 @@ struct StdioProxy {
     
     // Writes a full JSON-RPC response to stdout
     private func write(data: Data) throws {
-        let header = "Content-Length: \(data.count)\r\n\r\n"
-        guard let headerData = header.data(using: .utf8) else {
-            throw ProxyError.responseEncodingError
-        }
-        
-        try stdout.write(contentsOf: headerData)
-        try stdout.write(contentsOf: data)
+        try StdioIO.write(data, to: stdout)
     }
     
     /// Launches the GUI app and waits for it to start, then becomes a proxy.
