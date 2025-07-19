@@ -72,6 +72,7 @@ struct StdioProxy {
             let contentLength: Int
             do {
                 // Returns nil on clean EOF before any header bytes
+                Log.server.info("readHeader")
                 guard let len = try StdioIO.readHeader(fd: stdinFd) else {
                     Log.server.info("📤 EOF before header (clean disconnect); proxy shutting down.")
                     break readLoop
@@ -83,6 +84,7 @@ struct StdioProxy {
             }
 
             do {
+                Log.server.msg("readBody \(contentLength)")
                 let jsonData = try StdioIO.readBody(fd: stdinFd, length: contentLength)
                 try forwardRequestSync(data: jsonData)
             } catch {

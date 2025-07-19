@@ -13,9 +13,7 @@ struct AboutView: View {
     @State private var credits: String = ""
     
     private var appVersionText: String {
-        let appName = Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "RiffMCP"
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
-        return "\(appName) v\(version)"
+        return "\(AppInfo.name) v\(AppInfo.fullVersion)"
     }
 
     var body: some View {

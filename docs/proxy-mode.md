@@ -1,9 +1,8 @@
 Goal: 
   To provide a GUI, an http server, and stdio invocation all within a single app. 
   The thought is external simplicy to the user with no node dependencies or separate services required.
-  Whether or not this is worth the complexity below...we'll see. If it becomes cumbersome 
-  the code is modular enough to strip down to a simple app/server with stdio shims.
-  Btw, this should all work within the contraints of a sandboxed app. :)
+  If it becomes cumbersome the code is modular enough to strip down to a simple app/server with stdio shims.
+  This should all work within the contraints of a sandboxed app.
 
 "Smart App" / Proxy Mode Architecture
 
