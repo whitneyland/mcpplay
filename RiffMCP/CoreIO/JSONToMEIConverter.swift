@@ -272,7 +272,7 @@ private extension JSONToMEIConverter {
     static func durationToAttributes(beats: Double) throws -> [XMLNode] {
 
         guard beats.isFinite, beats > 0 else {
-            Log.io.info("Warning: invalid duration \(beats, privacy: .public); using quarter.")
+            Log.io.info("Warning: invalid duration \(beats); using quarter.")
             return [att("dur", "4")]
         }
 
@@ -298,7 +298,7 @@ private extension JSONToMEIConverter {
         }
 
         // 4) unsupported → placeholder
-        Log.io.info("Warning: unsupported duration \(beats, privacy: .public); using quarter.")
+        Log.io.info("Warning: unsupported duration \(beats); using quarter.")
         return [att("dur", "4"), att("artic", "stacc")]
     }
 

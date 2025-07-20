@@ -90,7 +90,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
                 if let data = data, !data.isEmpty {
                     await self?.processHTTPRequest(data, connection: connection)
                 } else if let error = error {
-                    Log.server.error("❌ Connection error: \(error.localizedDescription, privacy: .public)")
+                    Log.server.error("❌ Connection error: \(error.localizedDescription)")
                 }
                 if isComplete {
                     connection.cancel()
@@ -181,7 +181,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
             let fileData = try Data(contentsOf: fileURL)
             await sendHTTPResponse(connection: connection, statusCode: 200, headers: ["Content-Type": "image/png"], bodyData: fileData)
         } catch {
-            Log.io.error("❌ Could not read image file: \(fileURL.path, privacy: .public). Error: \(error.localizedDescription, privacy: .public)")
+            Log.io.error("❌ Could not read image file: \(fileURL.path). Error: \(error.localizedDescription)")
             await sendHTTPResponse(connection: connection, statusCode: 404, body: "Not Found")
         }
     }
@@ -305,7 +305,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         
         let jsonData = try JSONSerialization.data(withJSONObject: config, options: .prettyPrinted)
         try jsonData.write(to: configPath, options: .atomic)
-        Log.server.info("📝 Config written to: \(configPath.path, privacy: .public)")
+        Log.server.info("📝 Config written to: \(configPath.path)")
 
         // Sanity-check the write
         guard let echo = ServerConfigUtils.readServerConfig(), echo.instance == instanceUUID else {

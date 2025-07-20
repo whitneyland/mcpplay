@@ -84,7 +84,7 @@ struct StdioProxy {
             }
 
             do {
-                Log.server.msg("readBody \(contentLength)")
+                Log.server.info("readBody \(contentLength)")
                 let jsonData = try StdioIO.readBody(fd: stdinFd, length: contentLength)
                 try forwardRequestSync(data: jsonData)
             } catch {

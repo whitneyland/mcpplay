@@ -22,11 +22,11 @@ struct RiffMCPApp: App {
             // The compiler knows this function is `-> Never`, meaning it will not
             // return. The process will be terminated within this call.
             // The SwiftUI App body will never be initialized.
-            Log.app.msg("\(AppInfo.name) v\(AppInfo.fullVersion) started in --stdio mode.")
+            Log.app.info("\(AppInfo.name) v\(AppInfo.fullVersion) started in --stdio mode.")
             StdioProxy.runAsProxyAndExitIfNeeded()
         }
         else {
-            Log.app.msg("\(AppInfo.name) v\(AppInfo.fullVersion) started no arguments.")
+            Log.app.info("\(AppInfo.name) v\(AppInfo.fullVersion) started no arguments.")
         }
 
         // CASE 2: Normal GUI Launch. This code is only reached if --stdio is NOT present.

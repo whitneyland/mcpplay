@@ -73,6 +73,9 @@ actor MCPRequestHandler {
         do {
             let response: JSONRPCResponse
             switch request.method {
+            case "ping":
+                response = JSONRPCResponse(result: .object(["status": .string("pong"), "timestamp": .string(ISO8601DateFormatter().string(from: Date()))]), id: request.id)
+            
             case "initialize":
                 let capabilities = MCPCapabilities(tools: ["listChanged": .bool(true)], prompts: ["listChanged": .bool(true)], resources: ["listChanged": .bool(true)])
                 let initResult = MCPInitializeResult(protocolVersion: "2024-11-05", capabilities: capabilities, serverInfo: MCPServerInfo(name: "RiffMCP", version: "1.1.0"))
@@ -216,7 +219,7 @@ actor MCPRequestHandler {
         try pngData.write(to: pngURL)
         
         let resourceURI = "http://\(host):\(port)/images/\(pngFileName)"
-        Log.io.info("🖼️ Image resource URI: \(resourceURI, privacy: .public)")
+        Log.io.info("🖼️ Image resource URI: \(resourceURI)")
 
         let base64PNG = pngData.base64EncodedString()
         let imageItem = MCPContentItem.image(data: base64PNG, mimeType: "image/png")
@@ -294,7 +297,7 @@ actor MCPRequestHandler {
             // Clean up old PNG files on startup
             cleanupOldPNGFiles()
         } catch {
-            Log.io.error("⚠️ Failed to setup PNG management: \(error.localizedDescription, privacy: .public)")
+            Log.io.error("⚠️ Failed to setup PNG management: \(error.localizedDescription)")
         }
     }
     
@@ -311,11 +314,11 @@ actor MCPRequestHandler {
                 let attributes = try fileURL.resourceValues(forKeys: [.creationDateKey])
                 if let creationDate = attributes.creationDate, creationDate < cutoffDate {
                     try fileManager.removeItem(at: fileURL)
-                    Log.io.info("🗑️ Cleaned up old PNG file: \(fileURL.lastPathComponent, privacy: .public)")
+                    Log.io.info("🗑️ Cleaned up old PNG file: \(fileURL.lastPathComponent)")
                 }
             }
         } catch {
-            Log.io.error("⚠️ Failed to cleanup old PNG files: \(error.localizedDescription, privacy: .public)")
+            Log.io.error("⚠️ Failed to cleanup old PNG files: \(error.localizedDescription)")
         }
     }
     
@@ -365,7 +368,7 @@ actor MCPRequestHandler {
                     await ActivityLog.shared.updateLastEventWithResponse(responseString)
                 }
             } catch {
-                Log.server.error("Failed to encode response for logging: \(error.localizedDescription, privacy: .public)")
+                Log.server.error("Failed to encode response for logging: \(error.localizedDescription)")
             }
         }
     }

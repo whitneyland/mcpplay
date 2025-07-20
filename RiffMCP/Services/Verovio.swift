@@ -60,7 +60,7 @@ class Verovio {
             }
         } catch {
             // In case of a regex error, return the original string.
-            Log.io.error("SVG Post-processing Error: Invalid Regex. \(error.localizedDescription, privacy: .public)")
+            Log.io.error("SVG Post-processing Error: Invalid Regex. \(error.localizedDescription)")
             return svgString
         }
 

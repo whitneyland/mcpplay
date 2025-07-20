@@ -199,7 +199,7 @@ class AudioManager: AudioManaging, ObservableObject {
                 try trackSampler.loadSoundBankInstrument(at: soundFontURL, program: program, bankMSB: 0x79, bankLSB: 0)
                 // Log.audio.info("🎵 Track \(index, privacy: .public): Successfully loaded soundbank")
             } catch {
-                Log.audio.error("🎵 Track \(index, privacy: .public): Failed to load instrument \(track.instrument, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                Log.audio.error("🎵 Track \(index): Failed to load instrument \(track.instrument): \(error.localizedDescription)")
                 throw AudioError.instrumentLoadFailed(track.instrument, error.localizedDescription)
             }
             trackSamplers.append(trackSampler)
@@ -212,7 +212,7 @@ class AudioManager: AudioManaging, ObservableObject {
             
             // Connect the sequencer track to our sampler
             sequencerTrack.destinationAudioUnit = trackSampler
-            Log.audio.info("🎵 Track \(trackIndex, privacy: .public): Connected to \(track.instrument, privacy: .public) sampler, \(track.events.count, privacy: .public) events")
+            Log.audio.info("🎵 Track \(trackIndex): Connected to \(track.instrument) sampler, \(track.events.count) events")
             
             var eventCount = 0
             for event in track.events {
@@ -238,7 +238,7 @@ class AudioManager: AudioManaging, ObservableObject {
                     eventCount += 1
                 }
             }
-            Log.audio.info("🎵 Track \(trackIndex, privacy: .public): Added \(eventCount, privacy: .public) MIDI events, length \(String(format: "%.3f", sequencerTrack.lengthInBeats), privacy: .public) beats")
+            Log.audio.info("🎵 Track \(trackIndex): Added \(eventCount) MIDI events, length \(String(format: "%.3f", sequencerTrack.lengthInBeats)) beats")
         }
         
         // Prepare and start the sequencer
@@ -251,7 +251,7 @@ class AudioManager: AudioManaging, ObservableObject {
             try sequencer.start()
             Log.audio.info("🎶 AVAudioSequencer started")
         } catch {
-            Log.audio.error("🎵 Sequencer: Failed to start - \(error.localizedDescription, privacy: .public)")
+            Log.audio.error("🎵 Sequencer: Failed to start - \(error.localizedDescription)")
             throw AudioError.sequencerStartFailed(error.localizedDescription)
         }
     }
