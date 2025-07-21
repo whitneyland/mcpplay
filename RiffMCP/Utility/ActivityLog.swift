@@ -18,6 +18,7 @@ struct ActivityEvent: Identifiable, Hashable {
     let requestData: String?
     let sequenceData: String?
     let responseData: String?
+    let clientInfo: String?
     
     enum TransportType: String, CaseIterable {
         case http = "HTTP"
@@ -89,9 +90,9 @@ class ActivityLog: ObservableObject {
 
     private init() {} // Private initializer for singleton
 
-    func add(message: String, type: ActivityEvent.EventType, transport: ActivityEvent.TransportType, requestData: String? = nil, sequenceData: String? = nil, responseData: String? = nil) {
+    func add(message: String, type: ActivityEvent.EventType, transport: ActivityEvent.TransportType, requestData: String? = nil, sequenceData: String? = nil, responseData: String? = nil, clientInfo: String? = nil) {
         // Prepend new events to the top of the list
-        events.insert(ActivityEvent(timestamp: Date(), message: message, type: type, transport: transport, requestData: requestData, sequenceData: sequenceData, responseData: responseData), at: 0)
+        events.insert(ActivityEvent(timestamp: Date(), message: message, type: type, transport: transport, requestData: requestData, sequenceData: sequenceData, responseData: responseData, clientInfo: clientInfo), at: 0)
 
         // Keep the list from growing indefinitely
         if events.count > 100 {
@@ -114,7 +115,8 @@ class ActivityLog: ObservableObject {
             transport: lastEvent.transport,
             requestData: lastEvent.requestData,
             sequenceData: lastEvent.sequenceData,
-            responseData: responseData
+            responseData: responseData,
+            clientInfo: lastEvent.clientInfo
         )
     }
     

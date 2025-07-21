@@ -176,6 +176,14 @@ struct ServerActivityView: View {
                     .font(.callout)
                     .foregroundColor(.white.opacity(0.9))
                     .lineLimit(1)
+
+                // Show client info if available
+                if let clientInfo = event.clientInfo {
+                    Text(clientInfo)
+                        .font(.callout)
+                        .foregroundColor(.yellow.opacity(0.9))
+                        .lineLimit(1)
+                }
             }
             .listRowBackground(Color.clear)
             .padding(.vertical, 2)

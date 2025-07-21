@@ -28,6 +28,7 @@ actor MCPRequestHandler {
     private var cachedTools: [MCPTool]?
     private var cachedPrompts: [MCPPrompt]?
     private let scoreStore = ScoreStore()
+    private var clientInitialized = false
 
     // MARK: - Initialization
 
@@ -78,7 +79,10 @@ actor MCPRequestHandler {
             
             case "initialize":
                 let capabilities = MCPCapabilities(tools: ["listChanged": .bool(true)], prompts: ["listChanged": .bool(true)], resources: ["listChanged": .bool(true)])
-                let initResult = MCPInitializeResult(protocolVersion: "2024-11-05", capabilities: capabilities, serverInfo: MCPServerInfo(name: "RiffMCP", version: "1.1.0"))
+                let initResult = MCPInitializeResult(
+                        protocolVersion: "2025-06-18",
+                        capabilities: capabilities,
+                        serverInfo: MCPServerInfo(name: AppInfo.serverName, version: AppInfo.version))
                 response = JSONRPCResponse(result: try encodeToJSONValue(initResult), id: request.id)
             
             case "notifications/initialized":
@@ -350,12 +354,25 @@ actor MCPRequestHandler {
             message = "STDIO \(request.method)\(toolNameDetail) (\(bodySize) bytes)"
         }
 
+        // Extract client info for initialize requests
+        var clientInfo: String?
+        if request.method == "initialize",
+           case let .object(params)? = request.params,
+           case let .object(client)? = params["clientInfo"],
+           case let .string(name)? = client["name"] {
+
+            let version: String
+            if case let .string(v)? = client["version"] { version = v } else { version = "unknown" }
+            clientInfo = "\(name) v\(version)"
+        }
+
         Task { @MainActor in
-            await ActivityLog.shared.add(
+            ActivityLog.shared.add(
                 message: message,
                 type: eventType,
                 transport: transport,
-                requestData: body
+                requestData: body,
+                clientInfo: clientInfo
             )
         }
     }

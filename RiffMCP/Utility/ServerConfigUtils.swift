@@ -7,6 +7,7 @@
 
 import Foundation
 import Darwin
+import AppKit
 
 /// Shared utilities for server configuration and process management
 enum ServerConfigUtils {
@@ -26,9 +27,15 @@ enum ServerConfigUtils {
     static func readServerConfig() -> ServerConfig? {
         let configPath = getConfigFilePath()
 
-        guard FileManager.default.fileExists(atPath: configPath.path) else { return nil }
+        guard FileManager.default.fileExists(atPath: configPath.path) else {
+            Log.server.info("❌ ServerConfig: not found - \(configPath.path)")
+            return nil
+        }
 
-        guard let data = try? Data(contentsOf: configPath) else { return nil }
+        guard let data = try? Data(contentsOf: configPath) else {
+            Log.server.info("❌ ServerConfig: could not read - \(configPath.path)")
+            return nil
+        }
 
         // Best-effort JSON parse (don’t crash on bad types)
         guard
@@ -39,7 +46,7 @@ enum ServerConfigUtils {
             let status = json["status"] as? String,
             let instance = json["instance"] as? String
         else {
-            Log.server.error("⚠️  ServerConfig: missing/invalid keys – deleting")
+            Log.server.error("❌ ServerConfig: missing/invalid keys – deleting - \(configPath.path)")
             try? FileManager.default.removeItem(at: configPath)
             return nil
         }
@@ -68,12 +75,12 @@ enum ServerConfigUtils {
     /// - Parameter pid: The process ID to check
     /// - Returns: true if the process is running, false otherwise
     static func isProcessRunning(pid: pid_t) -> Bool {
-        //  result == 0:
-        //      The process exists and you have permission to signal it.
-        //  result == -1:
-        //      An error occurred. errno will be set to indicate the reason:
-        //          ESRCH (3) : No such process exists with the given pid.
-        //          EPERM (1) : The process exists, but you don't have permission to signal it (e.g., it's owned by another user).
+        // Use NSRunningApplication for more reliable process detection
+        if let runningApp = NSRunningApplication(processIdentifier: pid) {
+            return !runningApp.isTerminated
+        }
+        
+        // Fallback to kill(pid, 0) for non-application processes
         let result = kill(pid, 0)
         if result == 0 {
             return true

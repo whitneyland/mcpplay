@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# Get the latest Xcode build path
+BUILD_PATH=$(xcodebuild -project RiffMCP.xcodeproj -scheme RiffMCP -configuration Debug -showBuildSettings 2>/dev/null | grep "BUILT_PRODUCTS_DIR" | head -1 | sed 's/.*= //')/RiffMCP.app
+
+if [ ! -d "$BUILD_PATH" ]; then
+    echo "Error: Could not find RiffMCP.app build at $BUILD_PATH"
+    exit 1
+fi
+
+echo "Using build: $BUILD_PATH"
+
+# MCP initialization sequence
+echo "Simulating MCP client initialization sequence..."
+echo ""
+
+# Step 1: Initialize request
+INIT_REQUEST='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{"roots":{"listChanged":true},"sampling":{}},"clientInfo":{"name":"test-client","version":"1.0.0"}}}'
+INIT_LENGTH=${#INIT_REQUEST}
+
+# Step 2: Initialized notification  
+INIT_NOTIFICATION='{"jsonrpc":"2.0","method":"notifications/initialized"}'
+NOTIF_LENGTH=${#INIT_NOTIFICATION}
+
+# Support both formats - default to newline-delimited (MCP 2025-06-18)
+if [ "$MCP_FORMAT" = "legacy" ]; then
+    # Create Content-Length test file (legacy format)
+    INIT_FILE="/tmp/mcp_init_test.txt"
+    printf "Content-Length: %d\r\n\r\n%s" "$INIT_LENGTH" "$INIT_REQUEST" > "$INIT_FILE"
+    printf "Content-Length: %d\r\n\r\n%s" "$NOTIF_LENGTH" "$INIT_NOTIFICATION" >> "$INIT_FILE"
+    echo "Using Content-Length format (legacy - use MCP_FORMAT=legacy)"
+else
+    # Create newline-delimited test file (default MCP format)
+    INIT_FILE="/tmp/mcp_init_newline_test.txt"
+    printf "%s\n%s\n" "$INIT_REQUEST" "$INIT_NOTIFICATION" > "$INIT_FILE"
+    echo "Using newline-delimited format (MCP 2025-06-18 default)"
+fi
+
+echo "Step 1: Sending initialize request"
+echo "Request: $INIT_REQUEST"
+echo "Length: $INIT_LENGTH bytes"
+echo ""
+
+echo "Step 2: Sending initialized notification"  
+echo "Notification: $INIT_NOTIFICATION"
+echo "Length: $NOTIF_LENGTH bytes"
+echo ""
+
+echo "Total message size: $((INIT_LENGTH + NOTIF_LENGTH + 44)) bytes (including headers)"
+echo ""
+
+# Run the test
+echo "=== MCP Initialization Test ==="
+"$BUILD_PATH/Contents/MacOS/RiffMCP" --stdio --log-stdio < "$INIT_FILE"

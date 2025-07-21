@@ -11,8 +11,8 @@ import os
 // Evaluate once at startup
 enum LogConfig {
     static let mirrorToStderr: Bool = {
-        // Command line flag --log-stdio
-        if CommandLine.arguments.contains("--log-stdio") { return true }
+        if CommandLine.arguments.contains("--stdio") { return true }
+        // if CommandLine.arguments.contains("--log-stdio") { return true }
         // OR environment variable
         if ProcessInfo.processInfo.environment["RIFF_LOG_STDIO"] == "1" { return true }
         return false

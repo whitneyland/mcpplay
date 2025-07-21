@@ -17,35 +17,38 @@ struct RiffMCPApp: App {
     private static var shouldLaunchUI: Bool = true
 
     init() {
+        //
         // CASE 1: Launched with --stdio. This path takes over the process and never returns.
+        //
         if CommandLine.arguments.contains("--stdio") {
+            Log.app.info("\(AppInfo.name) v\(AppInfo.fullVersion) started in --stdio mode.")
+
             // The compiler knows this function is `-> Never`, meaning it will not
             // return. The process will be terminated within this call.
             // The SwiftUI App body will never be initialized.
-            Log.app.info("\(AppInfo.name) v\(AppInfo.fullVersion) started in --stdio mode.")
             StdioProxy.runAsProxyAndExitIfNeeded()
         }
-        else {
-            Log.app.info("\(AppInfo.name) v\(AppInfo.fullVersion) started no arguments.")
-        }
-
+        //
         // CASE 2: Normal GUI Launch. This code is only reached if --stdio is NOT present.
         // Check for an existing instance of the GUI app.
+        //
+        Log.app.info("\(AppInfo.name) v\(AppInfo.fullVersion) started no arguments.")
         if let existingInstance = checkForExistingGUIInstance() {
-            Log.app.info("🔍 Found existing GUI instance: port \(existingInstance.port), pid \(existingInstance.pid)")
+            Log.app.info("🔍 GUI: Found existing GUI instance: port \(existingInstance.port), pid \(existingInstance.pid)")
 
             // Bring existing window to front.
             bringExistingWindowToFront()
 
             // This new, redundant instance should not launch its UI and should terminate.
             RiffMCPApp.shouldLaunchUI = false
-            Log.app.info("🏁 Terminating duplicate instance.")
-            NSApp.terminate(nil) // Gracefully terminates this redundant process.
-
+            Log.app.info("🏁 GUI: Terminating duplicate GUI instance.")
+            DispatchQueue.main.async {      // Wait until after init when NSApp is not nil
+                NSApp.terminate(nil)        // Use this instead of exit() to gracefully terminate this redundant process.
+            }
         } else {
             // No existing GUI instance was found. Proceed with a normal launch.
             // `shouldLaunchUI` remains its default `true` value.
-            Log.app.info("✅ No existing GUI instance found - proceeding with normal launch")
+            Log.app.info("✅ GUI: No existing GUI instance, proceeding with normal launch")
         }
     }
 

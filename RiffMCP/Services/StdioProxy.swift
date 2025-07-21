@@ -7,6 +7,7 @@
 
 import Foundation
 import Darwin
+import AppKit
 
 /// A lightweight bridge to forward stdio JSON-RPC calls to a running HTTPServer instance.
 ///
@@ -15,12 +16,14 @@ import Darwin
 struct StdioProxy {
     private let port: UInt16
     private let session: URLSession
-    private let stdinFd: Int32
+    private let stdin: FileHandle
     private let stdout: FileHandle
+    private var clientFormat: StdioIO.ProtocolFormat = .newlineDelimited
 
     init(port: UInt16) {
         self.port = port
-        self.stdinFd = STDIN_FILENO
+        // Use standard FileHandle.standardInput 
+        self.stdin = .standardInput
         self.stdout = .standardOutput
         
         // Use a simple URLSession for making the local HTTP requests
@@ -64,35 +67,62 @@ struct StdioProxy {
         fatalError("StdioProxy.runAsProxyAndExitIfNeeded reached an unreachable state. Terminating.")
     }
 
-    /// Runs the proxy loop, blocking the current thread until stdin is closed.
-    func runBlocking() throws {
-        Log.server.info("🔄 Starting stdio proxy loop...")
-        
-        readLoop: while true {
-            let contentLength: Int
-            do {
-                // Returns nil on clean EOF before any header bytes
-                Log.server.info("readHeader")
-                guard let len = try StdioIO.readHeader(fd: stdinFd) else {
-                    Log.server.info("📤 EOF before header (clean disconnect); proxy shutting down.")
-                    break readLoop
-                }
-                contentLength = len
-            } catch {
-                Log.server.error("Header read failed: \(error)")
-                throw error
-            }
+    mutating func runBlocking() throws {
+        Log.server.info("🔄 Starting stdio proxy loop…")
 
+        var sawFirstRequest = false
+        let idle: TimeInterval = 0.05
+
+        while true {
             do {
-                Log.server.info("readBody \(contentLength)")
-                let jsonData = try StdioIO.readBody(fd: stdinFd, length: contentLength)
-                try forwardRequestSync(data: jsonData)
-            } catch {
-                Log.server.error("Body read failed (expected \(contentLength) bytes): \(error)")
-                throw error
+                // ── header ──
+                if let hdr = try StdioIO.readHeader(from: stdin) {
+                    clientFormat = hdr.format                        // Capture client format
+                    // ── body ──
+                    let json = try StdioIO.readBody(from: stdin, length: hdr.length)
+                    sawFirstRequest = true
+                    try forwardRequestSync(data: json)
+                    continue
+                }
+
+                // clean EOF (nil) before first request → just wait
+                if sawFirstRequest { break }
+                Thread.sleep(forTimeInterval: idle)
+
+            } catch StdioError.unexpectedEndOfStream,        // <-- here
+                    ProxyError.unexpectedEndOfStream {       // fd variant
+                if sawFirstRequest { break }                 // normal shutdown
+                Thread.sleep(forTimeInterval: idle)          // still waiting
             }
         }
     }
+
+    /// Runs the proxy loop, blocking the current thread until stdin is closed.
+//    func runBlocking() throws {
+//        Log.server.info("🔄 Starting stdio proxy loop...")
+//        
+//        readLoop: while true {
+//            let contentLength: Int
+//            do {
+//                // Returns nil on clean EOF before any header bytes
+//                guard let len = try StdioIO.readHeader(from: stdin) else {
+//                    break readLoop
+//                }
+//                contentLength = len
+//            } catch {
+//                Log.server.error("Header read failed: \(error)")
+//                throw error
+//            }
+//
+//            do {
+//                let jsonData = try StdioIO.readBody(from: stdin, length: contentLength)
+//                try forwardRequestSync(data: jsonData)
+//            } catch {
+//                Log.server.error("Body read failed (expected \(contentLength) bytes): \(error)")
+//                throw error
+//            }
+//        }
+//    }
     
     // Forward the request via HTTP synchronously
     private func forwardRequestSync(data: Data) throws {
@@ -104,6 +134,13 @@ struct StdioProxy {
         request.setValue("close", forHTTPHeaderField: "Connection")
         
         Log.server.info("🔄 Proxy sending: \(data.count) bytes")
+        Log.server.info("🔄 Proxy request URL: \(url)")
+        Log.server.info("🔄 Proxy request method: \(request.httpMethod ?? "nil")")
+        Log.server.info("🔄 Proxy request headers: \(request.allHTTPHeaderFields ?? [:])")
+        Log.server.info("🔄 Proxy request body size: \(request.httpBody?.count ?? 0)")
+        if let bodyString = request.httpBody.flatMap({ String(data: $0, encoding: .utf8) }) {
+            Log.server.info("🔄 Proxy request body content: '\(bodyString)'")
+        }
 
         let semaphore = DispatchSemaphore(value: 0)
         var result: Result<Data, Error>?
@@ -170,7 +207,7 @@ struct StdioProxy {
     
     // Writes a full JSON-RPC response to stdout
     private func write(data: Data) throws {
-        try StdioIO.write(data, to: stdout)
+        try StdioIO.write(data, to: stdout, using: clientFormat)
     }
     
     /// Launches the GUI app and waits for it to start, then becomes a proxy.
@@ -219,23 +256,23 @@ struct StdioProxy {
             try? FileManager.default.removeItem(at: lockPath)
         }
         
-        // Get the current app bundle path and construct path to executable
-        let appPath = Bundle.main.bundlePath
-        let executablePath = URL(fileURLWithPath: appPath).appendingPathComponent("Contents/MacOS/RiffMCP")
+        // Get the current app bundle path
+        let bundleURL = URL(fileURLWithPath: Bundle.main.bundlePath)
         
-        Log.server.info("🚀 StdioProxy: Launching GUI app at: \(executablePath.path)")
+        Log.server.info("🚀 StdioProxy: Launching GUI app via LaunchServices at: \(bundleURL.path)")
         
-        // Launch the GUI app directly (avoiding /usr/bin/open to prevent Apple Events issues)
-        let process = Process()
-        process.executableURL = executablePath
-        process.arguments = []
-        
+        // Launch via LaunchServices to avoid sandbox termination
+        let runningApp: NSRunningApplication
         do {
-            try process.run()
+            // Use the synchronous launchApplication method for compatibility
+            runningApp = try NSWorkspace.shared.launchApplication(at: bundleURL, options: [.newInstance], configuration: [:])
+            let childPID = runningApp.processIdentifier
+            Log.server.info("🚀 Launched GUI via LaunchServices — pid \(childPID)")
         } catch {
-            throw ProxyError.launchError("Failed to launch GUI app: \(error.localizedDescription)")
+            throw ProxyError.launchError("Failed to launch GUI app via LaunchServices: \(error.localizedDescription)")
         }
-        
+
+
         // Enter discovery loop with 15-second timeout
         let startTime = Date()
         let timeout: TimeInterval = 15.0
@@ -249,7 +286,11 @@ struct StdioProxy {
                 Log.server.info("✅ StdioProxy: Found config during discovery - port: \(config.port), pid: \(config.pid)")
                 startProxyAndExit(port: config.port)
             }
-            
+
+            if runningApp.isTerminated {
+                Log.server.error("❌ StdioProxy: GUI process \(runningApp.processIdentifier) terminated unexpectedly")
+                exit(1)
+            }
             // Wait before checking again
             Thread.sleep(forTimeInterval: checkInterval)
         }
@@ -267,7 +308,6 @@ struct StdioProxy {
 
         // 1. read file
         guard let cfg = ServerConfigUtils.readServerConfig() else {
-            Log.server.info("❌ StdioProxy: no server.json found")
             return nil
         }
         Log.server.info("📄 StdioProxy: config says port \(cfg.port), pid \(cfg.pid)")
@@ -289,10 +329,10 @@ struct StdioProxy {
     private static func startProxyAndExit(port: UInt16) -> Never {
         Log.server.info("🔄 StdioProxy: Starting proxy to forward to port \(port)")
         
-        let proxy = StdioProxy(port: port)
+        var proxy = StdioProxy(port: port)        // was let
         
         do {
-            try proxy.runBlocking()
+            try proxy.runBlocking()                   // now mutating
         } catch {
             Log.server.error("Proxy error, exit (1): \(error.localizedDescription)")
             exit(1)
@@ -300,7 +340,6 @@ struct StdioProxy {
         
         // After the stdin stream from the LLM client closes, the loop will end.
         // We must exit the proxy process cleanly.
-        Log.server.error("Proxy exit (0)")
         exit(0)
     }
     

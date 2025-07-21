@@ -76,7 +76,7 @@ class AudioManager: AudioManaging, ObservableObject {
         sampler = AVAudioUnitSampler()
         sequencer = AVAudioSequencer(audioEngine: audioEngine)
         setupAudioEngine()
-        Log.audio.info("AudioManager init completed")
+        Log.audio.info("🎶 AudioManager initialized")
     }
 
     private func setupAudioEngine() {
