@@ -182,7 +182,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
                     }
                     
                     if let data = data, !data.isEmpty {
-                        Log.server.info("🌐 Received data chunk: \(data.count) bytes")
+                        // Log.server.info("🌐 Received data chunk: \(data.count) bytes")
                         connectionState.appendData(data)
                         
                         // Try to process the request if we have enough data
@@ -209,8 +209,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
             // Try to parse headers
             if let headers = connectionState.tryParseHeaders() {
                 let contentLength = Int(headers["content-length"] ?? "0") ?? 0
-                Log.server.info("🌐 Headers parsed, Content-Length: \(contentLength)")
-                
+
                 if contentLength == 0 {
                     // No body expected, process immediately
                     connectionState.state = .complete
@@ -233,7 +232,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         case .complete:
             // Process the complete request
             if let request = connectionState.extractCompleteRequest() {
-                Log.server.info("🌐 Processing complete HTTP request")
+                // Log.server.info("🌐 Processing complete HTTP request")
                 await processCompleteHTTPRequest(
                     requestLine: request.requestLine,
                     headers: request.headers,
@@ -284,8 +283,6 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
     }
 
     private func processCompleteHTTPRequest(requestLine: String, headers: [String: String], body: String, connection: NWConnection) async {
-        let requestStartTime = Date()
-        Log.server.info("🌐 Processing complete HTTP request")
 
         let components = requestLine.components(separatedBy: " ")
         guard components.count >= 3 else {
@@ -297,15 +294,25 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         let (method, path) = (components[0], components[1])
         let bodySize = body.data(using: .utf8)?.count ?? 0
 
-        Log.server.info("🔄 HTTP parsed - method: '\(method)', path: '\(path)', body size: \(bodySize) bytes")
-        Log.server.info("🔄 Body content: '\(body)'")
-        Log.server.latency("🚦 Request routing - \(method) \(path)", since: requestStartTime)
+        Log.server.info("🌐 Processing HTTP request - method: '\(method)', path: '\(path)', body size: \(bodySize) bytes")
 
         switch (method, path) {
-        case ("POST", "/"): await handleJSONRPC(body: body, connection: connection, bodySize: bodySize)
-        case ("GET", "/health"): await sendHTTPResponse(connection: connection, statusCode: 200, headers: ["Content-Type": "application/json"], body: #"{"status":"healthy","port":\#(resolvedPort ?? requestedPort)}"#)
-        case ("GET", let p) where p.starts(with: "/images/"): await handleImageRequest(path: p, connection: connection)
-        default: await sendHTTPResponse(connection: connection, statusCode: 404, body: "Not Found")
+        case ("POST", "/"):
+            await handleJSONRPC(body: body, connection: connection, bodySize: bodySize)
+
+        case ("GET", "/health"):
+            await sendHTTPResponse(
+                connection: connection,
+                statusCode: 200,
+                headers: ["Content-Type": "application/json"],
+                body: #"{"status":"healthy","port":\#(resolvedPort ?? requestedPort)}"#
+            )
+
+        case ("GET", let p) where p.hasPrefix("/images/"):
+            await handleImageRequest(path: p, connection: connection)
+
+        default:
+            await sendHTTPResponse(connection: connection, statusCode: 404, body: "Not Found")
         }
     }
 
@@ -334,10 +341,6 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         Log.server.info("📄 JSON-RPC processing started")
 
         do {
-            Log.server.info("📄 Raw body string: '\(body)'")
-            Log.server.info("📄 Body length: \(body.count) characters")
-            Log.server.info("📄 Body bytes: \(Array(body.utf8))")
-            
             // Check for empty body before attempting any parsing
             guard !body.isEmpty else {
                 Log.server.error("📄 Request body is empty")
@@ -348,39 +351,36 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
                 Log.server.error("📄 Failed to convert body to UTF-8 data")
                 throw JSONRPCError.parseError
             }
-            Log.server.info("📄 Body data: \(bodyData.count) bytes")
-            Log.server.info("📄 Body data hex: \(bodyData.map { String(format: "%02x", $0) }.joined(separator: " "))")
-            
+
             // Try to parse as JSON first to see what fails
             do {
                 let jsonObject = try JSONSerialization.jsonObject(with: bodyData, options: [])
-                Log.server.info("📄 JSON parsing successful, object: \(jsonObject)")
+                // Log.server.info("📄 JSON parsing successful, object: \(jsonObject)")
             } catch {
                 Log.server.error("📄 JSON parsing failed: \(error)")
                 throw JSONRPCError.parseError
             }
             
             let request = try JSONDecoder().decode(JSONRPCRequest.self, from: bodyData)
-            Log.server.info("📄 Successfully decoded JSON-RPC request: \(request.method)")
+
             guard request.jsonrpc == "2.0" else { throw JSONRPCError.invalidRequest }
 
-            Log.server.latency("🔍 JSON-RPC parsed - method: \(request.method)", since: jsonRpcStartTime)
+            Log.server.info("📄 Successfully decoded JSON-RPC request: \(request.method)")
 
             // Delegate to the central handler with HTTP transport type
-            let response = await mcpRequestHandler.handle(
+            if let response = await mcpRequestHandler.handle(
                 request: request,
                 transport: .http,
                 requestBody: body,
                 bodySize: bodySize
-            )
-            
-            // The `initialized` notification is special; it's one-way and requires an immediate empty HTTP response.
-            if request.method == "notifications/initialized" {
-                await sendHTTPResponse(connection: connection, statusCode: 200, body: "")
-                return
+            ) {
+                // It was a regular request, send the JSON-RPC response
+                await sendJSONRPCResponse(response, connection: connection)
+            } else {
+                // It was a notification (handle returned nil)
+                // Send a simple HTTP 204 No Content and close the connection
+                await sendHTTPResponse(connection: connection, statusCode: 204, body: "")
             }
-
-            await sendJSONRPCResponse(response, connection: connection)
 
         } catch let error as JSONRPCError {
             let errorResponse = JSONRPCResponse(error: error, id: nil)

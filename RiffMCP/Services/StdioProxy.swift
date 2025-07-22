@@ -42,7 +42,6 @@ struct StdioProxy {
     ///
     /// - Warning: This function always terminates the process via exit()
     static func runAsProxyAndExitIfNeeded() -> Never {
-        Log.server.info("🔍 StdioProxy: Checking for running server...")
 
         // Check for existing server first
         if let config = findRunningServer() {
@@ -59,16 +58,16 @@ struct StdioProxy {
             try launchGUIAppAndWait()
         } catch {
             // If launchGUIAppAndWait throws, we log the error and exit.
-            Log.server.error("❌ Failed to launch GUI app: \(error.localizedDescription)")
+            Log.server.error("❌ StdioProxy: Failed to launch GUI app: \(error.localizedDescription)")
             exit(1) // This call is `-> Never`
         }
 
         // The logic of launchGUIAppAndWait dictates that we should never reach this point.
-        fatalError("StdioProxy.runAsProxyAndExitIfNeeded reached an unreachable state. Terminating.")
+        fatalError("StdioProxy: runAsProxyAndExitIfNeeded reached an unreachable state. Terminating.")
     }
 
     mutating func runBlocking() throws {
-        Log.server.info("🔄 Starting stdio proxy loop…")
+        // Log.server.info("🔄 StdioProxy: Starting proxy loop…")
 
         var sawFirstRequest = false
         let idle: TimeInterval = 0.05
@@ -97,33 +96,6 @@ struct StdioProxy {
         }
     }
 
-    /// Runs the proxy loop, blocking the current thread until stdin is closed.
-//    func runBlocking() throws {
-//        Log.server.info("🔄 Starting stdio proxy loop...")
-//        
-//        readLoop: while true {
-//            let contentLength: Int
-//            do {
-//                // Returns nil on clean EOF before any header bytes
-//                guard let len = try StdioIO.readHeader(from: stdin) else {
-//                    break readLoop
-//                }
-//                contentLength = len
-//            } catch {
-//                Log.server.error("Header read failed: \(error)")
-//                throw error
-//            }
-//
-//            do {
-//                let jsonData = try StdioIO.readBody(from: stdin, length: contentLength)
-//                try forwardRequestSync(data: jsonData)
-//            } catch {
-//                Log.server.error("Body read failed (expected \(contentLength) bytes): \(error)")
-//                throw error
-//            }
-//        }
-//    }
-    
     // Forward the request via HTTP synchronously
     private func forwardRequestSync(data: Data) throws {
         let url = URL(string: "http://127.0.0.1:\(port)/")!
@@ -132,15 +104,13 @@ struct StdioProxy {
         request.httpBody = data
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("close", forHTTPHeaderField: "Connection")
-        
-        Log.server.info("🔄 Proxy sending: \(data.count) bytes")
-        Log.server.info("🔄 Proxy request URL: \(url)")
-        Log.server.info("🔄 Proxy request method: \(request.httpMethod ?? "nil")")
-        Log.server.info("🔄 Proxy request headers: \(request.allHTTPHeaderFields ?? [:])")
-        Log.server.info("🔄 Proxy request body size: \(request.httpBody?.count ?? 0)")
-        if let bodyString = request.httpBody.flatMap({ String(data: $0, encoding: .utf8) }) {
-            Log.server.info("🔄 Proxy request body content: '\(bodyString)'")
-        }
+
+        Log.server.info("🔄 Proxy sending POST to URL: \(url), \(data.count) bytes")
+//        Log.server.info("🔄 Proxy request headers: \(request.allHTTPHeaderFields ?? [:])")
+//        Log.server.info("🔄 Proxy request body size: \(request.httpBody?.count ?? 0)")
+//        if let bodyString = request.httpBody.flatMap({ String(data: $0, encoding: .utf8) }) {
+//            Log.server.info("🔄 Proxy request body content: '\(bodyString)'")
+//        }
 
         let semaphore = DispatchSemaphore(value: 0)
         var result: Result<Data, Error>?
@@ -186,7 +156,7 @@ struct StdioProxy {
         case .success(let responseData):
             try write(data: responseData)
         case .failure(let error):
-            Log.server.error("Proxy forwarding error: \(error.localizedDescription)")
+            Log.server.error("StdioProxy: forwarding error: \(error.localizedDescription)")
             // Send a JSON-RPC error response back to the client with correct ID
             let requestId = extractRequestId(from: data)
             
@@ -276,8 +246,8 @@ struct StdioProxy {
         // Enter discovery loop with 15-second timeout
         let startTime = Date()
         let timeout: TimeInterval = 15.0
-        let checkInterval: TimeInterval = 0.2
-        
+        let checkInterval: TimeInterval = 0.25
+
         Log.server.info("🔍 StdioProxy: Entering discovery loop (timeout: \(timeout)s)")
         
         while Date().timeIntervalSince(startTime) < timeout {
@@ -310,7 +280,7 @@ struct StdioProxy {
         guard let cfg = ServerConfigUtils.readServerConfig() else {
             return nil
         }
-        Log.server.info("📄 StdioProxy: config says port \(cfg.port), pid \(cfg.pid)")
+        // Log.server.info("📄 StdioProxy: config says port \(cfg.port), pid \(cfg.pid)")
 
         // 2. verify PID alive
         guard ServerConfigUtils.isProcessRunning(pid: cfg.pid) else {
@@ -334,7 +304,7 @@ struct StdioProxy {
         do {
             try proxy.runBlocking()                   // now mutating
         } catch {
-            Log.server.error("Proxy error, exit (1): \(error.localizedDescription)")
+            Log.server.error("StdioProxy: exit (1): \(error.localizedDescription)")
             exit(1)
         }
         

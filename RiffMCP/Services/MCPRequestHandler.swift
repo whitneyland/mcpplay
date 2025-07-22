@@ -62,13 +62,27 @@ actor MCPRequestHandler {
 
     /// The primary entry point for all incoming JSON-RPC requests.
     /// This method routes the request to the appropriate handler based on its method.
-    func handle(request: JSONRPCRequest, transport: ActivityEvent.TransportType, requestBody: String? = nil, bodySize: Int? = nil) async -> JSONRPCResponse {
-        let startTime = Date()
-        Log.server.info("⚡️ Actor handling method: \(request.method)")
-        
+    /// Returns nil for notifications that should not receive a JSON-RPC response.
+    func handle(request: JSONRPCRequest, transport: ActivityEvent.TransportType, requestBody: String? = nil, bodySize: Int? = nil) async -> JSONRPCResponse? {
+
+        // Log.server.info("⚡️ Handling method: \(request.method)")
+
         // Log the activity
         if let requestBody = requestBody {
             logActivity(for: request, transport: transport, body: requestBody, bodySize: bodySize ?? 0)
+        }
+
+        // Handle notifications (requests without an id)
+        if request.id == nil {
+            switch request.method {
+            case "notifications/initialized":
+                self.clientInitialized = true
+                Log.server.info("🤝 Client initialized.")
+            default:
+                Log.server.info("📄 Received notification: \(request.method)")
+            }
+            // Return nil to signal that no JSON-RPC response should be sent
+            return nil
         }
 
         do {
@@ -85,9 +99,6 @@ actor MCPRequestHandler {
                         serverInfo: MCPServerInfo(name: AppInfo.serverName, version: AppInfo.version))
                 response = JSONRPCResponse(result: try encodeToJSONValue(initResult), id: request.id)
             
-            case "notifications/initialized":
-                // This is a one-way notification, but we must return a valid, empty success response for the HTTP transport.
-                return JSONRPCResponse(result: .object([:]), id: request.id)
 
             case "tools/list":
                 let result = MCPToolsResult(tools: getToolDefinitions())
@@ -109,8 +120,7 @@ actor MCPRequestHandler {
             default:
                 response = JSONRPCResponse(error: .methodNotFound, id: request.id)
             }
-            Log.server.latency("✅ Actor finished handling \(request.method)", since: startTime)
-            
+
             // Log the response
             logResponse(response)
             
@@ -126,14 +136,12 @@ actor MCPRequestHandler {
     // MARK: - Tool Implementations
 
     private func handleToolCall(_ request: JSONRPCRequest) async throws -> JSONRPCResponse {
-        let toolCallStartTime = Date()
-        Log.server.info("🔧 Tool call processing started")
 
         guard let params = request.params, let toolName = params.objectValue?["name"]?.stringValue else {
             throw JSONRPCError.invalidParams
         }
 
-        Log.server.latency("🎯 Tool identified: \(toolName)", since: toolCallStartTime)
+        Log.server.info("🎯 Tool identified: \(toolName)")
 
         do {
             let result: MCPResult

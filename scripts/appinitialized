@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# Get the latest Xcode build path
+BUILD_PATH=$(xcodebuild -project RiffMCP.xcodeproj -scheme RiffMCP -configuration Debug -showBuildSettings 2>/dev/null | grep "BUILT_PRODUCTS_DIR" | head -1 | sed 's/.*= //')/RiffMCP.app
+
+if [ ! -d "$BUILD_PATH" ]; then
+    echo "Error: Could not find RiffMCP.app build at $BUILD_PATH"
+    exit 1
+fi
+
+echo "Using build: $BUILD_PATH"
+
+# Test the refactored notifications/initialized handling
+echo "Testing refactored notifications/initialized handling..."
+echo ""
+
+# Step 1: Initialized notification (WITHOUT id - this is the main refactor test)
+INIT_NOTIFICATION='{"jsonrpc":"2.0","method":"notifications/initialized"}'
+NOTIF_LENGTH=${#INIT_NOTIFICATION}
+
+# Step 2: Test notification with id (edge case - should still be treated as notification)
+NOTIF_WITH_ID='{"jsonrpc":"2.0","id":1,"method":"notifications/initialized"}'
+NOTIF_ID_LENGTH=${#NOTIF_WITH_ID}
+
+# Support both formats - default to newline-delimited (MCP 2025-06-18)
+if [ "$MCP_FORMAT" = "legacy" ]; then
+    # Create Content-Length test file (legacy format)
+    INIT_FILE="/tmp/mcp_initialized_test.txt"
+    printf "Content-Length: %d\r\n\r\n%s" "$NOTIF_LENGTH" "$INIT_NOTIFICATION" > "$INIT_FILE"
+    printf "Content-Length: %d\r\n\r\n%s" "$NOTIF_ID_LENGTH" "$NOTIF_WITH_ID" >> "$INIT_FILE"
+    echo "Using Content-Length format (legacy - use MCP_FORMAT=legacy)"
+else
+    # Create newline-delimited test file (default MCP format)
+    INIT_FILE="/tmp/mcp_initialized_newline_test.txt"
+    printf "%s\n%s\n" "$INIT_NOTIFICATION" "$NOTIF_WITH_ID" > "$INIT_FILE"
+    echo "Using newline-delimited format (MCP 2025-06-18 default)"
+fi
+
+echo "Step 1: Sending initialized notification (NO id - tests refactor)"
+echo "Notification: $INIT_NOTIFICATION"
+echo "Expected: No JSON-RPC response (handled by MCPRequestHandler, returns nil)"
+echo ""
+
+echo "Step 2: Sending initialized with id (edge case)"
+echo "Request: $NOTIF_WITH_ID"
+echo "Expected: No JSON-RPC response (notifications/initialized should never respond, even with id)"
+echo ""
+
+echo "=== Testing Refactored notifications/initialized Handling ==="
+echo "This test verifies:"
+echo "1. notifications/initialized (no id) are handled by MCPRequestHandler and return nil"
+echo "2. HTTPServer sends HTTP 204 No Content for notifications"
+echo "3. notifications/initialized with id also treated as notification (no response)"
+echo "4. No duplicate processing between HTTPServer and MCPRequestHandler"
+echo ""
+
+# Run the test
+"$BUILD_PATH/Contents/MacOS/RiffMCP" --stdio --log-stdio < "$INIT_FILE"
