@@ -92,7 +92,10 @@ actor MCPRequestHandler {
                 response = JSONRPCResponse(result: .object(["status": .string("pong"), "timestamp": .string(ISO8601DateFormatter().string(from: Date()))]), id: request.id)
             
             case "initialize":
-                let capabilities = MCPCapabilities(tools: ["listChanged": .bool(true)], prompts: ["listChanged": .bool(true)], resources: ["listChanged": .bool(true)])
+                let capabilities = MCPCapabilities(
+                        tools: ["listChanged": .bool(false)],
+                        prompts: ["listChanged": .bool(false)],
+                        resources: ["listChanged": .bool(false)])
                 let initResult = MCPInitializeResult(
                         protocolVersion: "2025-06-18",
                         capabilities: capabilities,

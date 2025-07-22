@@ -21,6 +21,7 @@ private class ConnectionState: @unchecked Sendable {
     var buffer = Data()
     var state: ParsingState = .readingHeaders
     var headersEndIndex: Data.Index?
+    var lastRequestContentLength: Int = 0
     
     func appendData(_ data: Data) {
         buffer.append(data)
@@ -88,6 +89,29 @@ private class ConnectionState: @unchecked Sendable {
         let bodyString = String(data: bodyData.prefix(contentLength), encoding: .utf8) ?? ""
         
         return (requestLine: requestLine, headers: headers, body: bodyString)
+    }
+    
+    func consumeProcessedRequest() {
+        guard let headersEndIndex = headersEndIndex else { return }
+        
+        // Calculate total request size (headers + body)
+        // Use the saved content length instead of re-parsing headers
+        let contentLength = self.lastRequestContentLength
+        let headerLength = buffer.distance(from: buffer.startIndex, to: headersEndIndex)
+        let totalRequestSize = headerLength + contentLength
+        
+        // Remove processed request from buffer
+        if totalRequestSize <= buffer.count {
+            buffer.removeFirst(totalRequestSize)
+        } else {
+            // If we don't have enough data, remove what we have
+            buffer.removeAll()
+        }
+        
+        // Reset state for next request
+        state = .readingHeaders
+        self.headersEndIndex = nil
+        self.lastRequestContentLength = 0
     }
 }
 
@@ -210,6 +234,9 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
             if let headers = connectionState.tryParseHeaders() {
                 let contentLength = Int(headers["content-length"] ?? "0") ?? 0
 
+                // Save content length for later use in consumeProcessedRequest
+                connectionState.lastRequestContentLength = contentLength
+
                 if contentLength == 0 {
                     // No body expected, process immediately
                     connectionState.state = .complete
@@ -239,9 +266,17 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
                     body: request.body,
                     connection: connection
                 )
+                
+                // Remove processed request from buffer and reset state for next request
+                connectionState.consumeProcessedRequest()
+                
+                // Check if there's another request in the buffer to process
+                await tryProcessBufferedRequest(connectionState, connection: connection)
             } else {
                 Log.server.error("🌐 Failed to extract complete request")
                 await sendHTTPResponse(connection: connection, statusCode: 400, body: "Bad Request")
+                // Don't consume the request if extraction failed - may need to close connection
+                connection.cancel()
             }
         }
     }
@@ -399,7 +434,6 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
 
     private func sendHTTPResponse(connection: NWConnection, statusCode: Int, headers: [String: String] = [:], body: String) async {
         var responseString = "HTTP/1.1 \(statusCode) \(httpStatusMessage(statusCode))\r\n"
-        responseString += "Connection: close\r\n"
         responseString += "Content-Length: \(body.utf8.count)\r\n"
         for (key, value) in headers {
             responseString += "\(key): \(value)\r\n"
@@ -407,15 +441,12 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         responseString += "\r\n\(body)"
 
         if let data = responseString.data(using: .utf8) {
-            connection.send(content: data, completion: .contentProcessed { _ in connection.cancel() })
-        } else {
-            connection.cancel()
+            connection.send(content: data, completion: .contentProcessed { _ in })
         }
     }
 
     private func sendHTTPResponse(connection: NWConnection, statusCode: Int, headers: [String: String] = [:], bodyData: Data) async {
         var responseString = "HTTP/1.1 \(statusCode) \(httpStatusMessage(statusCode))\r\n"
-        responseString += "Connection: close\r\n"
         responseString += "Content-Length: \(bodyData.count)\r\n"
         for (key, value) in headers {
             responseString += "\(key): \(value)\r\n"
@@ -425,7 +456,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         var data = responseString.data(using: .utf8) ?? Data()
         data.append(bodyData)
 
-        connection.send(content: data, completion: .contentProcessed { _ in connection.cancel() })
+        connection.send(content: data, completion: .contentProcessed { _ in })
     }
 
     private func sendJSONRPCResponse(_ response: JSONRPCResponse, connection: NWConnection) async {
