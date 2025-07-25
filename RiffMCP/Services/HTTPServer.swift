@@ -413,8 +413,8 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
                 await sendJSONRPCResponse(response, connection: connection)
             } else {
                 // It was a notification (handle returned nil)
-                // Send a simple HTTP 204 No Content and close the connection
-                await sendHTTPResponse(connection: connection, statusCode: 204, body: "")
+                // MCP spec says send no JSON-RPC response and HTTP should return 202
+                await sendHTTPResponse(connection: connection, statusCode: 202, body: "")
             }
 
         } catch let error as JSONRPCError {
