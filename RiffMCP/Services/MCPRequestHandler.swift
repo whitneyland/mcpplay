@@ -60,9 +60,9 @@ actor MCPRequestHandler {
 
     // MARK: - Main Request Handler
 
-    /// The primary entry point for all incoming JSON-RPC requests.
-    /// This method routes the request to the appropriate handler based on its method.
-    /// Returns nil for notifications that should not receive a JSON-RPC response.
+    /// Primary entry point for all incoming JSON-RPC requests.
+    /// Routes the request to the appropriate handler based on its method.
+    /// 
     func handle(request: JSONRPCRequest, transport: ActivityEvent.TransportType, requestBody: String? = nil, bodySize: Int? = nil) async -> JSONRPCResponse? {
 
         // Log.server.info("⚡️ Handling method: \(request.method)")

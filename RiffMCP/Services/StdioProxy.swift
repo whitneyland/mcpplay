@@ -231,11 +231,12 @@ struct StdioProxy {
         
         Log.server.info("🚀 StdioProxy: Launching GUI app via LaunchServices at: \(bundleURL.path)")
         
-        // Launch via LaunchServices to avoid sandbox termination
+
         let runningApp: NSRunningApplication
         do {
+            // Launch via LaunchServices to avoid sandbox termination
             // Use the synchronous launchApplication method for compatibility
-            runningApp = try NSWorkspace.shared.launchApplication(at: bundleURL, options: [.newInstance], configuration: [:])
+            runningApp = try NSWorkspace.shared.launchApplication(at: bundleURL, options: [.newInstance, .andHide], configuration: [:])
             let childPID = runningApp.processIdentifier
             Log.server.info("🚀 Launched GUI via LaunchServices — pid \(childPID)")
         } catch {
@@ -270,7 +271,9 @@ struct StdioProxy {
         Log.server.error("❌ StdioProxy: Discovery timeout after \(elapsed)s - GUI app failed to start")
         exit(1)
     }
-    
+
+
+
     // MARK: - Helper Functions
     
     /// Return a live `ServerConfig` if the GUI server is confirmed running.
