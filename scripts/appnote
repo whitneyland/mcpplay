@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# Simple note test
+set -euo pipefail
+
+echo "🎵 Testing single note playback..."
+
+# Get the latest Xcode build path
+BUILD_PATH=$(xcodebuild -project RiffMCP.xcodeproj -scheme RiffMCP -configuration Debug -showBuildSettings 2>/dev/null | grep "BUILT_PRODUCTS_DIR" | head -1 | sed 's/.*= //')/RiffMCP.app
+
+if [ ! -d "$BUILD_PATH" ]; then
+    echo "Error: Could not find RiffMCP.app build at $BUILD_PATH"
+    exit 1
+fi
+
+echo "Using build: $BUILD_PATH"
+
+# Test playing a single C4 note
+TEST_MESSAGE='{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"play","arguments":{"tempo":120,"tracks":[{"instrument":"grand_piano","events":[{"time":0,"pitches":["C4"],"dur":1.0}]}]}}}'
+CONTENT_LENGTH=${#TEST_MESSAGE}
+
+# Support both formats - default to newline-delimited (MCP 2025-06-18)
+if [ "${MCP_FORMAT:-}" = "legacy" ]; then
+    # Create Content-Length test file (legacy format)
+    TEST_FILE="/tmp/note_test_proper.txt"
+    printf "Content-Length: %d\r\n\r\n%s" "$CONTENT_LENGTH" "$TEST_MESSAGE" > "$TEST_FILE"
+    echo "Using Content-Length format (legacy - use MCP_FORMAT=legacy)"
+    echo "Testing with:"
+    echo "Content-Length: $CONTENT_LENGTH"
+    echo "JSON: $TEST_MESSAGE"
+else
+    # Create newline-delimited test file (default MCP format)
+    TEST_FILE="/tmp/note_test_newline.txt"
+    printf "%s\n" "$TEST_MESSAGE" > "$TEST_FILE"
+    echo "Using newline-delimited format (MCP 2025-06-18 default)"
+    echo "Testing with:"
+    echo "JSON: $TEST_MESSAGE"
+    echo "Format: newline-delimited"
+fi
+echo ""
+
+echo "🎵 Playing C4 note..."
+
+if "$BUILD_PATH/Contents/MacOS/RiffMCP" --stdio --log-stdio < "$TEST_FILE"; then
+    echo "✅ Note test completed!"
+else
+    echo "❌ Note test failed with exit code $?"
+fi

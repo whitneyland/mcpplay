@@ -12,25 +12,67 @@ import Foundation
 struct RiffMCPApp: App {
     @State private var services: AppServices?
     @State private var launchError: Error?
+    
+    // This is set to false only if we must terminate due to a duplicate instance.
+    private static var shouldLaunchUI: Bool = true
+
+    init() {
+        //
+        // CASE 1: Launched with --stdio. This path takes over the process and never returns.
+        //
+        if CommandLine.arguments.contains("--stdio") {
+            Log.app.info("\(AppInfo.name) v\(AppInfo.fullVersion) started in --stdio mode.")
+
+            // The compiler knows this function is `-> Never`, meaning it will not
+            // return. The process will be terminated within this call.
+            // The SwiftUI App body will never be initialized.
+            StdioProxy.runAsProxyAndExitIfNeeded()
+        }
+        //
+        // CASE 2: Normal GUI Launch. This code is only reached if --stdio is NOT present.
+        // Check for an existing instance of the GUI app.
+        //
+        Log.app.info("\(AppInfo.name) v\(AppInfo.fullVersion) started no arguments.")
+        if let existingInstance = checkForExistingGUIInstance() {
+            Log.app.info("🔍 GUI: Found existing GUI instance: port \(existingInstance.port), pid \(existingInstance.pid)")
+
+            // Bring existing window to front.
+            bringExistingWindowToFront()
+
+            // This new, redundant instance should not launch its UI and should terminate.
+            RiffMCPApp.shouldLaunchUI = false
+            Log.app.info("🏁 GUI: Terminating duplicate GUI instance.")
+            DispatchQueue.main.async {      // Wait until after init when NSApp is not nil
+                NSApp.terminate(nil)        // Use this instead of exit() to gracefully terminate this redundant process.
+            }
+        } else {
+            // No existing GUI instance was found. Proceed with a normal launch.
+            // `shouldLaunchUI` remains its default `true` value.
+            Log.app.info("✅ GUI: No existing GUI instance, proceeding with normal launch")
+        }
+    }
 
     var body: some Scene {
         WindowGroup {
             Group {
-                if let svc = services {
-                    // ✅ Services exist – run the real UI
-                    MainView()
-                        .environmentObject(svc.audioManager)
-                        .environmentObject(svc.httpServer)
-                } else if launchError == nil {
-                    // ⏳ Still launching
-                    ProgressView("Starting services…")
-                        .padding()
+                // Only show the main view if we're not in a successful proxy mode.
+                if RiffMCPApp.shouldLaunchUI {
+                    if let svc = services {
+                        // ✅ Services exist – run the real UI
+                        MainView()
+                            .environmentObject(svc.audioManager)
+                            .environmentObject(svc.httpServer)
+                    } else if launchError == nil {
+                        // ⏳ Still launching
+                        ProgressView("Starting services…")
+                            .padding()
+                    }
                 }
             }
             // Kick off launch once the view appears
             .task(id: "startup") {
-                // Only run once
-                guard services == nil && launchError == nil else { return }
+                // Only run once and only if we should launch UI
+                guard RiffMCPApp.shouldLaunchUI && services == nil && launchError == nil else { return }
 
                 do {
                     let svc = try AppServices()
@@ -43,7 +85,7 @@ struct RiffMCPApp: App {
             // Show an alert if we failed
             .alert(
                 "RiffMCP failed to start",
-                isPresented: .constant(launchError != nil)
+                isPresented: .constant(RiffMCPApp.shouldLaunchUI && launchError != nil)
             ) {
                 Button("Quit") { NSApp.terminate(nil) }
             } message: {
@@ -51,6 +93,42 @@ struct RiffMCPApp: App {
             }
         }
         .commands { AboutCommands() }
+    }
+    
+    /// Checks for an existing GUI instance by looking for a valid server.json file
+    /// - Returns: Server config if found and process is running, nil otherwise
+    private func checkForExistingGUIInstance() -> (port: UInt16, pid: pid_t)? {
+        guard let config = ServerConfigUtils.readServerConfig() else {
+            return nil
+        }
+        
+        // Check if the process is still running
+        if ServerConfigUtils.isProcessRunning(pid: config.pid) {
+            return (config.port, config.pid)
+        } else {
+            // Process is dead, config already cleaned up by ServerConfigUtils
+            return nil
+        }
+    }
+    
+    /// Brings the existing window to the front by activating the running process
+    private func bringExistingWindowToFront() {
+        // Use NSRunningApplication instead of AppleScript to avoid sandbox entitlement requirements
+        guard let config = ServerConfigUtils.readServerConfig() else {
+            Log.server.error("Cannot bring window to front: no server config found")
+            return
+        }
+        
+        if let app = NSRunningApplication(processIdentifier: config.pid) {
+            let success = app.activate(options: [.activateIgnoringOtherApps])
+            if success {
+                Log.server.info("✅ Brought existing window to front")
+            } else {
+                Log.server.error("Failed to activate existing application window")
+            }
+        } else {
+            Log.server.error("Failed to find running application with PID: \(config.pid)")
+        }
     }
 }
 

@@ -53,6 +53,7 @@ struct ServerActivityView: View {
                     Button(action: {
                         activityLog.clearLog()
                         selectedEvent = nil
+                        Log.app.info("Activity log cleared")
                     }) {
                         Image(systemName: "trash")
                             .font(.title2)
@@ -163,10 +164,26 @@ struct ServerActivityView: View {
                     .font(.system(.caption, design: .monospaced))
                     .foregroundColor(.gray)
 
+                // Transport pill
+                Label(event.transport.rawValue, systemImage: event.transport.icon)
+                    .font(.caption2.weight(.semibold))
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    .foregroundColor(event.transport.color)
+                    .background(event.transport.color.opacity(0.15))
+                    .clipShape(Capsule())
+
                 Text(event.message)
                     .font(.callout)
                     .foregroundColor(.white.opacity(0.9))
                     .lineLimit(1)
+
+                // Show client info if available
+                if let clientInfo = event.clientInfo {
+                    Text(clientInfo)
+                        .font(.callout)
+                        .foregroundColor(.yellow.opacity(0.9))
+                        .lineLimit(1)
+                }
             }
             .listRowBackground(Color.clear)
             .padding(.vertical, 2)
@@ -333,7 +350,7 @@ struct ServerActivityView_Previews: PreviewProvider {
                 // Add some dummy data for previewing
                 let log = ActivityLog.shared
                 log.updateServerStatus(online: true)
-                log.add(message: "New request: play a C major scale", type: .request, requestData: """
+                log.add(message: "New request: play a C major scale", type: .request, transport: .http, requestData: """
                 {
                   "jsonrpc": "2.0",
                   "id": 1,
@@ -352,9 +369,9 @@ struct ServerActivityView_Previews: PreviewProvider {
                   }
                 }
                 """)
-                log.add(message: "Generated 12 notes for Piano", type: .generation)
-                log.add(message: "Playback complete", type: .success)
-                log.add(message: "Invalid instrument: 'banjo'", type: .error)
+                log.add(message: "Generated 12 notes for Piano", type: .generation, transport: .http)
+                log.add(message: "Playback complete", type: .success, transport: .stdio)
+                log.add(message: "Invalid instrument: 'banjo'", type: .error, transport: .http)
             }
             .frame(width: 800, height: 500)
             .background(Color.gray.opacity(0.3))

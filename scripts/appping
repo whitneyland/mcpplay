@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# Get the latest Xcode build path
+BUILD_PATH=$(xcodebuild -project RiffMCP.xcodeproj -scheme RiffMCP -configuration Debug -showBuildSettings 2>/dev/null | grep "BUILT_PRODUCTS_DIR" | head -1 | sed 's/.*= //')/RiffMCP.app
+
+if [ ! -d "$BUILD_PATH" ]; then
+    echo "Error: Could not find RiffMCP.app build at $BUILD_PATH"
+    exit 1
+fi
+
+echo "Using build: $BUILD_PATH"
+
+# Create proper ping test data
+PING_DATA='{"jsonrpc":"2.0","id":1,"method":"ping"}'
+CONTENT_LENGTH=${#PING_DATA}
+
+# Support both formats - default to newline-delimited (MCP 2025-06-18)
+if [ "$MCP_FORMAT" = "legacy" ]; then
+    # Create Content-Length test file (legacy format)
+    TEST_FILE="/tmp/ping_test_proper.txt"
+    printf "Content-Length: %d\r\n\r\n%s" "$CONTENT_LENGTH" "$PING_DATA" > "$TEST_FILE"
+    echo "Using Content-Length format (legacy - use MCP_FORMAT=legacy)"
+    echo "Testing with:"
+    echo "Content-Length: $CONTENT_LENGTH"
+    echo "JSON: $PING_DATA"
+    echo "Expected bytes: $CONTENT_LENGTH"
+else
+    # Create newline-delimited test file (default MCP format)
+    TEST_FILE="/tmp/ping_test_newline.txt"
+    printf "%s\n" "$PING_DATA" > "$TEST_FILE"
+    echo "Using newline-delimited format (MCP 2025-06-18 default)"
+    echo "Testing with:"
+    echo "JSON: $PING_DATA"
+    echo "Format: newline-delimited"
+fi
+echo ""
+
+# Run the test
+"$BUILD_PATH/Contents/MacOS/RiffMCP" --stdio --log-stdio < "$TEST_FILE"

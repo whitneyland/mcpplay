@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "riff": {
+      "command": "/Applications/RiffMCP.app/Contents/MacOS/RiffMCP",
+      "args": ["--stdio"]
+    }
+  }
+}

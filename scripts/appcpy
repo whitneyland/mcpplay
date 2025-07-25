@@ -1,0 +1,35 @@
+#!/bin/bash
+# appcpy - Copy the last built RiffMCP.app to Applications folder
+
+set -e
+
+echo "🔍 Finding last built RiffMCP.app..."
+
+# Get the path to the last built RiffMCP.app using xcodebuild
+APP_PATH=$(xcodebuild -showBuildSettings -scheme RiffMCP -configuration Debug | grep "BUILT_PRODUCTS_DIR" | head -1 | cut -d= -f2 | xargs)/RiffMCP.app
+
+if [ ! -d "$APP_PATH" ]; then
+    echo "❌ Error: RiffMCP.app not found at $APP_PATH"
+    echo "   Make sure you've built the project first with: xcodebuild -scheme RiffMCP"
+    exit 1
+fi
+
+echo "📦 Found RiffMCP.app at: $APP_PATH"
+
+# Remove existing app if it exists
+if [ -d "/Applications/RiffMCP.app" ]; then
+    echo "🗑️  Removing existing RiffMCP.app from Applications..."
+    rm -rf "/Applications/RiffMCP.app"
+fi
+
+# Copy the app to Applications
+echo "📋 Copying RiffMCP.app to Applications..."
+cp -R "$APP_PATH" "/Applications/"
+
+# Verify the copy was successful
+if [ -d "/Applications/RiffMCP.app" ]; then
+    echo "✅ Successfully copied RiffMCP.app to Applications folder"
+else
+    echo "❌ Error: Failed to copy RiffMCP.app to Applications folder"
+    exit 1
+fi

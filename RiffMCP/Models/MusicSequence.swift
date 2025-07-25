@@ -170,7 +170,7 @@ enum Pitch: Codable, Sendable {
             do {
                 return try NoteConverter.nameToMIDI(noteName)
             } catch {
-                Log.audio.warning("⚠️ Invalid note name: '\(noteName, privacy: .public)' - \(error.localizedDescription, privacy: .public). Defaulting to 60.")
+                Log.audio.error("⚠️ Invalid note name: '\(noteName)' - \(error.localizedDescription). Defaulting to 60.")
                 return 60
             }
         }

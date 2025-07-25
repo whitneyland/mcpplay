@@ -1,14 +1,14 @@
 [
   {
     "name": "play",
-    "description": "Play audio of a multi-track, multi-instrument music sequence. Use this tool for composing, playing, or hearing music. Not for visual sheet music.",
+    "description": "Play audio of a multi-track, multi-instrument music sequence. Use this tool for composing and playing music.",
     "inputSchema": {
       "type": "object",
       "required": ["tempo", "tracks"],
       "properties": {
         "title": {
           "type": "string",
-          "description": "Descriptive title for the music sequence (optional but recommended for better organization)"
+          "description": "Descriptive title for the music sequence (optional but recommended)"
         },
         "tempo": {
           "type": "number",
@@ -68,7 +68,7 @@
   },
   {
     "name": "engrave",
-    "description": "Generate sheet-music PNG. Prioritizes: score_id > inline notes > last session score. If no arguments are given, engraves the session's last-played score.",
+    "description": "Generate sheet-music image. Prioritizes: score_id > inline notes > last session score. If no arguments are given, engraves the session's last-played score.",
     "inputSchema": {
       "type": "object",
       "properties": {

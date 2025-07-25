@@ -2,11 +2,118 @@
 //  HTTPServer.swift
 //  RiffMCP
 //
-//  Simple HTTP server to handle Model Context Protocol requests without requiring a heavy external dependency
+//  Simple HTTP server to handle Model Context Protocol requests.
+//  This class is a thin transport layer that delegates all logic to the MCPRequestHandler.
 //
 
 import Foundation
 import Network
+
+// MARK: - Connection State Management
+
+private class ConnectionState: @unchecked Sendable {
+    enum ParsingState: Equatable {
+        case readingHeaders
+        case readingBody(expectedLength: Int)
+        case complete
+    }
+    
+    var buffer = Data()
+    var state: ParsingState = .readingHeaders
+    var headersEndIndex: Data.Index?
+    var lastRequestContentLength: Int = 0
+    
+    func appendData(_ data: Data) {
+        buffer.append(data)
+    }
+    
+    func tryParseHeaders() -> [String: String]? {
+        guard state == .readingHeaders else { return nil }
+        
+        // Look for end of headers marker
+        let headerTerminator = Data([0x0D, 0x0A, 0x0D, 0x0A]) // \r\n\r\n
+        guard let terminatorRange = buffer.range(of: headerTerminator) else {
+            return nil // Headers not complete yet
+        }
+        
+        headersEndIndex = terminatorRange.upperBound
+        
+        // Parse headers
+        let headerData = buffer.prefix(upTo: terminatorRange.lowerBound)
+        guard let headerString = String(data: headerData, encoding: .utf8) else {
+            return nil
+        }
+        
+        var headers: [String: String] = [:]
+        let lines = headerString.components(separatedBy: "\r\n")
+        
+        for line in lines.dropFirst() { // Skip request line
+            let parts = line.split(separator: ":", maxSplits: 1)
+            if parts.count == 2 {
+                let key = parts[0].trimmingCharacters(in: .whitespaces).lowercased()
+                let value = parts[1].trimmingCharacters(in: .whitespaces)
+                headers[key] = value
+            }
+        }
+        
+        return headers
+    }
+    
+    func hasCompleteBody(expectedLength: Int) -> Bool {
+        guard let headersEndIndex = headersEndIndex else { return false }
+        let bodyData = buffer.suffix(from: headersEndIndex)
+        return bodyData.count >= expectedLength
+    }
+    
+    func extractCompleteRequest() -> (requestLine: String, headers: [String: String], body: String)? {
+        guard let headersEndIndex = headersEndIndex else { return nil }
+        
+        let headerData = buffer.prefix(upTo: headersEndIndex.advanced(by: -4)) // Exclude \r\n\r\n
+        guard let headerString = String(data: headerData, encoding: .utf8) else { return nil }
+        
+        let lines = headerString.components(separatedBy: "\r\n")
+        guard let requestLine = lines.first else { return nil }
+        
+        var headers: [String: String] = [:]
+        for line in lines.dropFirst() {
+            let parts = line.split(separator: ":", maxSplits: 1)
+            if parts.count == 2 {
+                let key = parts[0].trimmingCharacters(in: .whitespaces).lowercased()
+                let value = parts[1].trimmingCharacters(in: .whitespaces)
+                headers[key] = value
+            }
+        }
+        
+        let bodyData = buffer.suffix(from: headersEndIndex)
+        let contentLength = Int(headers["content-length"] ?? "0") ?? 0
+        let bodyString = String(data: bodyData.prefix(contentLength), encoding: .utf8) ?? ""
+        
+        return (requestLine: requestLine, headers: headers, body: bodyString)
+    }
+    
+    func consumeProcessedRequest() {
+        guard let headersEndIndex = headersEndIndex else { return }
+        
+        // Calculate total request size (headers + body)
+        // Use the saved content length instead of re-parsing headers
+        let contentLength = self.lastRequestContentLength
+        let headerLength = buffer.distance(from: buffer.startIndex, to: headersEndIndex)
+        let totalRequestSize = headerLength + contentLength
+        
+        // Remove processed request from buffer
+        if totalRequestSize <= buffer.count {
+            buffer.removeFirst(totalRequestSize)
+        } else {
+            // If we don't have enough data, remove what we have
+            buffer.removeAll()
+        }
+        
+        // Reset state for next request
+        state = .readingHeaders
+        self.headersEndIndex = nil
+        self.lastRequestContentLength = 0
+    }
+}
 
 class HTTPServer: ObservableObject, @unchecked Sendable {
 
@@ -16,13 +123,8 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
     private let listener: NWListener
     private let requestedPort: UInt16
     private let host: String
-    private let audioManager: AudioManaging
+    private let mcpRequestHandler: MCPRequestHandler
     internal let tempDirectory: URL
-    private let toolsURL: URL?
-    private let promptsURL: URL?
-    private var cachedTools: [MCPTool]?
-    private var cachedPrompts: [MCPPrompt]?
-    private let scoreStore = ScoreStore()
 
     @Published var isRunning = false
     @Published var lastError: String?
@@ -39,19 +141,15 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
     }
 
     init(
-        audioManager: AudioManaging,
+        mcpRequestHandler: MCPRequestHandler,
         host: String = HTTPServer.defaultHost,
         port: UInt16 = HTTPServer.defaultPort,
-        tempDirectory: URL? = nil,
-        toolsURL: URL? = Bundle.main.url(forResource: "tools", withExtension: "json", subdirectory: "MCP"),
-        promptsURL: URL? = Bundle.main.url(forResource: "prompts", withExtension: "json", subdirectory: "mcp")
+        tempDirectory: URL? = nil
     ) throws {
-        self.audioManager = audioManager
+        self.mcpRequestHandler = mcpRequestHandler
         self.host = host
         self.requestedPort = port
         self.tempDirectory = tempDirectory ?? Self.defaultTempDir
-        self.toolsURL = toolsURL
-        self.promptsURL = promptsURL
 
         let parameters = NWParameters.tcp
         parameters.allowLocalEndpointReuse = true
@@ -73,16 +171,6 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
     func start() async throws {
         guard !isRunning else { return }
 
-        // Create temp directory for PNG files
-        try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
-
-        // Clean up old PNG files on startup
-        cleanupOldPNGFiles()
-
-        // Pre-warm the tool and prompt definition caches
-        _ = getToolDefinitions()
-        _ = getPromptDefinitions()
-
         listener.start(queue: .global(qos: .userInitiated))
     }
 
@@ -92,23 +180,103 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         await MainActor.run {
             isRunning = false
         }
-        try? await removeConfigFile()
+        do {
+            try await removeConfigFile()
+        } catch {
+            Log.server.error("❌ Failed to remove server config: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - Connection Handling
 
     private func handleConnection(_ connection: NWConnection) async {
         connection.start(queue: .global(qos: .userInitiated))
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
-            Task {
-                if let data = data, !data.isEmpty {
-                    await self?.processHTTPRequest(data, connection: connection)
-                } else if let error = error {
-                    Log.server.error("❌ Connection error: \(error.localizedDescription, privacy: .public)")
+        
+        let connectionState = ConnectionState()
+        
+        @Sendable func receiveLoop() {
+            connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
+                Task {
+                    guard let self = self else { return }
+                    
+                    if let error = error {
+                        Log.server.error("❌ Connection error: \(error.localizedDescription)")
+                        connection.cancel()
+                        return
+                    }
+                    
+                    if let data = data, !data.isEmpty {
+                        // Log.server.info("🌐 Received data chunk: \(data.count) bytes")
+                        connectionState.appendData(data)
+                        
+                        // Try to process the request if we have enough data
+                        await self.tryProcessBufferedRequest(connectionState, connection: connection)
+                    }
+                    
+                    if isComplete {
+                        connection.cancel()
+                        return
+                    }
+                    
+                    // Continue receiving more data
+                    receiveLoop()
                 }
-                if isComplete {
-                    connection.cancel()
+            }
+        }
+        
+        receiveLoop()
+    }
+    
+    private func tryProcessBufferedRequest(_ connectionState: ConnectionState, connection: NWConnection) async {
+        switch connectionState.state {
+        case .readingHeaders:
+            // Try to parse headers
+            if let headers = connectionState.tryParseHeaders() {
+                let contentLength = Int(headers["content-length"] ?? "0") ?? 0
+
+                // Save content length for later use in consumeProcessedRequest
+                connectionState.lastRequestContentLength = contentLength
+
+                if contentLength == 0 {
+                    // No body expected, process immediately
+                    connectionState.state = .complete
+                } else {
+                    // Expect a body of the specified length
+                    connectionState.state = .readingBody(expectedLength: contentLength)
                 }
+                
+                // Check if we can process now
+                await tryProcessBufferedRequest(connectionState, connection: connection)
+            }
+            
+        case .readingBody(let expectedLength):
+            // Check if we have the complete body
+            if connectionState.hasCompleteBody(expectedLength: expectedLength) {
+                connectionState.state = .complete
+                await tryProcessBufferedRequest(connectionState, connection: connection)
+            }
+            
+        case .complete:
+            // Process the complete request
+            if let request = connectionState.extractCompleteRequest() {
+                // Log.server.info("🌐 Processing complete HTTP request")
+                await processCompleteHTTPRequest(
+                    requestLine: request.requestLine,
+                    headers: request.headers,
+                    body: request.body,
+                    connection: connection
+                )
+                
+                // Remove processed request from buffer and reset state for next request
+                connectionState.consumeProcessedRequest()
+                
+                // Check if there's another request in the buffer to process
+                await tryProcessBufferedRequest(connectionState, connection: connection)
+            } else {
+                Log.server.error("🌐 Failed to extract complete request")
+                await sendHTTPResponse(connection: connection, statusCode: 400, body: "Bad Request")
+                // Don't consume the request if extraction failed - may need to close connection
+                connection.cancel()
             }
         }
     }
@@ -117,12 +285,20 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
     private func handleStateChange(_ state: NWListener.State) async {
         switch state {
         case .ready:
-            resolvedPort = listener.port?.rawValue
+            let port = listener.port?.rawValue
+            resolvedPort = port
             isRunning = true
             lastError = nil
-            Log.server.info("🚀 HTTP Server started on \(self.host):\(self.resolvedPort!)")
+            Log.server.info("🚀 HTTP Server started on \(self.host):\(port!)")
+            if let port {
+                await mcpRequestHandler.update(port: port) // Update the handler with the resolved port
+            }
             ActivityLog.shared.updateServerStatus(online: true)
-            try? await writeConfigFile()
+            do {
+                try await writeConfigFile()
+            } catch {
+                Log.server.error("❌ Failed to write server config: \(error.localizedDescription)")
+            }
 
         case .failed(let error):
             isRunning = false
@@ -141,405 +317,123 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         }
     }
 
-    private func processHTTPRequest(_ data: Data, connection: NWConnection) async {
-        let requestStartTime = Date()
-        Log.server.info("🌐 HTTP request received")
+    private func processCompleteHTTPRequest(requestLine: String, headers: [String: String], body: String, connection: NWConnection) async {
 
-        guard let httpString = String(data: data, encoding: .utf8) else {
-            await sendHTTPResponse(connection: connection, statusCode: 400, body: "Bad Request")
-            return
-        }
-        let lines = httpString.components(separatedBy: "\r\n")
-        guard let requestLine = lines.first, let bodyStartIndex = httpString.range(of: "\r\n\r\n")?.upperBound else {
-            await sendHTTPResponse(connection: connection, statusCode: 400, body: "Bad Request")
-            return
-        }
         let components = requestLine.components(separatedBy: " ")
         guard components.count >= 3 else {
+            Log.server.error("🌐 Invalid request line format: \(components)")
             await sendHTTPResponse(connection: connection, statusCode: 400, body: "Bad Request")
             return
         }
 
-        let (method, path, body) = (components[0], components[1], String(httpString[bodyStartIndex...]))
-
-        // Extract User-Agent from headers
-        let userAgent = lines.first(where: { $0.lowercased().starts(with: "user-agent:") })?
-            .components(separatedBy: ":").dropFirst().joined(separator: ":").trimmingCharacters(in: .whitespaces) ?? "Unknown"
+        let (method, path) = (components[0], components[1])
         let bodySize = body.data(using: .utf8)?.count ?? 0
 
-        Log.server.latency("🚦 Request routing - \(method) \(path)", since: requestStartTime)
+        Log.server.info("🌐 Processing HTTP request - method: '\(method)', path: '\(path)', body size: \(bodySize) bytes")
 
         switch (method, path) {
-        case ("POST", "/"): await handleJSONRPC(body: body, connection: connection, userAgent: userAgent, bodySize: bodySize)
-        case ("GET", "/health"): await sendHTTPResponse(connection: connection, statusCode: 200, headers: ["Content-Type": "application/json"], body: #"{"status":"healthy","port":\#(resolvedPort ?? requestedPort)}"#)
-        case ("GET", let p) where p.starts(with: "/images/"): await handleImageRequest(path: p, connection: connection)
-        default: await sendHTTPResponse(connection: connection, statusCode: 404, body: "Not Found")
+        case ("POST", "/"):
+            await handleJSONRPC(body: body, connection: connection, bodySize: bodySize)
+
+        case ("GET", "/health"):
+            await sendHTTPResponse(
+                connection: connection,
+                statusCode: 200,
+                headers: ["Content-Type": "application/json"],
+                body: #"{"status":"healthy","port":\#(resolvedPort ?? requestedPort)}"#
+            )
+
+        case ("GET", let p) where p.hasPrefix("/images/"):
+            await handleImageRequest(path: p, connection: connection)
+
+        default:
+            await sendHTTPResponse(connection: connection, statusCode: 404, body: "Not Found")
         }
     }
 
     private func handleImageRequest(path: String, connection: NWConnection) async {
-        // 1. Extract filename from path
         let filename = URL(fileURLWithPath: path).lastPathComponent
-
-        // 2. Construct the full, safe file path
         let fileURL = tempDirectory.appendingPathComponent(filename)
 
-        // 3. SECURITY CHECK: Ensure the resolved path is still inside our temp directory.
         guard fileURL.path.hasPrefix(tempDirectory.path) else {
             await sendHTTPResponse(connection: connection, statusCode: 403, body: "Forbidden")
             return
         }
 
-        // 4. Read file and send response
         do {
             let fileData = try Data(contentsOf: fileURL)
             await sendHTTPResponse(connection: connection, statusCode: 200, headers: ["Content-Type": "image/png"], bodyData: fileData)
         } catch {
-            Log.io.error("❌ Could not read image file: \(fileURL.path, privacy: .public). Error: \(error.localizedDescription, privacy: .public)")
+            Log.io.error("❌ Could not read image file: \(fileURL.path). Error: \(error.localizedDescription)")
             await sendHTTPResponse(connection: connection, statusCode: 404, body: "Not Found")
         }
     }
 
     // MARK: - JSON-RPC Handler
 
-    private func handleJSONRPC(body: String, connection: NWConnection, userAgent: String, bodySize: Int) async {
+    private func handleJSONRPC(body: String, connection: NWConnection, bodySize: Int) async {
         let jsonRpcStartTime = Date()
         Log.server.info("📄 JSON-RPC processing started")
 
         do {
-            guard let bodyData = body.data(using: .utf8) else { throw JSONRPCError.parseError }
+            // Check for empty body before attempting any parsing
+            guard !body.isEmpty else {
+                Log.server.error("📄 Request body is empty")
+                throw JSONRPCError.emptyRequest
+            }
+            
+            guard let bodyData = body.data(using: .utf8) else {
+                Log.server.error("📄 Failed to convert body to UTF-8 data")
+                throw JSONRPCError.parseError
+            }
+
+            // Try to parse as JSON first to see what fails
+            do {
+                let jsonObject = try JSONSerialization.jsonObject(with: bodyData, options: [])
+                // Log.server.info("📄 JSON parsing successful, object: \(jsonObject)")
+            } catch {
+                Log.server.error("📄 JSON parsing failed: \(error)")
+                throw JSONRPCError.parseError
+            }
+            
             let request = try JSONDecoder().decode(JSONRPCRequest.self, from: bodyData)
+
             guard request.jsonrpc == "2.0" else { throw JSONRPCError.invalidRequest }
 
-            // Detailed logging
-            var toolNameDetail = ""
-            if request.method == "tools/call",
-               let params = request.params,
-               let name = params.objectValue?["name"]?.stringValue {
-                toolNameDetail = " - \(name)"
+            Log.server.info("📄 Successfully decoded JSON-RPC request: \(request.method)")
+
+            // Delegate to the central handler with HTTP transport type
+            if let response = await mcpRequestHandler.handle(
+                request: request,
+                transport: .http,
+                requestBody: body,
+                bodySize: bodySize
+            ) {
+                // It was a regular request, send the JSON-RPC response
+                await sendJSONRPCResponse(response, connection: connection)
+            } else {
+                // It was a notification (handle returned nil)
+                // MCP spec says send no JSON-RPC response and HTTP should return 202
+                await sendHTTPResponse(connection: connection, statusCode: 202, body: "")
             }
 
-            let eventType: ActivityEvent.EventType
-            switch request.method {
-            case "notifications/initialized": eventType = .notification
-            case "tools/list": eventType = .toolsList
-            case "tools/call": eventType = .toolsCall
-            case "resources/list": eventType = .resourcesList
-            case "prompts/list": eventType = .promptsList
-            default: eventType = .request
-            }
-
-            await ActivityLog.shared.add(message: "POST /\(request.method)\(toolNameDetail) (\(bodySize) bytes)", type: eventType, requestData: body)
-
-            Log.server.latency("🔍 JSON-RPC parsed - method: \(request.method)", since: jsonRpcStartTime)
-
-            let response: JSONRPCResponse
-            switch request.method {
-            case "initialize":
-                let capabilities = MCPCapabilities(tools: ["listChanged": .bool(true)], prompts: ["listChanged": .bool(true)], resources: ["listChanged": .bool(true)])
-                let initResult = MCPInitializeResult(protocolVersion: "2024-11-05", capabilities: capabilities, serverInfo: MCPServerInfo(name: "riff", version: "1.0.0"))
-                response = JSONRPCResponse(result: try encodeToJSONValue(initResult), id: request.id)
-            case "notifications/initialized":
-                await sendHTTPResponse(connection: connection, statusCode: 200, body: "")
-                return
-            case "tools/list":
-                let result = MCPToolsResult(tools: getToolDefinitions())
-                response = JSONRPCResponse(result: try encodeToJSONValue(result), id: request.id)
-            case "tools/call":
-                response = try await handleToolCall(request)
-            case "resources/list":
-                response = JSONRPCResponse(result: .object(["resources": .array([])]), id: request.id)
-            case "resources/read":
-                response = try await handleResourceRead(request)
-            case "prompts/list":
-                let result = MCPPromptsResult(prompts: getPromptDefinitions())
-                response = JSONRPCResponse(result: try encodeToJSONValue(result), id: request.id)
-            default:
-                response = JSONRPCResponse(error: .methodNotFound, id: request.id)
-            }
-            await sendJSONRPCResponse(response, connection: connection)
-
-            // Update the last event with response data
-            do {
-                let responseData = try JSONEncoder().encode(response)
-                if let responseString = String(data: responseData, encoding: .utf8) {
-                    await ActivityLog.shared.updateLastEventWithResponse(responseString)
-                }
-            } catch {
-                Log.server.error("Failed to encode response for logging: \(error.localizedDescription, privacy: .public)")
-            }
         } catch let error as JSONRPCError {
             let errorResponse = JSONRPCResponse(error: error, id: nil)
             await sendJSONRPCResponse(errorResponse, connection: connection)
-
-            // Update with error response
-            do {
-                let responseData = try JSONEncoder().encode(errorResponse)
-                if let responseString = String(data: responseData, encoding: .utf8) {
-                    await ActivityLog.shared.updateLastEventWithResponse(responseString)
-                }
-            } catch {
-                Log.server.error("Failed to encode error response for logging: \(error.localizedDescription, privacy: .public)")
-            }
-        } catch is DecodingError {
+        } catch let error as DecodingError {
+            Log.server.error(error.localizedDescription)
             let parseErrorResponse = JSONRPCResponse(error: .parseError, id: nil)
             await sendJSONRPCResponse(parseErrorResponse, connection: connection)
-
-            // Update with parse error response
-            do {
-                let responseData = try JSONEncoder().encode(parseErrorResponse)
-                if let responseString = String(data: responseData, encoding: .utf8) {
-                    await ActivityLog.shared.updateLastEventWithResponse(responseString)
-                }
-            } catch {
-                Log.server.error("Failed to encode parse error response for logging: \(error.localizedDescription, privacy: .public)")
-            }
         } catch {
             let internalErrorResponse = JSONRPCResponse(error: .internalError, id: nil)
             await sendJSONRPCResponse(internalErrorResponse, connection: connection)
-
-            // Update with internal error response
-            do {
-                let responseData = try JSONEncoder().encode(internalErrorResponse)
-                if let responseString = String(data: responseData, encoding: .utf8) {
-                    await ActivityLog.shared.updateLastEventWithResponse(responseString)
-                }
-            } catch {
-                Log.server.error("Failed to encode internal error response for logging: \(error.localizedDescription, privacy: .public)")
-            }
         }
     }
-
-    private func handleToolCall(_ request: JSONRPCRequest) async throws -> JSONRPCResponse {
-        let toolCallStartTime = Date()
-        Log.server.info("🔧 Tool call processing started")
-
-        guard let params = request.params, let toolName = params.objectValue?["name"]?.stringValue else {
-            return JSONRPCResponse(error: .invalidParams, id: request.id)
-        }
-
-        Log.server.latency("🎯 Tool identified: \(toolName)", since: toolCallStartTime)
-
-        do {
-            let result: MCPResult
-            let arguments = params.objectValue?["arguments"] ?? .object([:])
-
-            let data = try JSONEncoder().encode(arguments)
-            let decoder = JSONDecoder()
-
-            switch toolName {
-            case "play":
-                let sequenceDecodeStart = Date()
-                let sequence = try decoder.decode(MusicSequence.self, from: data)
-                Log.server.latency("🎼 Sequence decoded", since: sequenceDecodeStart)
-                result = try await handlePlaySequence(sequence: sequence)
-            case "engrave":
-                let input = try decoder.decode(EngraveInput.self, from: data)
-                result = try await handleEngraveSequence(input: input)
-            default:
-                throw JSONRPCError.serverError("Unknown tool: \(toolName)")
-            }
-            return JSONRPCResponse(result: try encodeToJSONValue(result), id: request.id)
-        } catch let error as DecodingError {
-            Log.server.error("Decoding error: \(error.localizedDescription, privacy: .public)")
-            switch error {
-            case .typeMismatch(let type, let context):
-                Log.server.error("Type mismatch for type \(type, privacy: .public) at \(context.codingPath, privacy: .public): \(context.debugDescription, privacy: .public)")
-            case .valueNotFound(let type, let context):
-                Log.server.error("Value of type \(type, privacy: .public) not found at \(context.codingPath, privacy: .public): \(context.debugDescription, privacy: .public)")
-            case .keyNotFound(let key, let context):
-                Log.server.error("Key '\(key.stringValue, privacy: .public)' not found at \(context.codingPath, privacy: .public): \(context.debugDescription, privacy: .public)")
-            case .dataCorrupted(let context):
-                Log.server.error("Data corrupted at \(context.codingPath, privacy: .public): \(context.debugDescription, privacy: .public)")
-            @unknown default:
-                Log.server.error("Unknown decoding error: \(error.localizedDescription, privacy: .public)")
-            }
-            return JSONRPCResponse(error: .invalidParams, id: request.id)
-        } catch let error as JSONRPCError {
-            return JSONRPCResponse(error: error, id: request.id)
-        } catch {
-            let serverError = JSONRPCError.serverError("Tool execution failed: \(error.localizedDescription)")
-            return JSONRPCResponse(error: serverError, id: request.id)
-        }
-    }
-
-    // MARK: - Tool Implementations
-
-    private func handlePlaySequence(sequence: MusicSequence) async throws -> MCPResult {
-        let playSequenceStartTime = Date()
-        Log.server.info("🎵 handlePlaySequence started")
-
-        let validInstruments = Instruments.getInstrumentNames()
-        for track in sequence.tracks where !validInstruments.contains(track.instrument) {
-            throw JSONRPCError.serverError("Invalid instrument \"\(track.instrument)\". Check the instrument enum in the schema for valid options.")
-        }
-
-        Log.server.latency("✅ Instrument validation completed", since: playSequenceStartTime)
-
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted]
-        let jsonData = try encoder.encode(sequence)
-        guard let jsonString = String(data: jsonData, encoding: .utf8) else {
-            throw JSONRPCError.serverError("Failed to serialize sequence for audio manager.")
-        }
-
-        Log.server.info("📝 Sequence serialized")
-
-        Log.server.info("🎶 Calling AudioManager.playSequenceFromJSON")
-        await audioManager.playSequenceFromJSON(jsonString)
-
-        // Store the sequence with a unique ID
-        let scoreId = UUID().uuidString
-        await scoreStore.put(scoreId, sequence)
-
-        let totalEvents = sequence.tracks.reduce(0) { $0 + $1.events.count }
-        let summary = "Playing \(sequence.title ?? "Untitled") at \(Int(sequence.tempo)) BPM with \(totalEvents) event\(totalEvents == 1 ? "" : "s")."
-
-        var titleWith = ""
-        if let title = sequence.title {
-            titleWith = title + " with"
-        }
-        var forInstrument = ""
-        if let insturment = sequence.tracks.first?.instrument {
-            forInstrument = " for \(insturment)"
-        }
-        await ActivityLog.shared.add(message: "Play \(titleWith) \(totalEvents) notes\(forInstrument)", type: .generation, sequenceData: jsonString)
-
-        return MCPResult(content: [
-            .text(summary),
-            .text("Score ID: \(scoreId)")
-        ])
-    }
-
-    private func handleEngraveSequence(input: EngraveInput) async throws -> MCPResult {
-        Log.server.info("🎼 handleEngraveSequence started")
-
-        // 1. Resolve the sequence from input
-        let sequence: MusicSequence
-        if let tempo = input.tempo, let tracks = input.tracks {
-            // Use inline notes
-            sequence = MusicSequence(title: input.title, tempo: tempo, tracks: tracks)
-        } else if let id = input.score_id {
-            // Use specific score ID
-            guard let cached = await scoreStore.get(id) else {
-                throw JSONRPCError.serverError("Score ID '\(id)' not found")
-            }
-            sequence = cached
-        } else {
-            // Use last played score
-            guard let cached = await scoreStore.get(nil) else {
-                throw JSONRPCError.serverError("No score available. Either provide notes or play a sequence first.")
-            }
-            sequence = cached
-        }
-
-        // 2. Validate instruments
-        Log.server.info("✅ Starting instrument validation")
-        let validInstruments = Instruments.getInstrumentNames()
-        for track in sequence.tracks where !validInstruments.contains(track.instrument) {
-            throw JSONRPCError.serverError("Invalid instrument \"\(track.instrument)\". Check the instrument enum in the schema for valid options.")
-        }
-        Log.server.info("✅ Instrument validation completed")
-
-        // 3. Convert sequence to MEI -> SVG -> PNG
-        do {
-            let sequenceData = try JSONEncoder().encode(sequence)
-            Log.server.info("🔄 JSON encoding completed")
-
-            let meiXML = try JSONToMEIConverter.convert(from: sequenceData)
-            Log.io.info("🎵 MEI conversion completed")
-
-            guard let svgString = await Verovio.svg(from: meiXML) else {
-                Log.io.error("❌ Verovio.svgFromMEI returned nil")
-                throw JSONRPCError.serverError("Failed to generate SVG from MEI.")
-            }
-            Log.io.info("🖼️ SVG generation completed")
-
-            let pngData = try await SVGToPNGRenderer.renderToPNG(svgString: svgString)
-            Log.io.info("🖼️ PNG rendering completed")
-
-            // 3. Save PNG to temp directory
-            let pngUUID = UUID().uuidString
-            let pngFileName = "\(pngUUID).png"
-            let pngURL = tempDirectory.appendingPathComponent(pngFileName)
-            try pngData.write(to: pngURL)
-            let resourceURI = "http://\(host):\(resolvedPort ?? requestedPort)/images/\(pngFileName)"
-
-            Log.io.info("PNG saved to disk")
-
-            // 4. Make .png Base-64 (Claude still needs type:"image")
-            let base64PNG   = pngData.base64EncodedString()
-            let imageItem   = MCPContentItem.image(
-                data:     base64PNG,
-                mimeType: "image/png"
-            )
-
-            Log.io.info(" Image link points to: \(resourceURI, privacy: .public)")
-            Log.io.info(" PNG file saved at: \(pngURL.path, privacy: .public)")
-
-            // 6. Log the activity
-            if let jsonString = String(data: sequenceData, encoding: .utf8) {
-                await ActivityLog.shared.add(message: "Engrave \(sequence.title ?? "Untitled")", type: .generation, sequenceData: jsonString)
-            }
-            Log.server.info("✅ engraveSequence completed successfully")
-
-            // 7. Return the result
-            return MCPResult(content: [imageItem])
-//            return MCPResult(content: [imageItem, markdownLink])
-
-        } catch let error as JSONRPCError {
-            Log.server.error("❌ JSONRPCError in handleEngraveSequence: \(error.message, privacy: .public)")
-            throw error
-        } catch {
-            Log.server.error("❌ Unexpected error in handleEngraveSequence: \(error.localizedDescription, privacy: .public)")
-            throw JSONRPCError.serverError("Engraving failed: \(error.localizedDescription)")
-        }
-    }
-
-    private func handleResourceRead(_ request: JSONRPCRequest) async throws -> JSONRPCResponse {
-        guard let params = request.params, let uri = params.objectValue?["uri"]?.stringValue else {
-            return JSONRPCResponse(error: .invalidParams, id: request.id)
-        }
-
-        // Extract file path from URI
-        guard uri.hasPrefix("file://") else {
-            return JSONRPCResponse(error: .serverError("Unsupported URI scheme"), id: request.id)
-        }
-
-        let filePath = String(uri.dropFirst(7)) // Remove "file://" prefix
-        let fileURL = URL(fileURLWithPath: filePath)
-
-        // Verify file is in our temp directory for security
-        guard fileURL.path.hasPrefix(tempDirectory.path) else {
-            return JSONRPCResponse(error: .serverError("Access denied"), id: request.id)
-        }
-
-        do {
-            let fileData = try Data(contentsOf: fileURL)
-            let base64Data = fileData.base64EncodedString()
-
-            let result: [String: JSONValue] = [
-                "contents": .array([
-                    .object([
-                        "uri": .string(uri),
-                        "mimeType": .string("image/png"),
-                        "blob": .string(base64Data)
-                    ])
-                ])
-            ]
-
-            return JSONRPCResponse(result: .object(result), id: request.id)
-        } catch {
-            return JSONRPCResponse(error: .serverError("Failed to read resource: \(error.localizedDescription)"), id: request.id)
-        }
-    }
-
 
     // MARK: - HTTP & JSON Helpers
 
     private func sendHTTPResponse(connection: NWConnection, statusCode: Int, headers: [String: String] = [:], body: String) async {
         var responseString = "HTTP/1.1 \(statusCode) \(httpStatusMessage(statusCode))\r\n"
-        responseString += "Connection: close\r\n"
         responseString += "Content-Length: \(body.utf8.count)\r\n"
         for (key, value) in headers {
             responseString += "\(key): \(value)\r\n"
@@ -547,15 +441,12 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         responseString += "\r\n\(body)"
 
         if let data = responseString.data(using: .utf8) {
-            connection.send(content: data, completion: .contentProcessed { _ in connection.cancel() })
-        } else {
-            connection.cancel()
+            connection.send(content: data, completion: .contentProcessed { _ in })
         }
     }
 
     private func sendHTTPResponse(connection: NWConnection, statusCode: Int, headers: [String: String] = [:], bodyData: Data) async {
         var responseString = "HTTP/1.1 \(statusCode) \(httpStatusMessage(statusCode))\r\n"
-        responseString += "Connection: close\r\n"
         responseString += "Content-Length: \(bodyData.count)\r\n"
         for (key, value) in headers {
             responseString += "\(key): \(value)\r\n"
@@ -565,7 +456,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         var data = responseString.data(using: .utf8) ?? Data()
         data.append(bodyData)
 
-        connection.send(content: data, completion: .contentProcessed { _ in connection.cancel() })
+        connection.send(content: data, completion: .contentProcessed { _ in })
     }
 
     private func sendJSONRPCResponse(_ response: JSONRPCResponse, connection: NWConnection) async {
@@ -582,103 +473,43 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         switch code {
         case 200: return "OK"
         case 400: return "Bad Request"
+        case 403: return "Forbidden"
         case 404: return "Not Found"
         case 500: return "Internal Server Error"
         default: return "Unknown"
         }
     }
 
-    private func encodeToJSONValue<T: Codable>(_ value: T) throws -> JSONValue {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted]
-        let data = try encoder.encode(value)
-        return try JSONDecoder().decode(JSONValue.self, from: data)
-    }
+    // MARK: - Configuration File
 
-    // MARK: - PNG Cleanup
+    private func writeConfigFile() async throws {
+        let configPath = ServerConfigUtils.getConfigFilePath()
+        try FileManager.default.createDirectory(at: configPath.deletingLastPathComponent(), withIntermediateDirectories: true)
+        
+        let instanceUUID = UUID().uuidString
+        let config: [String: Any] = [
+            "port": resolvedPort ?? requestedPort,
+            "host": host,
+            "status": "running",
+            "pid": ProcessInfo.processInfo.processIdentifier,
+            "instance": instanceUUID,
+            "timestamp": Date().timeIntervalSince1970
+        ]
+        
+        let jsonData = try JSONSerialization.data(withJSONObject: config, options: .prettyPrinted)
+        try jsonData.write(to: configPath, options: .atomic)
+        Log.server.info("📝 Config written to: \(configPath.path)")
 
-    private func cleanupOldPNGFiles() {
-        do {
-            let fileManager = FileManager.default
-            let files = try fileManager.contentsOfDirectory(at: tempDirectory, includingPropertiesForKeys: [.creationDateKey], options: [])
-
-            let cutoffDate = Date().addingTimeInterval(-24 * 60 * 60) // 24 hours ago
-
-            for fileURL in files {
-                guard fileURL.pathExtension == "png" else { continue }
-
-                let attributes = try fileURL.resourceValues(forKeys: [.creationDateKey])
-                if let creationDate = attributes.creationDate, creationDate < cutoffDate {
-                    try fileManager.removeItem(at: fileURL)
-                    Log.io.info("🗑️ Cleaned up old PNG file: \(fileURL.lastPathComponent, privacy: .public)")
-                }
-            }
-        } catch {
-            Log.io.error("⚠️ Failed to cleanup old PNG files: \(error.localizedDescription, privacy: .public)")
+        // Sanity-check the write
+        guard let echo = ServerConfigUtils.readServerConfig(), echo.instance == instanceUUID else {
+            throw NSError(domain: "RiffMCP", code: 1, userInfo: [NSLocalizedDescriptionKey: "Server config write verification failed"])
         }
     }
 
-    // MARK: - Configuration File
-
-    private func getConfigFilePath() -> URL {
-        let supportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        return supportDir.appendingPathComponent("MCP Play/server.json")
-    }
-
-    private func writeConfigFile() async throws {
-        let configPath = getConfigFilePath()
-        try FileManager.default.createDirectory(at: configPath.deletingLastPathComponent(), withIntermediateDirectories: true)
-        let config: [String: Any] = ["port": resolvedPort ?? requestedPort, "host": host, "status": "running", "pid": ProcessInfo.processInfo.processIdentifier]
-        let jsonData = try JSONSerialization.data(withJSONObject: config, options: .prettyPrinted)
-        try jsonData.write(to: configPath)
-        Log.server.info("📝 Config written to: \(configPath.path, privacy: .public)")
-    }
-
     private func removeConfigFile() async throws {
-        let configPath = getConfigFilePath()
+        let configPath = ServerConfigUtils.getConfigFilePath()
         if FileManager.default.fileExists(atPath: configPath.path) {
             try FileManager.default.removeItem(at: configPath)
         }
     }
-
-    // MARK: - Tool & Prompt Definitions
-
-    private func getPromptDefinitions() -> [MCPPrompt] {
-        if let cachedPrompts = cachedPrompts {
-            return cachedPrompts
-        }
-
-        // Load prompt definitions from injected prompts URL
-        guard let promptsURL = promptsURL,
-              let promptsData = try? Data(contentsOf: promptsURL),
-              let promptsArray = try? JSONSerialization.jsonObject(with: promptsData) as? [[String: Any]] else {
-            Log.server.error("❌ Failed to load prompts.json, falling back to empty array")
-            return []
-        }
-
-        let prompts = promptsArray.compactMap { MCPPrompt(from: $0) }
-        self.cachedPrompts = prompts
-        return prompts
-    }
-
-    private func getToolDefinitions() -> [MCPTool] {
-        if let cachedTools = cachedTools {
-            return cachedTools
-        }
-
-        // Load tool definitions from injected tools URL
-        guard let toolsURL = toolsURL,
-              let toolsData = try? Data(contentsOf: toolsURL),
-              let toolsArray = try? JSONSerialization.jsonObject(with: toolsData) as? [[String: Any]] else {
-            Log.server.error("❌ Failed to load tools.json, falling back to empty array")
-            return []
-        }
-
-        let tools = toolsArray.compactMap { MCPTool(from: $0) }
-        self.cachedTools = tools
-        return tools
-    }
 }
-
-
-

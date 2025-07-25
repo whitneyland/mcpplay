@@ -46,6 +46,7 @@ struct JSONRPCError: Codable, Sendable, Error {
     static let methodNotFound = JSONRPCError(code: -32601, message: "Method not found")
     static let invalidParams = JSONRPCError(code: -32602, message: "Invalid params")
     static let internalError = JSONRPCError(code: -32603, message: "Internal error")
+    static let emptyRequest = JSONRPCError(code: -32600, message: "Empty or missing request body")
 
     static func serverError(_ message: String) -> JSONRPCError {
         return JSONRPCError(code: -32000, message: message)

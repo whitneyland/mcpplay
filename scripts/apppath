@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Get the latest build path using xcodebuild
+BUILD_DIR=$(xcodebuild -showBuildSettings -project RiffMCP.xcodeproj -scheme RiffMCP -configuration Debug | grep -E "^\s*BUILT_PRODUCTS_DIR" | awk '{print $3}')
+
+if [ -z "$BUILD_DIR" ]; then
+    echo "Error: Could not determine build directory"
+    exit 1
+fi
+
+APP_PATH="$BUILD_DIR/RiffMCP.app"
+EXECUTABLE_PATH="$APP_PATH/Contents/MacOS/RiffMCP"
+
+echo "App bundle: $APP_PATH"
+echo "Executable: $EXECUTABLE_PATH"
+echo ""
+echo "To run directly:"
+echo "\"$EXECUTABLE_PATH\""

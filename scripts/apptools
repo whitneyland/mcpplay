@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# Get the latest Xcode build path
+BUILD_PATH=$(xcodebuild -project RiffMCP.xcodeproj -scheme RiffMCP -configuration Debug -showBuildSettings 2>/dev/null | grep "BUILT_PRODUCTS_DIR" | head -1 | sed 's/.*= //')/RiffMCP.app
+
+if [ ! -d "$BUILD_PATH" ]; then
+    echo "Error: Could not find RiffMCP.app build at $BUILD_PATH"
+    exit 1
+fi
+
+echo "Using build: $BUILD_PATH"
+
+# MCP tools/list request
+TOOLS_REQUEST='{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+TOOLS_LENGTH=${#TOOLS_REQUEST}
+
+# Support both formats - default to newline-delimited (MCP 2025-06-18)
+if [ "$MCP_FORMAT" = "legacy" ]; then
+    # Create Content-Length test file (legacy format)
+    TOOLS_FILE="/tmp/mcp_tools_test.txt"
+    printf "Content-Length: %d\r\n\r\n%s" "$TOOLS_LENGTH" "$TOOLS_REQUEST" > "$TOOLS_FILE"
+    echo "Using Content-Length format (legacy - use MCP_FORMAT=legacy)"
+    echo "Requesting available tools from MCP server..."
+    echo "Request: $TOOLS_REQUEST"
+    echo "Length: $TOOLS_LENGTH bytes"
+else
+    # Create newline-delimited test file (default MCP format)
+    TOOLS_FILE="/tmp/mcp_tools_newline_test.txt"
+    printf "%s\n" "$TOOLS_REQUEST" > "$TOOLS_FILE"
+    echo "Using newline-delimited format (MCP 2025-06-18 default)"
+    echo "Requesting available tools from MCP server..."
+    echo "Request: $TOOLS_REQUEST"
+    echo "Format: newline-delimited"
+fi
+echo ""
+
+# Run the test
+echo "=== MCP Tools List Test ==="
+"$BUILD_PATH/Contents/MacOS/RiffMCP" --stdio --log-stdio < "$TOOLS_FILE"

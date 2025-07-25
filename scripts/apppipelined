@@ -1,0 +1,88 @@
+#!/bin/bash
+
+# Test HTTP pipelining with multiple requests on same connection
+
+echo "Testing HTTP pipelining with multiple requests..."
+echo ""
+
+# Three different JSON-RPC requests
+REQUEST1='{"jsonrpc":"2.0","id":1,"method":"ping"}'
+REQUEST2='{"jsonrpc":"2.0","id":2,"method":"ping"}'
+REQUEST3='{"jsonrpc":"2.0","id":3,"method":"ping"}'
+
+LEN1=${#REQUEST1}
+LEN2=${#REQUEST2}
+LEN3=${#REQUEST3}
+
+# Create pipelined HTTP requests in a single stream
+PIPELINE_FILE="/tmp/http_pipelined_test.txt"
+
+# Build complete HTTP requests with proper termination
+{
+    # Request 1
+    printf "POST / HTTP/1.1\r\n"
+    printf "Host: localhost:3001\r\n"
+    printf "Content-Type: application/json\r\n"
+    printf "Content-Length: %d\r\n" "$LEN1"
+    printf "Connection: keep-alive\r\n"
+    printf "\r\n"
+    printf "%s" "$REQUEST1"
+    
+    # Request 2 (immediately after request 1)
+    printf "POST / HTTP/1.1\r\n"
+    printf "Host: localhost:3001\r\n"
+    printf "Content-Type: application/json\r\n"
+    printf "Content-Length: %d\r\n" "$LEN2"
+    printf "Connection: keep-alive\r\n"
+    printf "\r\n"
+    printf "%s" "$REQUEST2"
+    
+    # Request 3 (immediately after request 2)
+    printf "POST / HTTP/1.1\r\n"
+    printf "Host: localhost:3001\r\n"
+    printf "Content-Type: application/json\r\n"
+    printf "Content-Length: %d\r\n" "$LEN3"
+    printf "Connection: keep-alive\r\n"
+    printf "\r\n"
+    printf "%s" "$REQUEST3"
+} > "$PIPELINE_FILE"
+
+echo "=== Testing HTTP Pipelining ==="
+echo "Sending 3 pipelined requests (id=1, id=2, id=3) on same connection"
+echo "Expected: 3 responses with Connection: keep-alive headers"
+echo "Before fix: only 1st response, then connection closed"
+echo "After fix: all 3 responses processed in order"
+echo ""
+
+# Use nc (netcat) to send raw HTTP and keep connection open
+if command -v nc &> /dev/null; then
+    echo "Using netcat to send pipelined requests..."
+    nc localhost 3001 < "$PIPELINE_FILE"
+else
+    echo "netcat not available, using curl with --http1.1 --tcp-nodelay for each request..."
+    echo "Note: This tests keep-alive but not true pipelining"
+    
+    curl -s --http1.1 --tcp-nodelay -X POST localhost:3001 \
+         -H "Content-Type: application/json" \
+         -H "Connection: keep-alive" \
+         -d "$REQUEST1"
+    echo ""
+    
+    curl -s --http1.1 --tcp-nodelay -X POST localhost:3001 \
+         -H "Content-Type: application/json" \
+         -H "Connection: keep-alive" \
+         -d "$REQUEST2"
+    echo ""
+    
+    curl -s --http1.1 --tcp-nodelay -X POST localhost:3001 \
+         -H "Content-Type: application/json" \
+         -H "Connection: keep-alive" \
+         -d "$REQUEST3"
+    echo ""
+fi
+
+echo ""
+echo "Look for:"
+echo "1. Connection: keep-alive in response headers"
+echo "2. All 3 JSON-RPC responses with correct IDs"
+echo "3. No connection refused/reset errors"
