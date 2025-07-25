@@ -88,9 +88,11 @@ actor MCPRequestHandler {
         do {
             let response: JSONRPCResponse
             switch request.method {
+
             case "ping":
-                response = JSONRPCResponse(result: .object(["status": .string("pong"), "timestamp": .string(ISO8601DateFormatter().string(from: Date()))]), id: request.id)
-            
+                // MCP spec says receiver MUST respond promptly to ping with an empty response
+                response = JSONRPCResponse(result: .object([:]), id: request.id)
+
             case "initialize":
                 let capabilities = MCPCapabilities(
                         tools: ["listChanged": .bool(false)],
@@ -113,11 +115,15 @@ actor MCPRequestHandler {
             case "resources/list":
                 response = JSONRPCResponse(result: .object(["resources": .array([])]), id: request.id)
 
+            case "resources/templates/list":
+                response = JSONRPCResponse(result: .object(["resourceTemplates": .array([])]), id: request.id)
+
             case "resources/read":
                 response = try await handleResourceRead(request)
 
             case "prompts/list":
-                let result = MCPPromptsResult(prompts: getPromptDefinitions())
+                // let result = MCPPromptsResult(prompts: getPromptDefinitions())
+                let result = MCPPromptsResult(prompts: [])
                 response = JSONRPCResponse(result: try encodeToJSONValue(result), id: request.id)
 
             default:
