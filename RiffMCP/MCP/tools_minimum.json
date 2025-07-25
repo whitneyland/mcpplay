@@ -1,0 +1,140 @@
+[
+  {
+    "name": "play",
+    "description": "Use this tool for composing and playing music.",
+    "inputSchema": {
+      "type": "object",
+      "required": ["tempo", "tracks"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Descriptive title for the music sequence (optional but recommended)"
+        },
+        "tempo": {
+          "type": "number",
+          "description": "BPM (beats per minute)"
+        },
+        "tracks": {
+          "type": "array",
+          "description": "Array of track objects",
+          "items": {
+            "type": "object",
+            "required": ["events"],
+            "properties": {
+              "instrument": {
+                "type": "string",
+                "enum": ["grand_piano"],
+                "description": "Available instruments: Piano (grand_piano)"
+              },
+              "events": {
+                "type": "array",
+                "description": "Array of musical events",
+                "items": {
+                  "type": "object",
+                  "required": ["time", "pitches", "dur"],
+                  "properties": {
+                    "time": {
+                      "type": "number",
+                      "description": "When to play (in beats from start of sequence)"
+                    },
+                    "pitches": {
+                      "type": "array",
+                      "description": "Note names like 'C4' or MIDI numbers like 60",
+                      "items": {
+                        "oneOf": [
+                          {"type": "number", "description": "MIDI note number (0-127)"},
+                          {"type": "string", "description": "Note name like 'C4', 'F#3'"}
+                        ]
+                      }
+                    },
+                    "dur": {
+                      "type": "number",
+                      "description": "How long to play in beats (1.0 = quarter note at current tempo)"
+                    },
+                    "vel": {
+                      "type": "integer",
+                      "description": "Volume/intensity 0-127 (optional, defaults to 100)",
+                      "minimum": 0,
+                      "maximum": 127
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "engrave",
+    "description": "Generate sheet-music image. Prioritizes: score_id > inline notes > last session score. If no arguments are given, engraves the session's last-played score.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "score_id": {
+          "type": "string",
+          "description": "Reference to previously played score. Takes precedence over inline notes."
+        },
+        "title": {
+          "type": "string",
+          "description": "Descriptive title for the music sequence (optional but recommended for better organization)"
+        },
+        "tempo": {
+          "type": "number",
+          "description": "BPM (beats per minute)"
+        },
+        "tracks": {
+          "type": "array",
+          "description": "Array of track objects",
+          "items": {
+            "type": "object",
+            "required": ["events"],
+            "properties": {
+              "instrument": {
+                "type": "string",
+                "enum": ["grand_piano"],
+                "description": "Available instruments: Piano (grand_piano)"
+              },
+              "events": {
+                "type": "array",
+                "description": "Array of musical events",
+                "items": {
+                  "type": "object",
+                  "required": ["time", "pitches", "dur"],
+                  "properties": {
+                    "time": {
+                      "type": "number",
+                      "description": "When to play (in beats from start of sequence)"
+                    },
+                    "pitches": {
+                      "type": "array",
+                      "description": "Note names like 'C4' or MIDI numbers like 60",
+                      "items": {
+                        "oneOf": [
+                          {"type": "number", "description": "MIDI note number (0-127)"},
+                          {"type": "string", "description": "Note name like 'C4', 'F#3'"}
+                        ]
+                      }
+                    },
+                    "dur": {
+                      "type": "number",
+                      "description": "How long to play in beats (1.0 = quarter note at current tempo)"
+                    },
+                    "vel": {
+                      "type": "integer",
+                      "description": "Volume/intensity 0-127 (optional, defaults to 100)",
+                      "minimum": 0,
+                      "maximum": 127
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]
+
