@@ -21,12 +21,18 @@ struct TransportBar: View {
                     Image(systemName: isPlaying ? "stop.fill" : "play.fill")
                     Text(isPlaying ? "Stop" : "Play")
                 }
+                .frame(width: 80, height: 30)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.white.opacity(0.15))
+                )
+
                 .foregroundColor(.white)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
             }
-            .background(Color.gray30)
-            .cornerRadius(6)
+            .frame(width: 80, height: 30)
+            .buttonStyle(.plain)
             .disabled(jsonInput.isEmpty)
 
             ZStack {

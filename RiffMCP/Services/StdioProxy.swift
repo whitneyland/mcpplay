@@ -106,14 +106,10 @@ struct StdioProxy {
         request.setValue("close", forHTTPHeaderField: "Connection")
 
         Log.server.info("🔄 Proxy sending POST to URL: \(url), \(data.count) bytes")
-//        Log.server.info("🔄 Proxy request headers: \(request.allHTTPHeaderFields ?? [:])")
-//        Log.server.info("🔄 Proxy request body size: \(request.httpBody?.count ?? 0)")
-//        if let bodyString = request.httpBody.flatMap({ String(data: $0, encoding: .utf8) }) {
-//            Log.server.info("🔄 Proxy request body content: '\(bodyString)'")
-//        }
 
         let semaphore = DispatchSemaphore(value: 0)
         var result: Result<Data, Error>?
+        var httpStatus: Int?
 
         session.dataTask(with: request) { data, response, error in
             defer { semaphore.signal() }
@@ -127,7 +123,8 @@ struct StdioProxy {
                 result = .failure(ProxyError.invalidHTTPResponse("No HTTP response"))
                 return
             }
-            
+            httpStatus = httpResponse.statusCode
+
             guard (200...299).contains(httpResponse.statusCode) else {
                 // Map HTTP status codes to appropriate JSON-RPC errors
                 let jsonRpcError: JSONRPCError
@@ -151,7 +148,13 @@ struct StdioProxy {
         }.resume()
 
         semaphore.wait()
-        
+
+        // MPC/JSON-RPC say must return nothing in the case of notifications (which return HTTP 202)
+        if httpStatus == 202 {
+            Log.server.info("StdioProxy: send no response for notifications.")
+            return
+        }
+
         switch result! {
         case .success(let responseData):
             try write(data: responseData)

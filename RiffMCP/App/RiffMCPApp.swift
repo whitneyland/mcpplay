@@ -77,7 +77,7 @@ struct RiffMCPApp: App {
                 do {
                     let svc = try AppServices()
                     services = svc               // <- @State is settable
-                    try await svc.startServices()
+                    await svc.startServices()
                 } catch {
                     launchError = error
                 }
@@ -120,7 +120,7 @@ struct RiffMCPApp: App {
         }
         
         if let app = NSRunningApplication(processIdentifier: config.pid) {
-            let success = app.activate(options: [.activateIgnoringOtherApps])
+            let success = app.activate()
             if success {
                 Log.server.info("✅ Brought existing window to front")
             } else {

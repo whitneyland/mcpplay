@@ -399,7 +399,7 @@ actor MCPRequestHandler {
             do {
                 let responseData = try JSONEncoder().encode(response)
                 if let responseString = String(data: responseData, encoding: .utf8) {
-                    await ActivityLog.shared.updateLastEventWithResponse(responseString)
+                    ActivityLog.shared.updateLastEventWithResponse(responseString)
                 }
             } catch {
                 Log.server.error("Failed to encode response for logging: \(error.localizedDescription)")
