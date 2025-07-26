@@ -393,7 +393,7 @@ private extension JSONToMEIConverter {
                     ProcessedTrack(originalTrackIndex: trackIndex,
                                    staffIndex: staffCount,
                                    instrumentName: instrumentName,
-                                   label: Instruments.getDisplayName(for: instrumentName) ?? instrumentName.replacingOccurrences(of: "_", with: " ").capitalized,
+                                   label: Instruments.getDisplayName(for: instrumentName),
                                    midiProgram: midiProgram,
                                    clef: ClefInfo.clefFromString("treble")))
                 staffCount += 1
@@ -410,7 +410,7 @@ private extension JSONToMEIConverter {
                     ProcessedTrack(originalTrackIndex: trackIndex,
                                    staffIndex: staffCount,
                                    instrumentName: instrumentName,
-                                   label: Instruments.getDisplayName(for: instrumentName) ?? instrumentName.replacingOccurrences(of: "_", with: " ").capitalized,
+                                   label: Instruments.getDisplayName(for: instrumentName),
                                    midiProgram: midiProgram,
                                    clef: ClefInfo.clefFromString(Instruments.getClef(for: instrumentName))))
             }

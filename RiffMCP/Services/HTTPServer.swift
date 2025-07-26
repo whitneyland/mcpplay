@@ -222,7 +222,6 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
     }
 
     private func handleJSONRPC(body: String, connection: NWConnection, bodySize: Int) async {
-        let jsonRpcStartTime = Date()
         Log.server.info("📄 JSON-RPC processing started")
 
         do {
@@ -239,8 +238,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
 
             // Try to parse as JSON first to see what fails
             do {
-                let jsonObject = try JSONSerialization.jsonObject(with: bodyData, options: [])
-                // Log.server.info("📄 JSON parsing successful, object: \(jsonObject)")
+                _ = try JSONSerialization.jsonObject(with: bodyData, options: [])
             } catch {
                 Log.server.error("📄 JSON parsing failed: \(error)")
                 throw JSONRPCError.parseError

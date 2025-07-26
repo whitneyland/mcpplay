@@ -106,11 +106,6 @@ struct StdioProxy {
         request.setValue("close", forHTTPHeaderField: "Connection")
 
         Log.server.info("🔄 Proxy sending POST to URL: \(url), \(data.count) bytes")
-//        Log.server.info("🔄 Proxy request headers: \(request.allHTTPHeaderFields ?? [:])")
-//        Log.server.info("🔄 Proxy request body size: \(request.httpBody?.count ?? 0)")
-//        if let bodyString = request.httpBody.flatMap({ String(data: $0, encoding: .utf8) }) {
-//            Log.server.info("🔄 Proxy request body content: '\(bodyString)'")
-//        }
 
         let semaphore = DispatchSemaphore(value: 0)
         var result: Result<Data, Error>?
