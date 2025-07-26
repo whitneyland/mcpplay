@@ -187,6 +187,99 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         }
     }
 
+    private func processCompleteHTTPRequest(requestLine: String, headers: [String: String], body: String, connection: NWConnection) async {
+
+        let components = requestLine.components(separatedBy: " ")
+        guard components.count >= 3 else {
+            Log.server.error("🌐 Invalid request line format: \(components)")
+            await sendHTTPResponse(connection: connection, statusCode: 400, body: "Bad Request")
+            return
+        }
+
+        let (method, path) = (components[0], components[1])
+        let bodySize = body.data(using: .utf8)?.count ?? 0
+
+        Log.server.info("🌐 Processing HTTP request - method: '\(method)', path: '\(path)', body size: \(bodySize) bytes")
+
+        switch (method, path) {
+        case ("POST", "/"):
+            await handleJSONRPC(body: body, connection: connection, bodySize: bodySize)
+
+        case ("GET", "/health"):
+            await sendHTTPResponse(
+                connection: connection,
+                statusCode: 200,
+                headers: ["Content-Type": "application/json"],
+                body: #"{"status":"healthy","port":\#(resolvedPort ?? requestedPort)}"#
+            )
+
+        case ("GET", let p) where p.hasPrefix("/images/"):
+            await handleImageRequest(path: p, connection: connection)
+
+        default:
+            await sendHTTPResponse(connection: connection, statusCode: 404, body: "Not Found")
+        }
+    }
+
+    private func handleJSONRPC(body: String, connection: NWConnection, bodySize: Int) async {
+        let jsonRpcStartTime = Date()
+        Log.server.info("📄 JSON-RPC processing started")
+
+        do {
+            // Check for empty body before attempting any parsing
+            guard !body.isEmpty else {
+                Log.server.error("📄 Request body is empty")
+                throw JSONRPCError.emptyRequest
+            }
+
+            guard let bodyData = body.data(using: .utf8) else {
+                Log.server.error("📄 Failed to convert body to UTF-8 data")
+                throw JSONRPCError.parseError
+            }
+
+            // Try to parse as JSON first to see what fails
+            do {
+                let jsonObject = try JSONSerialization.jsonObject(with: bodyData, options: [])
+                // Log.server.info("📄 JSON parsing successful, object: \(jsonObject)")
+            } catch {
+                Log.server.error("📄 JSON parsing failed: \(error)")
+                throw JSONRPCError.parseError
+            }
+
+            let request = try JSONDecoder().decode(JSONRPCRequest.self, from: bodyData)
+
+            guard request.jsonrpc == "2.0" else { throw JSONRPCError.invalidRequest }
+
+            Log.server.info("📄 Successfully decoded JSON-RPC request: \(request.method)")
+
+            // Delegate to the central handler with HTTP transport type
+            if let response = await mcpRequestHandler.handle(
+                request: request,
+                transport: .http,
+                requestBody: body,
+                bodySize: bodySize
+            ) {
+                // It was a regular request, send the JSON-RPC response
+                await sendJSONRPCResponse(response, connection: connection)
+            } else {
+                // It was a notification (handle returned nil)
+                // MCP spec says send no JSON-RPC response and HTTP should return 202
+                await sendHTTPResponse(connection: connection, statusCode: 202, body: "")
+            }
+
+        } catch let error as JSONRPCError {
+            let errorResponse = JSONRPCResponse(error: error, id: nil)
+            await sendJSONRPCResponse(errorResponse, connection: connection)
+        } catch let error as DecodingError {
+            Log.server.error(error.localizedDescription)
+            let parseErrorResponse = JSONRPCResponse(error: .parseError, id: nil)
+            await sendJSONRPCResponse(parseErrorResponse, connection: connection)
+        } catch {
+            let internalErrorResponse = JSONRPCResponse(error: .internalError, id: nil)
+            await sendJSONRPCResponse(internalErrorResponse, connection: connection)
+        }
+    }
+
     // MARK: - Connection Handling
 
     private func handleConnection(_ connection: NWConnection) async {
@@ -317,40 +410,6 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         }
     }
 
-    private func processCompleteHTTPRequest(requestLine: String, headers: [String: String], body: String, connection: NWConnection) async {
-
-        let components = requestLine.components(separatedBy: " ")
-        guard components.count >= 3 else {
-            Log.server.error("🌐 Invalid request line format: \(components)")
-            await sendHTTPResponse(connection: connection, statusCode: 400, body: "Bad Request")
-            return
-        }
-
-        let (method, path) = (components[0], components[1])
-        let bodySize = body.data(using: .utf8)?.count ?? 0
-
-        Log.server.info("🌐 Processing HTTP request - method: '\(method)', path: '\(path)', body size: \(bodySize) bytes")
-
-        switch (method, path) {
-        case ("POST", "/"):
-            await handleJSONRPC(body: body, connection: connection, bodySize: bodySize)
-
-        case ("GET", "/health"):
-            await sendHTTPResponse(
-                connection: connection,
-                statusCode: 200,
-                headers: ["Content-Type": "application/json"],
-                body: #"{"status":"healthy","port":\#(resolvedPort ?? requestedPort)}"#
-            )
-
-        case ("GET", let p) where p.hasPrefix("/images/"):
-            await handleImageRequest(path: p, connection: connection)
-
-        default:
-            await sendHTTPResponse(connection: connection, statusCode: 404, body: "Not Found")
-        }
-    }
-
     private func handleImageRequest(path: String, connection: NWConnection) async {
         let filename = URL(fileURLWithPath: path).lastPathComponent
         let fileURL = tempDirectory.appendingPathComponent(filename)
@@ -366,67 +425,6 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         } catch {
             Log.io.error("❌ Could not read image file: \(fileURL.path). Error: \(error.localizedDescription)")
             await sendHTTPResponse(connection: connection, statusCode: 404, body: "Not Found")
-        }
-    }
-
-    // MARK: - JSON-RPC Handler
-
-    private func handleJSONRPC(body: String, connection: NWConnection, bodySize: Int) async {
-        let jsonRpcStartTime = Date()
-        Log.server.info("📄 JSON-RPC processing started")
-
-        do {
-            // Check for empty body before attempting any parsing
-            guard !body.isEmpty else {
-                Log.server.error("📄 Request body is empty")
-                throw JSONRPCError.emptyRequest
-            }
-            
-            guard let bodyData = body.data(using: .utf8) else {
-                Log.server.error("📄 Failed to convert body to UTF-8 data")
-                throw JSONRPCError.parseError
-            }
-
-            // Try to parse as JSON first to see what fails
-            do {
-                let jsonObject = try JSONSerialization.jsonObject(with: bodyData, options: [])
-                // Log.server.info("📄 JSON parsing successful, object: \(jsonObject)")
-            } catch {
-                Log.server.error("📄 JSON parsing failed: \(error)")
-                throw JSONRPCError.parseError
-            }
-            
-            let request = try JSONDecoder().decode(JSONRPCRequest.self, from: bodyData)
-
-            guard request.jsonrpc == "2.0" else { throw JSONRPCError.invalidRequest }
-
-            Log.server.info("📄 Successfully decoded JSON-RPC request: \(request.method)")
-
-            // Delegate to the central handler with HTTP transport type
-            if let response = await mcpRequestHandler.handle(
-                request: request,
-                transport: .http,
-                requestBody: body,
-                bodySize: bodySize
-            ) {
-                // It was a regular request, send the JSON-RPC response
-                await sendJSONRPCResponse(response, connection: connection)
-            } else {
-                // It was a notification (handle returned nil)
-                // MCP spec says send no JSON-RPC response and HTTP should return 202
-                await sendHTTPResponse(connection: connection, statusCode: 202, body: "")
-            }
-
-        } catch let error as JSONRPCError {
-            let errorResponse = JSONRPCResponse(error: error, id: nil)
-            await sendJSONRPCResponse(errorResponse, connection: connection)
-        } catch let error as DecodingError {
-            Log.server.error(error.localizedDescription)
-            let parseErrorResponse = JSONRPCResponse(error: .parseError, id: nil)
-            await sendJSONRPCResponse(parseErrorResponse, connection: connection)
-        } catch {
-            let internalErrorResponse = JSONRPCResponse(error: .internalError, id: nil)
-            await sendJSONRPCResponse(internalErrorResponse, connection: connection)
         }
     }
 
