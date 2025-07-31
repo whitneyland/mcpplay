@@ -1,6 +1,7 @@
 # RiffMCP
 
-RiffMCP is a proof of concept MCP server that allows LLMs to create and render music.
+RiffMCP is an MCP server that allows LLMs to create and render music
+
 [![RiffMCP screenshot 1](docs/images/riffmcp_screenshot_1.png)](docs/images/riffmcp_screenshot_1.png)
 
 ## Overview
