@@ -3,137 +3,150 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎹 RiffMCP</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            line-height: 1.6;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 2rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #333;
-        }
-        
-        .container {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 2.5rem;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-        }
-        
-        h1 {
-            color: #2c3e50;
-            text-align: center;
-            margin-bottom: 1.5rem;
-            font-size: 2.5rem;
-            font-weight: 700;
-        }
-        
-        .subtitle {
-            font-size: 1.2rem;
-            color: #555;
-            text-align: center;
-            margin-bottom: 2rem;
-            font-weight: 300;
-        }
-        
-        .goals {
-            background: #f8f9fa;
-            padding: 1.5rem;
-            border-radius: 15px;
-            margin: 2rem 0;
-            border-left: 4px solid #667eea;
-        }
-        
-        .goals h2 {
-            color: #2c3e50;
-            margin-top: 0;
-            margin-bottom: 1rem;
-        }
-        
-        ul {
-            list-style: none;
-            padding-left: 0;
-        }
-        
-        li {
-            margin: 1rem 0;
-            padding: 0.5rem 0;
-            font-size: 1.1rem;
-        }
-        
-        .footer {
-            text-align: center;
-            margin-top: 2rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid #eee;
-            color: #666;
-            font-style: italic;
-        }
-        
-        .piano-keys {
-            display: flex;
-            justify-content: center;
-            margin: 2rem 0;
-        }
-        
-        .key {
-            width: 30px;
-            height: 100px;
-            background: white;
-            border: 1px solid #ccc;
-            margin: 0 1px;
-            border-radius: 0 0 5px 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        
-        .key.black {
-            width: 20px;
-            height: 60px;
-            background: #333;
-            margin: 0 -10px;
-            z-index: 1;
-            position: relative;
-        }
-    </style>
+    <title>RiffMCP</title>
+    
+    <link rel="icon" type="image/png" sizes="16x16" href="images/icon-32.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/icon-32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="images/icon-180.png">
+    
+    <link rel="stylesheet" href="common.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
 </head>
-<body>
-    <div class="container">
-        <h1>🎹 RiffMCP</h1>
-        
-        <div class="piano-keys">
-            <div class="key"></div>
-            <div class="key black"></div>
-            <div class="key"></div>
-            <div class="key black"></div>
-            <div class="key"></div>
-            <div class="key"></div>
-            <div class="key black"></div>
-            <div class="key"></div>
-            <div class="key black"></div>
-            <div class="key"></div>
-            <div class="key black"></div>
-            <div class="key"></div>
-        </div>
-        
-        <p class="subtitle">RiffMCP is a demo project exploring real-time control of MIDI playback in an iOS app using OpenAI's Model Context Protocol (MCP).</p>
-        
-        <div class="goals">
-            <h2>This project aims to:</h2>
-            <ul>
-                <li>🔁 Trigger MIDI sequences dynamically via MCP server commands</li>
-                <li>📲 Explore push notifications and app activation strategies</li>
-                <li>🎶 Showcase AI-driven interactions like "play a C major scale" or "compose a melody"</li>
-                <li>🎛️ Test soundfont integration for custom audio output</li>
-            </ul>
-        </div>
-        
-        <div class="footer">
-            It's a proof-of-concept built to demo what's possible at the intersection of AI orchestration and mobile audio.
+<body data-theme="light">
+    <div class="header-section">
+        <div class="header-content">            
+            <div class="header-text">
+                <h1><img src="images/icon-128.png" alt="RiffMCP" style="width: 96px; height: 96px; vertical-align: middle; margin-right: 8px;"> RiffMCP</h1>
+                <h2>LLM Music generation via Model Context Protocol</h2>
+            </div>
         </div>
     </div>
+
+    <main>
+        <div class="content-card">
+            <h3 style="color: white;">RiffMCP is a proof of concept MCP server that allows LLMs to create and render music.</h3>
+            <a href="images/riffmcp_screenshot_1.png"><img src="images/riffmcp_screenshot_1.png" alt="RiffMCP screenshot 1" style="width: 800px; height: auto;"></a>
+        </div>
+
+        <article class="content-card">
+            <h2>
+                <i class="ti ti-info-circle"></i>
+                Overview
+            </h2>
+            <ul>
+                <li>Local MCP server that runs as a macOS app</li>
+                <li>Handles the MCP stdio protocol, which is routed to a built-in HTTP server</li>
+                <li>Defines a JSON-based music sequence format used between the LLM and the MCP server</li>
+                <li>Multi-track music is played back using a high quality soundfont</li>
+                <li>Supports basic sheet music rendering</li>
+            </ul>
+        </article>
+
+        <article class="content-card">
+            <h2>
+                <i class="ti ti-automation"></i>
+                How it works
+            </h2>
+            <ul>
+                <li>Add RiffMCP to Claude Desktop, Gemini CLI, or any LLM that supports MCP servers (see <a href="#setup">setup</a> below).</li>
+                <li>Once configured, you can chat with the LLM to generate music or view the rendered output.</li>
+            </ul>
+                <div style="text-align: center; margin-top: 1em;">
+                    <a href="images/riffmcp_screenshot_3.png">
+                        <img src="images/riffmcp_screenshot_3.png" alt="RiffMCP screenshot 2" style="width: 400px; height: auto;">
+                    </a>
+                </div>
+            <h2>
+                <i class="ti ti-video"></i>
+                Watch demo
+            </h2>
+            
+        </article>
+
+        <article class="content-card">
+            <h2>
+                <i class="ti ti-music"></i>
+                Usage examples
+            </h2>
+            <ul>
+                <li>"Play a happy melody" or "Play a sad melody"</li>
+                <li>"Play a cascading blues minor scale with varying tempo"</li>
+                <li>"Play a 12 bar jazz progression with walking bass"</li>
+                <li>"Show me the sheet music for that"</li>
+                <li>"What instruments are available?"</li>
+            </ul>
+        </article>
+
+        <article class="content-card">
+            <h2>
+                <i class="ti ti-tool"></i>
+                Why build an MCP server as an app?
+            </h2>
+            <li>In addition to MCP functionality, I wanted an interface that allows monitoring MCP activity, a simple JSON editor for experimentation, and a piano roll to see how playback is working.</li>
+            <li>The challenge became how to implement MCP stdio protocol, an HTTP server, and a GUI simultaneously <em>without</em> any Node.js/Electron dependencies or separate daemon processes. The goal is to have only one native app running.</li>
+            <li>The solution was to use a <a href="proxy-mode.md">smart app / proxy mode architecture</a>.</li>
+        </article>
+
+        <article class="content-card">
+            <h2 id="setup">
+                <i class="ti ti-settings"></i>
+                Setup
+            </h2>
+            
+            <h3>RiffMCP</h3>
+            <p>First, add RiffMCP.app to the Applications folder and run it. The HTTP server starts automatically on port 3001. Next, configure an LLM to use it.</p>
+
+            <h3>Setup with Claude Desktop</h3>
+            <p>Add this to your Claude Desktop app configuration file:</p>
+            <p><strong>Location:</strong> <code>~/Library/Application Support/Claude/claude_desktop_config.json</code></p>
+            <p>Create or extend the top-level "mcpServers" object:</p>
+            <pre><code>{
+  "mcpServers": {
+    "riff": {
+      "command": "/Applications/RiffMCP.app/Contents/MacOS/RiffMCP",
+      "args": ["--stdio"]
+    }
+  }
+}</code></pre>
+            <p><strong>Restart Claude Desktop</strong> to activate the configuration.</p>
+
+            <h3>Setup with Gemini CLI</h3>
+            <ol>
+                <li><strong>Edit &lt;project&gt;/.gemini/settings.json</strong></li>
+                <li><strong>Create or extend the top-level "mcpServers" object:</strong></li>
+            </ol>
+            <pre><code>{
+  "mcpServers": {
+    "riff": {
+      "command": "/Applications/RiffMCP.app/Contents/MacOS/RiffMCP",
+      "args": ["--stdio"]
+    }
+  }
+}</code></pre>
+            <p><strong>Restart Gemini CLI</strong> to activate the configuration.</p>
+
+            <h3>For LLMs that don't support MCP servers</h3>
+            <ul>
+                <li>Grab the prompt from <code><a href="PROMPT_PIANO.md">PROMPT_PIANO.md</a></code> or <code><a href="PROMPT_MULTITRACK.md">PROMPT_MULTITRACK.md</a></code></li>
+                <li>This will prompt any LLM to generate RiffMCP json format</li>
+                <li>Copy the output and paste it into the json editor window in the RiffMCP app</li>
+                <li>Press the Play button</li>
+                <li>See usage examples to chat</li>
+            </ul>
+        </article>
+
+        <article class="content-card">
+            <h2>
+                <i class="ti ti-brand-github"></i>
+                Code
+            </h2>
+            <ul>
+                <li><a href="https://github.com/whitneyland/riffmcp">https://github.com/whitneyland/riffmcp</a></li>                
+                <li><a href="http://www.apache.org/licenses/LICENSE-2.0">Apache License, Version 2.0</a></li>
+                <li>Copyright 2025 Lee Whitney</li>
+            </ul>
+        </article>
+    </main>
 </body>
 </html>
