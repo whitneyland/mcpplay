@@ -29,6 +29,7 @@ RiffMCP is an MCP server that allows LLMs to create and render music
 - The challenge became how to implement MCP stdio protocol, an HTTP server, and a GUI simultaneously *without* any Node.js/Electron dependencies or separate daemon processes. The goal is to have only one native app running.  
 - The solution was to use a [smart app / proxy mode architecture](docs/proxy-mode.md).  
 <br>
+
 # Setup
 
 First, add RiffMCP.app to the Applications folder and run it. The HTTP server starts automatically on port 3001. Next, configure an LLM to use it.
