@@ -1,13 +1,11 @@
-Goal: 
-  To provide a GUI, an http server, and stdio invocation all within a single app. 
-  The thought is external simplicy to the user with no node dependencies or separate services required.
-  This should all work within the contraints of a single sandboxed MacOS app.
+## Smart app proxy mode architecture
 
-Smart App Proxy Mode Architecture
+### Goal
+ - To provide a GUI, an http server, and stdio invocation all within a single app. 
+ - The thought is external simplicy to the user with no node dependencies or separate services required.
+ - This should all work within the contraints of a single sandboxed MacOS app.
 
-================================================================================
-                        App Startup Decision Tree
-================================================================================
+## App startup decision tree
 
 CASE 1: Normal GUI Launch (User double-clicks the app)
 
@@ -29,7 +27,6 @@ The goal is to ensure only one instance of the GUI app is running.
    * Show the main application window.
    * The app is now running and ready. The StdioServer is NOT used.
 
-================================================================================
 
 CASE 2: Launched with --stdio (LLM client runs the command)
 
@@ -81,42 +78,41 @@ This process will NEVER show its own UI.
    * When the LLM client closes the stdin pipe (signaling the end of the 
      conversation), the loop terminates, and the proxy process calls exit(0).
 
-================================================================================
-                    Visual Flowchart (--stdio Process Only)
-================================================================================
 
-This flowchart illustrates the logic for a process launched WITH THE --stdio FLAG:
+## Visual Flowchart (--stdio Process Only)
 
+This flowchart illustrates the logic for a process launched *with* the --stdio flag:
+
+```
 [ --stdio Process Starts ]
            |
-           V
+           v
 [ Check for valid server.json ] -----(Yes)-----> [ Go to "Become a Proxy" ]
            |
           (No)
            |
-           V
-[ Launch Main GUI App (e.g., `open RiffMCP.app`) ]
+           v
+[ Launch Main GUI App (e.g., open RiffMCP.app) ]
            |
-           V
+           v
 [ Enter Discovery Loop (timeout: 15s) ]
            |
-           |--> Check for valid server.json every 200ms
+           |---> Check for valid server.json every 200ms
            |
-           V
+           v
 [ server.json found? ] -----(No / Timeout)-----> [ Log error to stderr, exit(1) ]
            |
           (Yes)
            |
-           V
+           v
 [ Become a Proxy ]
            |
-           |--> Read port from server.json
-           |--> Loop:
-           |    - Read from stdin
-           |    - Forward via HTTP
-           |    - Write response to stdout
+           |---> Read port from server.json
+           |---> Loop:
+           |     - Read from stdin
+           |     - Forward via HTTP
+           |     - Write response to stdout
            |
-           V
+           v
 [ stdin closes, exit(0) ]
-
-================================================================================
+```
