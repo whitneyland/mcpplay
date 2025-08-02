@@ -6,25 +6,20 @@
 //
 
 import Foundation
-import Darwin
 import AppKit
 
-/// Shared utilities for server configuration and process management
-enum ServerConfigUtils {
-    
-    /// Server configuration data structure
-    struct ServerConfig {
-        let port: UInt16
-        let pid: pid_t
-        let host: String
-        let status: String
-        let instance: String
-        let timestamp: Double   // epoch seconds
-    }
+/// Server configuration data structure
+struct ServerConfig {
+    let port: UInt16
+    let pid: pid_t
+    let host: String
+    let status: String
+    let instance: String
+    let timestamp: Double   // epoch seconds
     
     /// Reads server.json, validates it, and enforces a 1-hour staleness limit.
     /// - Returns: `ServerConfig` when the file exists *and* the PID/timestamp look valid; otherwise `nil`.
-    static func readServerConfig() -> ServerConfig? {
+    static func read() -> ServerConfig? {
         let configPath = getConfigFilePath()
 
         guard FileManager.default.fileExists(atPath: configPath.path) else {
@@ -71,32 +66,36 @@ enum ServerConfigUtils {
                             timestamp: epoch)
     }
 
-    /// Checks if a process with the given PID is still running
-    /// - Parameter pid: The process ID to check
-    /// - Returns: true if the process is running, false otherwise
-    static func isProcessRunning(pid: pid_t) -> Bool {
-        // Use NSRunningApplication for more reliable process detection
-        if let runningApp = NSRunningApplication(processIdentifier: pid) {
-            return !runningApp.isTerminated
+    static func write(host: String, port: UInt16) async throws {
+        let configPath = ServerConfig.getConfigFilePath()
+        try FileManager.default.createDirectory(at: configPath.deletingLastPathComponent(), withIntermediateDirectories: true)
+
+        let instanceUUID = UUID().uuidString
+        let config: [String: Any] = [
+            "port": port,
+            "host": host,
+            "status": "running",
+            "pid": ProcessInfo.processInfo.processIdentifier,
+            "instance": instanceUUID,
+            "timestamp": Date().timeIntervalSince1970
+        ]
+
+        let jsonData = try JSONSerialization.data(withJSONObject: config, options: .prettyPrinted)
+        try jsonData.write(to: configPath, options: .atomic)
+        Log.server.info("📝 Config written to: \(configPath.path)")
+
+        // Sanity-check the write
+        guard let echo = ServerConfig.read(), echo.instance == instanceUUID else {
+            throw NSError(domain: "RiffMCP", code: 1, userInfo: [NSLocalizedDescriptionKey: "Server config write verification failed"])
         }
-        
-        // Fallback to kill(pid, 0) for non-application processes
-        let result = kill(pid, 0)
-        if result == 0 {
-            return true
-        }
-        if result == -1 && errno == EPERM {
-            // Process exists but is not signalable — still counts as running
-            return true
-        }
-        if result == -1 && errno == ESRCH {
-            // Process does not exist — clean up stale config files
-            cleanupStaleConfig()
-            return false
-        }
-        // Other unexpected errors (e.g., invalid pid)
-        return false
     }
+
+    static func remove() async throws {
+        let configPath = ServerConfig.getConfigFilePath()
+        if FileManager.default.fileExists(atPath: configPath.path) {
+            try FileManager.default.removeItem(at: configPath)
+        }
+    }    
     
     /// Returns the canonical path to the server config file
     /// - Returns: URL to the server.json file inside the sandbox container
@@ -106,7 +105,7 @@ enum ServerConfigUtils {
     }
     
     /// Removes stale server configuration files
-    private static func cleanupStaleConfig() {
+    static func cleanup() {
         let configPath = getConfigFilePath()
         try? FileManager.default.removeItem(at: configPath)
     }

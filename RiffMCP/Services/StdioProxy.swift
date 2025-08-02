@@ -44,7 +44,7 @@ struct StdioProxy {
     static func runAsProxyAndExitIfNeeded() -> Never {
 
         // Check for existing server first
-        if let config = findRunningServer() {
+        if let config = ServerProcess.findRunningServer() {
             startProxyAndExit(port: config.port) // This call is `-> Never`
         }
 
@@ -188,7 +188,7 @@ struct StdioProxy {
     private static func launchGUIAppAndWait() throws {
         // Atomically create a launch lock file to prevent race conditions
         // between multiple concurrent --stdio invocations
-        let lockPath = ServerConfigUtils.getConfigFilePath().appendingPathExtension("launching")
+        let lockPath = ServerConfig.getConfigFilePath().appendingPathExtension("launching")
         let lockData = "launching".data(using: .utf8)!
         
         guard FileManager.default.createFile(atPath: lockPath.path, contents: lockData, attributes: nil) else {
@@ -202,7 +202,7 @@ struct StdioProxy {
             
             while Date().timeIntervalSince(startTime) < timeout {
                 // Check if server config appears (launch succeeded)
-                if let config = findRunningServer() {
+                if let config = ServerProcess.findRunningServer() {
                     Log.server.info("✅ StdioProxy: Other process completed launch successfully")
                     // Clean up our lock attempt
                     try? FileManager.default.removeItem(at: lockPath)
@@ -229,23 +229,7 @@ struct StdioProxy {
             try? FileManager.default.removeItem(at: lockPath)
         }
         
-        // Get the current app bundle path
-        let bundleURL = URL(fileURLWithPath: Bundle.main.bundlePath)
-        
-        Log.server.info("🚀 StdioProxy: Launching GUI app via LaunchServices at: \(bundleURL.path)")
-        
-
-        let runningApp: NSRunningApplication
-        do {
-            // Launch via LaunchServices to avoid sandbox termination
-            // Use the synchronous launchApplication method for compatibility
-            runningApp = try NSWorkspace.shared.launchApplication(at: bundleURL, options: [.newInstance, .andHide], configuration: [:])
-            let childPID = runningApp.processIdentifier
-            Log.server.info("🚀 Launched GUI via LaunchServices — pid \(childPID)")
-        } catch {
-            throw ProxyError.launchError("Failed to launch GUI app via LaunchServices: \(error.localizedDescription)")
-        }
-
+        let runningApp = try ServerProcess.startAppGUI()
 
         // Enter discovery loop with 15-second timeout
         let startTime = Date()
@@ -256,7 +240,7 @@ struct StdioProxy {
         
         while Date().timeIntervalSince(startTime) < timeout {
             // Check for server config
-            if let config = findRunningServer() {
+            if let config = ServerProcess.findRunningServer() {
                 Log.server.info("✅ StdioProxy: Found config during discovery - port: \(config.port), pid: \(config.pid)")
                 startProxyAndExit(port: config.port)
             }
@@ -278,27 +262,6 @@ struct StdioProxy {
 
 
     // MARK: - Helper Functions
-    
-    /// Return a live `ServerConfig` if the GUI server is confirmed running.
-    private static func findRunningServer() -> ServerConfigUtils.ServerConfig? {
-
-        // 1. read file
-        guard let cfg = ServerConfigUtils.readServerConfig() else {
-            return nil
-        }
-        // Log.server.info("📄 StdioProxy: config says port \(cfg.port), pid \(cfg.pid)")
-
-        // 2. verify PID alive
-        guard ServerConfigUtils.isProcessRunning(pid: cfg.pid) else {
-            Log.server.info("⚠️  StdioProxy: process \(cfg.pid) is dead – removing stale server.json")
-            try? FileManager.default.removeItem(at: ServerConfigUtils.getConfigFilePath())
-            return nil
-        }
-
-        // 3. success
-        Log.server.info("✅ StdioProxy: process \(cfg.pid) is running; using existing server")
-        return cfg
-    }
 
     /// Starts the proxy and exits the process (never returns)
     /// - Parameter port: The port to proxy to

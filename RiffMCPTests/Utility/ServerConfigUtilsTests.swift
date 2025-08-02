@@ -15,7 +15,7 @@ struct ServerConfigUtilsTests {
     @Test("Read valid server config")
     func readServerConfig_ValidConfig() throws {
         // Given: A valid server config file at the canonical path
-        let configFile = ServerConfigUtils.getConfigFilePath()
+        let configFile = ServerConfig.getConfigFilePath()
         let configDirectory = configFile.deletingLastPathComponent()
         
         // Backup existing config if it exists
@@ -37,7 +37,7 @@ struct ServerConfigUtilsTests {
         try data.write(to: configFile)
         
         // When: Reading the config
-        let result = ServerConfigUtils.readServerConfig()
+        let result = ServerConfig.read()
         
         // Then: Should return valid config
         #expect(result != nil)
@@ -56,7 +56,7 @@ struct ServerConfigUtilsTests {
     @Test("Read server config with invalid status")
     func readServerConfig_InvalidStatus() throws {
         // Given: A config with invalid status at the canonical path
-        let configFile = ServerConfigUtils.getConfigFilePath()
+        let configFile = ServerConfig.getConfigFilePath()
         let configDirectory = configFile.deletingLastPathComponent()
         
         // Backup existing config if it exists
@@ -78,7 +78,7 @@ struct ServerConfigUtilsTests {
         try data.write(to: configFile)
         
         // When: Reading the config
-        let result = ServerConfigUtils.readServerConfig()
+        let result = ServerConfig.read()
         
         // Then: Should return nil and remove file
         #expect(result == nil)
@@ -95,7 +95,7 @@ struct ServerConfigUtilsTests {
         // Given: No config file exists
         
         // When: Reading the config
-        let result = ServerConfigUtils.readServerConfig()
+        let result = ServerConfig.read()
         
         // Then: Should return nil
         #expect(result == nil)
@@ -117,7 +117,7 @@ struct ServerConfigUtilsTests {
         try corruptedData.write(to: configFile)
         
         // When: Reading the config
-        let result = ServerConfigUtils.readServerConfig()
+        let result = ServerConfig.read()
         
         // Then: Should return nil and remove corrupted file
         #expect(result == nil)
@@ -152,7 +152,7 @@ struct ServerConfigUtilsTests {
         try data.write(to: configFile)
         
         // When: Reading the config
-        let result = ServerConfigUtils.readServerConfig()
+        let result = ServerConfig.read()
         
         // Then: Should return nil and remove stale file
         #expect(result == nil)
@@ -168,7 +168,7 @@ struct ServerConfigUtilsTests {
         let currentPID = ProcessInfo.processInfo.processIdentifier
         
         // When: Checking if process is running
-        let isRunning = ServerConfigUtils.isProcessRunning(pid: currentPID)
+        let isRunning = ServerConfig.isProcessRunning(pid: currentPID)
         
         // Then: Should return true
         #expect(isRunning == true)
@@ -180,7 +180,7 @@ struct ServerConfigUtilsTests {
         let fakePID: pid_t = 999999
         
         // When: Checking if process is running
-        let isRunning = ServerConfigUtils.isProcessRunning(pid: fakePID)
+        let isRunning = ServerConfig.isProcessRunning(pid: fakePID)
         
         // Then: Should return false
         #expect(isRunning == false)

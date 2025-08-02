@@ -181,7 +181,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
             isRunning = false
         }
         do {
-            try await removeConfigFile()
+            try await ServerConfig.remove()
         } catch {
             Log.server.error("❌ Failed to remove server config: \(error.localizedDescription)")
         }
@@ -386,7 +386,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
             }
             ActivityLog.shared.updateServerStatus(online: true)
             do {
-                try await writeConfigFile()
+                try await ServerConfig.write(host: host, port: resolvedPort ?? requestedPort)
             } catch {
                 Log.server.error("❌ Failed to write server config: \(error.localizedDescription)")
             }
@@ -473,39 +473,6 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         case 404: return "Not Found"
         case 500: return "Internal Server Error"
         default: return "Unknown"
-        }
-    }
-
-    // MARK: - Configuration File
-
-    private func writeConfigFile() async throws {
-        let configPath = ServerConfigUtils.getConfigFilePath()
-        try FileManager.default.createDirectory(at: configPath.deletingLastPathComponent(), withIntermediateDirectories: true)
-        
-        let instanceUUID = UUID().uuidString
-        let config: [String: Any] = [
-            "port": resolvedPort ?? requestedPort,
-            "host": host,
-            "status": "running",
-            "pid": ProcessInfo.processInfo.processIdentifier,
-            "instance": instanceUUID,
-            "timestamp": Date().timeIntervalSince1970
-        ]
-        
-        let jsonData = try JSONSerialization.data(withJSONObject: config, options: .prettyPrinted)
-        try jsonData.write(to: configPath, options: .atomic)
-        Log.server.info("📝 Config written to: \(configPath.path)")
-
-        // Sanity-check the write
-        guard let echo = ServerConfigUtils.readServerConfig(), echo.instance == instanceUUID else {
-            throw NSError(domain: "RiffMCP", code: 1, userInfo: [NSLocalizedDescriptionKey: "Server config write verification failed"])
-        }
-    }
-
-    private func removeConfigFile() async throws {
-        let configPath = ServerConfigUtils.getConfigFilePath()
-        if FileManager.default.fileExists(atPath: configPath.path) {
-            try FileManager.default.removeItem(at: configPath)
         }
     }
 }

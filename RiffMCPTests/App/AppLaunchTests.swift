@@ -104,12 +104,12 @@ struct AppLaunchTests {
 // Extension to make private methods testable
 extension RiffMCPApp {
     func checkForExistingGUIInstance() -> (port: UInt16, pid: pid_t)? {
-        guard let config = ServerConfigUtils.readServerConfig() else {
+        guard let config = ServerConfig.read() else {
             return nil
         }
         
         // Check if the process is still running
-        if ServerConfigUtils.isProcessRunning(pid: config.pid) {
+        if ServerConfig.isProcessRunning(pid: config.pid) {
             return (config.port, config.pid)
         } else {
             // Process is dead, config already cleaned up by ServerConfigUtils
