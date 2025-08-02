@@ -1,0 +1,17 @@
+/usr/bin/log stream --info --style ndjson \
+    --predicate 'subsystem == "com.whitneyland.RiffMCP"' \
+    --color none |
+jq -Rr '
+  #—— helpers
+  def to12h:                                    #  → “h:mm:ss AM/PM”
+    sub("\\..*"; "")                            # drop µs + zone
+    | strptime("%Y-%m-%d %H:%M:%S")
+    | strftime("%-I:%M:%S %p");
+
+  def pad6: ("      " + .)[-6:];                # right-align in 6-char field
+
+  fromjson?                                   # skip non-JSON lines
+  | ( .timestamp | to12h )        as $t
+  | ( .processID|tostring|pad6 )  as $pid
+  | "\($t)  \($pid)  \(.eventMessage)"
+'
