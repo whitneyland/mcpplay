@@ -51,6 +51,13 @@ struct JSONRPCError: Codable, Sendable, Error {
     static func serverError(_ message: String) -> JSONRPCError {
         return JSONRPCError(code: -32000, message: message)
     }
+
+    init(code: Int, message: String) {
+        self.code = code
+        self.message = message
+
+        Log.server.error("JSON-RPC Error: \(message) (Code: \(code))")
+    }
 }
 
 // MARK: - JSON Value Type
