@@ -73,7 +73,7 @@ First, add RiffMCP.app to the Applications folder and run it. The HTTP server st
 <br><br>
 
 # For LLMs that don't support MCP servers
-- Grab the prompt from [PROMPT_PIANO.md](docs/PROMPT_PIANO.md) or [PROMPT_MULTITRACK.md](docs/PROMPT_MULTITRACK.md)
+- Grab the prompt from [PROMPT_PIANO.md](docs/prompts/PROMPT_PIANO.md) or [PROMPT_MULTITRACK.md](docs/prompts/PROMPT_MULTITRACK.md)
 - This will prompt any LLM to generate RiffMCP json format
 - Copy the output and paste it into the json editor window in the RiffMCP app
 - Press the Play button

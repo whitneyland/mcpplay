@@ -324,7 +324,7 @@ body.quick-calibration-active {
 /* Header Section - positioned above main */
 .header-section {
     position: relative;
-    margin-top: 100px;
+    margin-top: 0px;
     margin-bottom: 20px;
     max-width: 900px;
     margin-left: auto;
@@ -621,7 +621,7 @@ header {
 }
 
 main {
-    padding: 32px;
+    padding: 12px 32px 32px 32px;
     max-width: 900px;
     margin: 20px auto;
 }
