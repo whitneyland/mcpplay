@@ -3,10 +3,13 @@
 
 set -e
 
+# Change to the script's directory to ensure we're in the project root
+cd "$(dirname "$0")/.."
+
 echo "🔍 Finding last built RiffMCP.app..."
 
 # Get the path to the last built RiffMCP.app using xcodebuild
-APP_PATH=$(xcodebuild -showBuildSettings -scheme RiffMCP -configuration Debug | grep "BUILT_PRODUCTS_DIR" | head -1 | cut -d= -f2 | xargs)/RiffMCP.app
+APP_PATH=$(xcodebuild -showBuildSettings -scheme RiffMCP -configuration Debug -quiet 2>/dev/null | grep "BUILT_PRODUCTS_DIR" | head -1 | cut -d= -f2 | xargs)/RiffMCP.app
 
 if [ ! -d "$APP_PATH" ]; then
     echo "❌ Error: RiffMCP.app not found at $APP_PATH"

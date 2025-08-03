@@ -1,0 +1,12 @@
+#!/bin/bash
+# appfind - Find all builds
+
+set -e
+
+echo "🔍 Finding last built RiffMCP.app..."
+
+find ~/Library/Developer/Xcode/DerivedData \
+     -type f \
+     -path '*/RiffMCP.app/Contents/MacOS/RiffMCP' \
+     -exec stat -f '%Sm %N' {} + |
+sort
