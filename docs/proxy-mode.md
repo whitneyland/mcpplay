@@ -2,117 +2,104 @@
 
 ### Goal
  - To provide a GUI, an http server, and stdio invocation all within a single app. 
- - The thought is external simplicy to the user with no node dependencies or separate services required.
+ - Keep external simplicy to the user with no node dependencies or separate services required.
  - This should all work within the contraints of a single sandboxed MacOS app.
 
-## App startup decision tree
+### App Startup Decision Tree
 
-CASE 1: Normal GUI Launch (User double-clicks the app)
+#### CASE 1  Normal GUI launch (user double-clicks)
 
-The goal is to ensure only one instance of the GUI app is running.
+*Goal: ensure **only one** GUI instance.*
 
-1. CHECK FOR AN EXISTING GUI INSTANCE:
-   * The app looks for a valid server.json with a live PID.
-   
-   * IF FOUND: Another instance is already running. Bring its window to the 
-     front and terminate this new, redundant instance.
-   
-   * IF NOT FOUND (or Stale): Delete any stale file. This instance will 
-     become the primary one.
+1. **Check for existing GUI instance**  
+   - Read `server.json` and verify the PID is alive.  
+   - **FOUND:** bring that app to front, then terminate the new process.  
+   - **NOT FOUND / stale:** delete the file and continue.
 
-2. BECOME THE PRIMARY GUI SERVER:
-   * Initialize all services (AudioManager, HTTPServer, etc.).
-   * Start the HTTPServer.
-   * On successful server start, write server.json with its port and PID.
-   * Show the main application window.
-   * The app is now running and ready. The StdioServer is NOT used.
+2. **Become the primary GUI server**  
+   - Spin up services (AudioManager, **HTTPServer**, etc.).  
+   - After the HTTP server is ready, write `server.json` (see table above).  
+   - Show the main window.  
+   - **Note:** `StdioProxy` is **not** used in this path.
 
+---
 
-CASE 2: Launched with --stdio (LLM client runs the command)
+#### CASE 2  Launched with `--stdio` (LLM client spawn)
 
-The goal is to ENSURE A GUI SERVER IS RUNNING AND THEN ACT AS A PROXY TO IT. 
-This process will NEVER show its own UI.
+*Goal: guarantee a GUI server is running **then** act as a proxy. This helper never shows UI.*
 
-1. CHECK FOR AN EXISTING GUI INSTANCE:
-   * The process immediately looks for a valid server.json with a live PID.
-   
-   * IF FOUND: A server is already running and ready.
-      * ACTION: Proceed directly to the "Become a Proxy" step below.
-   
-   * IF NOT FOUND (or Stale): No server is running. The app must be launched 
-     first.
-      * ACTION: Proceed to the "Launch and Discover" step.
+1. **Check for existing GUI instance**  
+   - If `server.json` + live PID exists → jump straight to **Become a Proxy**.  
+   - Otherwise → proceed to **Launch and Discover**.
 
-2. LAUNCH AND DISCOVER (The "Server is Not Running" Path):
-   * This --stdio process now takes responsibility for starting the main app.
-   
-   * LAUNCH GUI APP: It executes the system command to open the application 
-     bundle (e.g., open /path/to/RiffMCP.app). This is equivalent to the user 
-     double-clicking the icon.
-   
-   * ENTER DISCOVERY LOOP: The --stdio process now waits for the GUI app to 
-     finish its startup. It enters a loop with a timeout (e.g., 15 seconds).
-      * Inside the loop, it checks every ~200ms for the appearance of a valid 
-        server.json file.
-   
-   * DISCOVERY SUCCESS: As soon as it finds the valid server.json written by 
-     the newly launched GUI app, it breaks the loop.
-      * ACTION: Proceed to the "Become a Proxy" step.
-   
-   * DISCOVERY FAILURE: If the loop times out and no valid server.json 
-     appears, the GUI app has failed to launch correctly.
-      * ACTION: The --stdio process should write a clear error to stderr and 
-        exit(1). This signals failure to the LLM client.
+2. **Launch and Discover**  
+   - **Acquire launch lock**  
+     - Atomically create `server.json.launching`.  
+     - If creation fails, another helper is launching; wait up to **15 s**.  
+     - If that other helper disappears without success (lock file vanishes and no `server.json` emerges), **retry** from the top; stale lock files are cleaned up automatically.
+   - **Launch GUI app** via `NSWorkspace.launchApplication`.  
+   - **Discovery loop** (250 ms poll, 15 s timeout) waits for a valid `server.json`.  
+   - **Failure:** timeout ⇒ log to `stderr`, `exit(1)`.
 
-3. BECOME A PROXY (The Final Step in All --stdio Scenarios):
-   * At this point, a GUI server is guaranteed to be running, and a valid 
-     server.json exists.
-   * The process reads the port number from the file.
-   * It does NOT initialize its own services or UI.
-   * It runs the lightweight bridge logic:
-      * Loop:
-         * Read a full JSON-RPC message from stdin.
-         * Forward it via HTTP POST to the discovered server port.
-         * Wait for the HTTP response.
-         * Write the full response message back to stdout.
-   * When the LLM client closes the stdin pipe (signaling the end of the 
-     conversation), the loop terminates, and the proxy process calls exit(0).
+3. **Become a Proxy** (final step in all `--stdio` scenarios)  
+   - Read the port from `server.json`; no other services or UI are started.  
+   - Enter loop:  
+     1. Read one JSON-RPC message from **stdin**.  
+     2. POST it to `http://127.0.0.1:<port>/`.  
+     3. Forward the HTTP body back to **stdout**.  
+   - **Framing:**  
+     - The proxy auto-detects **newline-delimited JSON** (MCP 2025-06-18) *or* legacy `Content-Length` framing, echoing replies in the same format.  
+   - **Notifications:**  
+     - If the HTTP server returns **202 Accepted** (used for JSON-RPC notifications), the proxy writes **no** response to stdout, per MCP spec.  
+   - When the client closes stdin, the proxy exits with status 0.
 
+---
 
-## Visual Flowchart (--stdio Process Only)
-
-This flowchart illustrates the logic for a process launched *with* the --stdio flag:
+### Visual Flowchart (`--stdio` helper only)
 
 ```
-[ --stdio Process Starts ]
-           |
-           v
-[ Check for valid server.json ] -----(Yes)-----> [ Go to "Become a Proxy" ]
-           |
-          (No)
-           |
-           v
-[ Launch Main GUI App (e.g., open RiffMCP.app) ]
-           |
-           v
-[ Enter Discovery Loop (timeout: 15s) ]
-           |
-           |---> Check for valid server.json every 200ms
-           |
-           v
-[ server.json found? ] -----(No / Timeout)-----> [ Log error to stderr, exit(1) ]
-           |
-          (Yes)
-           |
-           v
-[ Become a Proxy ]
-           |
-           |---> Read port from server.json
-           |---> Loop:
-           |     - Read from stdin
-           |     - Forward via HTTP
-           |     - Write response to stdout
-           |
-           v
-[ stdin closes, exit(0) ]
+[ --stdio process starts ]
+        |
+        v
+[ valid server.json? ]──Yes──▶[ Become a Proxy ]
+        |
+        No
+        |
+        v
+[ create launch lock ]
+        |
+        v
+[ launch GUI app ]
+        |
+        v
+[ discovery loop ≤15 s ]
+        |
+ ┌──────┴──────┐
+ │             │
+Yes           Timeout
+ │             │
+ v             v
+[ Become       [ log error,
+  a Proxy ]      exit(1) ]
 ```
+
+### Server-config file (the “source of truth”)
+- Path: `~/Library/Application Support/RiffMCP/server.json`
+- Keys written by the GUI HTTP server:  
+
+  | key        | type    | example                          | notes                             |
+  |------------|---------|----------------------------------|-----------------------------------|
+  | `port`     | UInt16  | `3001`                           | resolved listening port           |
+  | `host`     | String  | `"127.0.0.1"`                    | always loopback today             |
+  | `status`   | String  | `"running"`                      | only “running” is considered live |
+  | `pid`      | Int     | `84411`                          | PID of the GUI process            |
+  | `instance` | String  | `"0D4E…"`                        | random UUID for sanity-checking   |
+  | `timestamp`| Double  | `1.967E9`                        | epoch seconds at write-time       |
+
+### Glossary of Moving Parts
+| Component   | Role |
+|-------------|------|
+| **`HTTPServer`** | Listens on loopback; handles `/` JSON-RPC, `/health`, and `/images/*`. |
+| **`StdioProxy`** | Bridge from stdin/stdout JSON-RPC to the running `HTTPServer`. |
+| **`ServerConfig`** | Reads/writes `server.json`; cleans stale files. |
+| **`ServerProcess`** | Utility for PID checks and launching the GUI app. |
