@@ -372,15 +372,9 @@ actor MCPRequestHandler {
         }
 
         // Extract client info for initialize requests
-        var clientInfo: String?
-        if request.method == "initialize",
-           case let .object(params)? = request.params,
-           case let .object(client)? = params["clientInfo"],
-           case let .string(name)? = client["name"] {
-
-            let version: String
-            if case let .string(v)? = client["version"] { version = v } else { version = "unknown" }
-            clientInfo = "\(name) v\(version)"
+        let clientInfo = Self.extractClientInfo(from: request)
+        if let clientInfo {
+            Log.server.info("🤝 JSON-RPC Handler: Client initializing: 🟡 \(clientInfo)")
         }
 
         Task { @MainActor in
@@ -414,5 +408,25 @@ actor MCPRequestHandler {
         encoder.outputFormatting = [.prettyPrinted]
         let data = try encoder.encode(value)
         return try JSONDecoder().decode(JSONValue.self, from: data)
+    }
+}
+
+extension MCPRequestHandler {
+    /// Returns "`<client name> v<version>`" for an `initialize` request, or `nil`.
+    static func extractClientInfo(from request: JSONRPCRequest) -> String? {
+        guard request.method == "initialize",
+              case let .object(params)?  = request.params,
+              case let .object(client)?  = params["clientInfo"],
+              case let .string(name)?    = client["name"] else {
+            return nil
+        }
+
+        let version: String
+        if case let .string(v)? = client["version"] {
+            version = v
+        } else {
+            version = "unknown"
+        }
+        return "\(name) v\(version)"
     }
 }
