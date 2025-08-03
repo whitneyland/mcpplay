@@ -21,7 +21,7 @@ final class VerovioManager {
                                          ofType: nil,
                                          inDirectory: "Verovio"),
             let tk   = vrvToolkit_constructorResourcePath(path)
-        else { fatalError("Verovio: couldn't load resources") }
+        else { fatalError("💀 Verovio: couldn't load resources") }
         
         _ = vrvToolkit_setResourcePath(tk, path)
         toolkit = tk

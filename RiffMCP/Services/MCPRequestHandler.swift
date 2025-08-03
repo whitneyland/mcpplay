@@ -65,7 +65,7 @@ actor MCPRequestHandler {
     /// 
     func handle(request: JSONRPCRequest, transport: ActivityEvent.TransportType, requestBody: String? = nil, bodySize: Int? = nil) async -> JSONRPCResponse? {
 
-        // Log.server.info("⚡️ Handling method: \(request.method)")
+        // Log.server.info("⚡️ JSON-RPC Handler: method - \(request.method)")
 
         // Log the activity
         if let requestBody = requestBody {
@@ -77,9 +77,9 @@ actor MCPRequestHandler {
             switch request.method {
             case "notifications/initialized":
                 self.clientInitialized = true
-                Log.server.info("🤝 Client initialized.")
+                Log.server.info("🤝 JSON-RPC Handler: Client initialized.")
             default:
-                Log.server.info("📄 Received notification: \(request.method)")
+                Log.server.info("📄 JSON-RPC Handler: Received notification: \(request.method)")
             }
             // Return nil to signal that no JSON-RPC response should be sent
             return nil
@@ -131,13 +131,13 @@ actor MCPRequestHandler {
             }
 
             // Log the response
-            logResponse(response)
+            logActivity(response)
             
             return response
         } catch let error as JSONRPCError {
             return JSONRPCResponse(error: error, id: request.id)
         } catch {
-            Log.server.error("❌ Unhandled error in request handler: \(error.localizedDescription)")
+            Log.server.error("❌ JSON-RPC Handler: Unhandled error in request: \(error.localizedDescription)")
             return JSONRPCResponse(error: .internalError, id: request.id)
         }
     }
@@ -150,7 +150,7 @@ actor MCPRequestHandler {
             throw JSONRPCError.invalidParams
         }
 
-        Log.server.info("🎯 Tool identified: \(toolName)")
+        Log.server.info("🎯 JSON-RPC Handler: Tool identified - \(toolName)")
 
         do {
             let result: MCPResult
@@ -240,7 +240,7 @@ actor MCPRequestHandler {
         try pngData.write(to: pngURL)
         
         let resourceURI = "http://\(host):\(port)/images/\(pngFileName)"
-        Log.io.info("🖼️ Image resource URI: \(resourceURI)")
+        Log.io.info("🖼️ JSON-RPC Handler: Image resource URI - \(resourceURI)")
 
         let base64PNG = pngData.base64EncodedString()
         let imageItem = MCPContentItem.image(data: base64PNG, mimeType: "image/png")
@@ -318,7 +318,7 @@ actor MCPRequestHandler {
             // Clean up old PNG files on startup
             cleanupOldPNGFiles()
         } catch {
-            Log.io.error("⚠️ Failed to setup PNG management: \(error.localizedDescription)")
+            Log.io.error("❌ JSON-RPC Handler: Failed to setup PNG management - \(error.localizedDescription)")
         }
     }
     
@@ -335,11 +335,11 @@ actor MCPRequestHandler {
                 let attributes = try fileURL.resourceValues(forKeys: [.creationDateKey])
                 if let creationDate = attributes.creationDate, creationDate < cutoffDate {
                     try fileManager.removeItem(at: fileURL)
-                    Log.io.info("🗑️ Cleaned up old PNG file: \(fileURL.lastPathComponent)")
+                    Log.io.info("🗑️ JSON-RPC Handler: Cleaned up old PNG file: \(fileURL.lastPathComponent)")
                 }
             }
         } catch {
-            Log.io.error("⚠️ Failed to cleanup old PNG files: \(error.localizedDescription)")
+            Log.io.error("❌ JSON-RPC Handler: Failed to cleanup old PNG files: \(error.localizedDescription)")
         }
     }
     
@@ -394,7 +394,7 @@ actor MCPRequestHandler {
         }
     }
 
-    private nonisolated func logResponse(_ response: JSONRPCResponse) {
+    private nonisolated func logActivity(_ response: JSONRPCResponse) {
         Task { @MainActor in
             do {
                 let responseData = try JSONEncoder().encode(response)
@@ -402,7 +402,7 @@ actor MCPRequestHandler {
                     ActivityLog.shared.updateLastEventWithResponse(responseString)
                 }
             } catch {
-                Log.server.error("Failed to encode response for logging: \(error.localizedDescription)")
+                Log.server.error("❌ JSON-RPC Handler: Failed to encode activity log: \(error.localizedDescription)")
             }
         }
     }

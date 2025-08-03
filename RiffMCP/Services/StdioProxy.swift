@@ -41,19 +41,21 @@ struct StdioProxy {
     ///   3. If any error occurs: Calls exit(1)
     ///
     /// - Warning: This function always terminates the process via exit()
-    static func runAsProxyAndExitIfNeeded() -> Never {
+    static func runStdioMode() -> Never {
 
         // Check for existing server first
-        if let config = ServerProcess.findRunningServer() {
-            startProxyAndExit(port: config.port) // This call is `-> Never`
+        switch ServerProcess.checkForExistingGUIInstance() {
+        case .found(let port, _):
+            runProxyForever(port: port) // This call is `-> Never`
+        case .noConfigFile:
+            Log.server.info("🚀 StdioProxy: runStdioMode - No server config, launching GUI app...")
+        case .processNotRunning:
+            Log.server.info("🚀 StdioProxy: runStdioMode - pid not running, launching GUI app...")
         }
-
-        // If we reach here, no server is running. Launch the GUI app and wait for it.
-        Log.server.info("🚀 StdioProxy: No server running, launching GUI app...")
 
         do {
             // This function is designed to either throw an error or call
-            // a `Never`-returning function (`startProxyAndExit`) internally.
+            // a `Never`-returning function (`runProxyForever`) internally.
             // It should never return control to this point.
             try launchGUIAppAndWait()
         } catch {
@@ -63,41 +65,36 @@ struct StdioProxy {
         }
 
         // The logic of launchGUIAppAndWait dictates that we should never reach this point.
-        fatalError("StdioProxy: runAsProxyAndExitIfNeeded reached an unreachable state. Terminating.")
+        fatalError("💀 StdioProxy: runAsProxyAndExitIfNeeded reached an unreachable state. Terminating.")
     }
 
-    mutating func runBlocking() throws {
-        // Log.server.info("🔄 StdioProxy: Starting proxy loop…")
-
+    mutating func runBlocking() async throws {
         var sawFirstRequest = false
-        let idle: TimeInterval = 0.05
+        let idle: UInt64 = 50_000_000 // 0.05s in ns
 
         while true {
             do {
-                // ── header ──
                 if let hdr = try StdioIO.readHeader(from: stdin) {
-                    clientFormat = hdr.format                        // Capture client format
-                    // ── body ──
+                    clientFormat = hdr.format
                     let json = try StdioIO.readBody(from: stdin, length: hdr.length)
                     sawFirstRequest = true
-                    try forwardRequestSync(data: json)
+                    try await forwardRequest(data: json)
                     continue
                 }
 
-                // clean EOF (nil) before first request → just wait
                 if sawFirstRequest { break }
-                Thread.sleep(forTimeInterval: idle)
+                try await Task.sleep(nanoseconds: idle)
 
-            } catch StdioError.unexpectedEndOfStream,        // <-- here
-                    ProxyError.unexpectedEndOfStream {       // fd variant
-                if sawFirstRequest { break }                 // normal shutdown
-                Thread.sleep(forTimeInterval: idle)          // still waiting
+            } catch StdioError.unexpectedEndOfStream,
+                    ProxyError.unexpectedEndOfStream {
+                if sawFirstRequest { break }
+                try await Task.sleep(nanoseconds: idle)
             }
         }
     }
 
-    // Forward the request via HTTP synchronously
-    private func forwardRequestSync(data: Data) throws {
+    // Forward the request via HTTP (async, no semaphore, no captured mutation)
+    private func forwardRequest(data: Data) async throws {
         let url = URL(string: "http://127.0.0.1:\(port)/")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -105,79 +102,48 @@ struct StdioProxy {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("close", forHTTPHeaderField: "Connection")
 
-        Log.server.info("🔄 Proxy sending POST to URL: \(url), \(data.count) bytes")
+        Log.server.info("🔄 StdioProxy: Sending POST to URL: \(url), \(data.count) bytes")
 
-        let semaphore = DispatchSemaphore(value: 0)
-        var result: Result<Data, Error>?
-        var httpStatus: Int?
+        do {
+            let (body, response) = try await session.data(for: request)
+            guard let http = response as? HTTPURLResponse else {
+                throw ProxyError.invalidHTTPResponse("No HTTP response")
+            }
 
-        session.dataTask(with: request) { data, response, error in
-            defer { semaphore.signal() }
-            
-            if let error = error {
-                result = .failure(error)
+            // MCP/JSON-RPC: notifications → no response body (HTTP 202)
+            if http.statusCode == 202 {
+                Log.server.info("🔄 StdioProxy: Send no response for notifications.")
                 return
             }
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                result = .failure(ProxyError.invalidHTTPResponse("No HTTP response"))
-                return
-            }
-            httpStatus = httpResponse.statusCode
 
-            guard (200...299).contains(httpResponse.statusCode) else {
-                // Map HTTP status codes to appropriate JSON-RPC errors
-                let jsonRpcError: JSONRPCError
-                if (400...499).contains(httpResponse.statusCode) {
-                    jsonRpcError = .invalidRequest
-                } else if (500...599).contains(httpResponse.statusCode) {
-                    jsonRpcError = .serverError("Server error (HTTP \(httpResponse.statusCode))")
-                } else {
-                    jsonRpcError = .internalError
+            guard (200...299).contains(http.statusCode) else {
+                let jsonRpcError: JSONRPCError = {
+                    if (400...499).contains(http.statusCode) { return .invalidRequest }
+                    if (500...599).contains(http.statusCode) { return .serverError("Server error (HTTP \(http.statusCode))") }
+                    return .internalError
+                }()
+
+                // Emit JSON-RPC error back to client (preserves current behavior)
+                let requestId = extractRequestId(from: data)
+                let errorResponse = JSONRPCResponse(error: jsonRpcError, id: requestId)
+                if let errorData = try? JSONEncoder().encode(errorResponse) {
+                    try write(data: errorData)
                 }
-                result = .failure(ProxyError.httpError(httpResponse.statusCode, jsonRpcError))
                 return
             }
-            
-            guard let data = data else {
-                result = .failure(ProxyError.invalidHTTPResponse("No response data"))
-                return
-            }
-            
-            result = .success(data)
-        }.resume()
 
-        semaphore.wait()
-
-        // MPC/JSON-RPC say must return nothing in the case of notifications (which return HTTP 202)
-        if httpStatus == 202 {
-            Log.server.info("StdioProxy: send no response for notifications.")
-            return
-        }
-
-        switch result! {
-        case .success(let responseData):
-            try write(data: responseData)
-        case .failure(let error):
-            Log.server.error("StdioProxy: forwarding error: \(error.localizedDescription)")
-            // Send a JSON-RPC error response back to the client with correct ID
+            try write(data: body)
+        } catch {
+            // Network/other error → JSON-RPC internalError
+            Log.server.error("❌ StdioProxy: Forwarding error: \(error.localizedDescription)")
             let requestId = extractRequestId(from: data)
-            
-            // Use appropriate JSON-RPC error based on the error type
-            let jsonRpcError: JSONRPCError
-            if case .httpError(_, let specificError) = error as? ProxyError {
-                jsonRpcError = specificError
-            } else {
-                jsonRpcError = .internalError
-            }
-            
-            let errorResponse = JSONRPCResponse(error: jsonRpcError, id: requestId)
+            let errorResponse = JSONRPCResponse(error: .internalError, id: requestId)
             if let errorData = try? JSONEncoder().encode(errorResponse) {
                 try write(data: errorData)
             }
         }
     }
-    
+
     // Writes a full JSON-RPC response to stdout
     private func write(data: Data) throws {
         try StdioIO.write(data, to: stdout, using: clientFormat)
@@ -198,15 +164,18 @@ struct StdioProxy {
             // Wait for the other process to complete launch (up to 15 seconds)
             let startTime = Date()
             let timeout: TimeInterval = 15.0
-            let checkInterval: TimeInterval = 0.2
-            
+            let checkInterval: TimeInterval = 0.25
+
             while Date().timeIntervalSince(startTime) < timeout {
                 // Check if server config appears (launch succeeded)
-                if let config = ServerProcess.findRunningServer() {
+                switch ServerProcess.checkForExistingGUIInstance() {
+                case .found(let port, _):
                     Log.server.info("✅ StdioProxy: Other process completed launch successfully")
                     // Clean up our lock attempt
                     try? FileManager.default.removeItem(at: lockPath)
-                    startProxyAndExit(port: config.port)
+                    runProxyForever(port: port)
+                case .noConfigFile, .processNotRunning:
+                    break // Continue waiting
                 }
                 
                 // Check if lock file disappeared (launch failed)
@@ -240,9 +209,12 @@ struct StdioProxy {
         
         while Date().timeIntervalSince(startTime) < timeout {
             // Check for server config
-            if let config = ServerProcess.findRunningServer() {
-                Log.server.info("✅ StdioProxy: Found config during discovery - port: \(config.port), pid: \(config.pid)")
-                startProxyAndExit(port: config.port)
+            switch ServerProcess.checkForExistingGUIInstance() {
+            case .found(let port, let pid):
+                Log.server.info("✅ StdioProxy: Found config during discovery - port: \(port), pid: \(pid)")
+                runProxyForever(port: port)
+            case .noConfigFile, .processNotRunning:
+                break // Continue discovery loop
             }
 
             if runningApp.isTerminated {
@@ -259,27 +231,27 @@ struct StdioProxy {
         exit(1)
     }
 
-
-
     // MARK: - Helper Functions
 
-    /// Starts the proxy and exits the process (never returns)
-    /// - Parameter port: The port to proxy to
-    private static func startProxyAndExit(port: UInt16) -> Never {
+    /// Spins up a stdio→HTTP proxy and blocks forever.
+    /// - Note: This function never returns; it terminates the process via `exit()`
+    ///         when the proxy loop ends or encounters a fatal error.
+    private static func runProxyForever(port: UInt16) -> Never {
         Log.server.info("🔄 StdioProxy: Starting proxy to forward to port \(port)")
-        
-        var proxy = StdioProxy(port: port)        // was let
-        
-        do {
-            try proxy.runBlocking()                   // now mutating
-        } catch {
-            Log.server.error("StdioProxy: exit (1): \(error.localizedDescription)")
-            exit(1)
+
+        var proxy = StdioProxy(port: port)
+
+        Task {
+            do {
+                try await proxy.runBlocking()
+                exit(0)
+            } catch {
+                Log.server.error("❌ StdioProxy: exit (1): \(error.localizedDescription)")
+                exit(1)
+            }
         }
-        
-        // After the stdin stream from the LLM client closes, the loop will end.
-        // We must exit the proxy process cleanly.
-        exit(0)
+        // Keep the process alive for the async task; never returns.
+        dispatchMain()
     }
     
     /// Extracts the request ID from JSON-RPC data for proper error responses
@@ -301,7 +273,7 @@ struct StdioProxy {
                 }
             }
         } catch {
-            Log.server.error("Failed to extract request ID: \(error.localizedDescription)")
+            Log.server.error("❌ StdioProxy: Failed to extract request ID: \(error.localizedDescription)")
         }
         return nil
     }

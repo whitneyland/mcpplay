@@ -56,7 +56,7 @@ struct JSONRPCError: Codable, Sendable, Error {
         self.code = code
         self.message = message
 
-        Log.server.error("JSON-RPC Error: \(message) (Code: \(code))")
+        Log.server.error("❌ JSON-RPC Error: \(message) (Code: \(code))")
     }
 }
 

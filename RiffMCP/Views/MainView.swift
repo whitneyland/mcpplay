@@ -98,7 +98,7 @@ struct MainView: View {
     
     private func loadPresetToInput() {
         guard let preset = presetManager.getPreset(by: selectedPresetId) else {
-            Log.app.error("Could not find preset with id: \(selectedPresetId)")
+            Log.app.error("❌ App: Could not find preset with id: \(selectedPresetId)")
             return
         }
         jsonInput = preset.content
@@ -139,7 +139,7 @@ struct MainView: View {
             let svg = Verovio.svg(from: meiXML)
             notationSVG = svg
         } catch {
-            Log.app.error("Error converting sequence to notation: \(error.localizedDescription)")
+            Log.app.error("❌ App: Error converting sequence to notation: \(error.localizedDescription)")
             // Fall back to simple test notation
             let svg = Verovio.svgFromSimpleTestXml()
             notationSVG = svg
@@ -171,7 +171,7 @@ struct MainView: View {
         do {
             jsonInput = try MusicSequenceJSONSerializer.prettyPrint(updatedSequence)
         } catch {
-            Log.app.error("Error encoding updated sequence: \(error.localizedDescription)")
+            Log.app.error("❌ App: Error encoding updated sequence: \(error.localizedDescription)")
         }
         
         // Update local state

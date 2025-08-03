@@ -180,18 +180,14 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         await MainActor.run {
             isRunning = false
         }
-        do {
-            try await ServerConfig.remove()
-        } catch {
-            Log.server.error("❌ Failed to remove server config: \(error.localizedDescription)")
-        }
+        ServerConfig.remove()
     }
 
     private func processCompleteHTTPRequest(requestLine: String, headers: [String: String], body: String, connection: NWConnection) async {
 
         let components = requestLine.components(separatedBy: " ")
         guard components.count >= 3 else {
-            Log.server.error("🌐 Invalid request line format: \(components)")
+            Log.server.error("❌ HTTPServer: Invalid request line format: \(components)")
             await sendHTTPResponse(connection: connection, statusCode: 400, body: "Bad Request")
             return
         }
@@ -199,7 +195,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         let (method, path) = (components[0], components[1])
         let bodySize = body.data(using: .utf8)?.count ?? 0
 
-        Log.server.info("🌐 Processing HTTP request - method: '\(method)', path: '\(path)', body size: \(bodySize) bytes")
+        Log.server.info("🌐 HTTPServer: Request - method: '\(method)', path: '\(path)', body size: \(bodySize) bytes")
 
         switch (method, path) {
         case ("POST", "/"):
@@ -222,17 +218,17 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
     }
 
     private func handleJSONRPC(body: String, connection: NWConnection, bodySize: Int) async {
-        Log.server.info("📄 JSON-RPC processing started")
+        // Log.server.info("🌐 HTTPServer: JSON-RPC processing started")
 
         do {
             // Check for empty body before attempting any parsing
             guard !body.isEmpty else {
-                Log.server.error("📄 Request body is empty")
+                Log.server.error("❌ HTTPServer: Request body is empty")
                 throw JSONRPCError.emptyRequest
             }
 
             guard let bodyData = body.data(using: .utf8) else {
-                Log.server.error("📄 Failed to convert body to UTF-8 data")
+                Log.server.error("❌ HTTPServer: Failed to convert body to UTF-8 data")
                 throw JSONRPCError.parseError
             }
 
@@ -240,7 +236,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
             do {
                 _ = try JSONSerialization.jsonObject(with: bodyData, options: [])
             } catch {
-                Log.server.error("📄 JSON parsing failed: \(error)")
+                Log.server.error("❌ HTTPServer: JSON parsing failed: \(error)")
                 throw JSONRPCError.parseError
             }
 
@@ -248,7 +244,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
 
             guard request.jsonrpc == "2.0" else { throw JSONRPCError.invalidRequest }
 
-            Log.server.info("📄 Successfully decoded JSON-RPC request: \(request.method)")
+            Log.server.info("🌐 HTTPServer: Decoded JSON-RPC request: 🟢 \(request.method)")
 
             // Delegate to the central handler with HTTP transport type
             if let response = await mcpRequestHandler.handle(
@@ -269,7 +265,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
             let errorResponse = JSONRPCResponse(error: error, id: nil)
             await sendJSONRPCResponse(errorResponse, connection: connection)
         } catch let error as DecodingError {
-            Log.server.error(error.localizedDescription)
+            Log.server.error("❌ HTTPServer: \(error.localizedDescription)")
             let parseErrorResponse = JSONRPCResponse(error: .parseError, id: nil)
             await sendJSONRPCResponse(parseErrorResponse, connection: connection)
         } catch {
@@ -291,13 +287,13 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
                     guard let self = self else { return }
                     
                     if let error = error {
-                        Log.server.error("❌ Connection error: \(error.localizedDescription)")
+                        Log.server.error("❌ HTTPServer: Connection error: \(error.localizedDescription)")
                         connection.cancel()
                         return
                     }
                     
                     if let data = data, !data.isEmpty {
-                        // Log.server.info("🌐 Received data chunk: \(data.count) bytes")
+                        // Log.server.info("🌐 HTTPServer: Received data chunk: \(data.count) bytes")
                         connectionState.appendData(data)
                         
                         // Try to process the request if we have enough data
@@ -350,7 +346,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
         case .complete:
             // Process the complete request
             if let request = connectionState.extractCompleteRequest() {
-                // Log.server.info("🌐 Processing complete HTTP request")
+                // Log.server.info("🌐 HTTPServer: Processing complete HTTP request")
                 await processCompleteHTTPRequest(
                     requestLine: request.requestLine,
                     headers: request.headers,
@@ -364,7 +360,7 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
                 // Check if there's another request in the buffer to process
                 await tryProcessBufferedRequest(connectionState, connection: connection)
             } else {
-                Log.server.error("🌐 Failed to extract complete request")
+                Log.server.error("❌ HTTPServer: Failed to extract complete request")
                 await sendHTTPResponse(connection: connection, statusCode: 400, body: "Bad Request")
                 // Don't consume the request if extraction failed - may need to close connection
                 connection.cancel()
@@ -380,27 +376,28 @@ class HTTPServer: ObservableObject, @unchecked Sendable {
             resolvedPort = port
             isRunning = true
             lastError = nil
-            Log.server.info("🚀 HTTP Server started on \(self.host):\(port!)")
+            Log.server.info("🚀 HTTPServer: Started on \(self.host):\(port!)")
             if let port {
                 await mcpRequestHandler.update(port: port) // Update the handler with the resolved port
             }
             ActivityLog.shared.updateServerStatus(online: true)
             do {
-                try await ServerConfig.write(host: host, port: resolvedPort ?? requestedPort)
+                try ServerConfig.write(host: host, port: resolvedPort ?? requestedPort)
+                Log.server.info("📝 HTTPServer: Config saved: \(ServerConfig.getConfigFilePath())")
             } catch {
-                Log.server.error("❌ Failed to write server config: \(error.localizedDescription)")
+                Log.server.error("❌ HTTPServer: Failed to write server config: \(error.localizedDescription)")
             }
 
         case .failed(let error):
             isRunning = false
             lastError = "Server failed: \(error.localizedDescription)"
-            Log.server.error("❌ \(error.localizedDescription)")
+            Log.server.error("❌ HTTPServer: \(error.localizedDescription)")
             ActivityLog.shared.updateServerStatus(online: false)
 
         case .cancelled:
             resolvedPort = nil
             isRunning = false
-            Log.server.info("🛑 HTTP Server stopped")
+            Log.server.info("🛑 HTTPServer: Stopped")
             ActivityLog.shared.updateServerStatus(online: false)
 
         default:

@@ -197,7 +197,7 @@ struct SVGImageView: View {
 
                 self.pngImage = NSImage(data: pngData)
             } catch {
-                Log.io.error("Failed to render SVG to PNG: \(error)")
+                Log.io.error("❌ Failed to render SVG to PNG: \(error)")
                 self.pngImage = nil
             }
         }

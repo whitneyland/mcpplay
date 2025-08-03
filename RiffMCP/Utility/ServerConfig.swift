@@ -23,12 +23,11 @@ struct ServerConfig {
         let configPath = getConfigFilePath()
 
         guard FileManager.default.fileExists(atPath: configPath.path) else {
-            Log.server.info("❌ ServerConfig: not found - \(configPath.path)")
             return nil
         }
 
         guard let data = try? Data(contentsOf: configPath) else {
-            Log.server.info("❌ ServerConfig: could not read - \(configPath.path)")
+            Log.server.info("❌ Server config: could not read - \(configPath.path)")
             return nil
         }
 
@@ -41,8 +40,8 @@ struct ServerConfig {
             let status = json["status"] as? String,
             let instance = json["instance"] as? String
         else {
-            Log.server.error("❌ ServerConfig: missing/invalid keys – deleting - \(configPath.path)")
-            try? FileManager.default.removeItem(at: configPath)
+            Log.server.error("❌ Server config: missing/invalid keys – deleting - \(configPath.path)")
+            ServerConfig.remove()
             return nil
         }
 
@@ -51,12 +50,12 @@ struct ServerConfig {
 
         // ----- age check (1 hour) ------------------------------------------------
         let epoch   = json["timestamp"] as? TimeInterval ?? 0         // 0 = distant past
-        let age     = Date().timeIntervalSince1970 - epoch
-        if age > 3600 {
-            Log.server.info("⏰ ServerConfig: stale (age \(Int(age)) s) – deleting")
-            try? FileManager.default.removeItem(at: configPath)
-            return nil
-        }
+//        let age     = Date().timeIntervalSince1970 - epoch
+//        if age > 3600 {
+//            Log.server.info("⏰ Server config: stale (age \(Int(age)) s) – deleting")
+//            ServerConfig.remove()
+//            return nil
+//        }
 
         return ServerConfig(port: port,
                             pid:  pid_t(pid),
@@ -66,7 +65,7 @@ struct ServerConfig {
                             timestamp: epoch)
     }
 
-    static func write(host: String, port: UInt16) async throws {
+    static func write(host: String, port: UInt16) throws {
         let configPath = ServerConfig.getConfigFilePath()
         try FileManager.default.createDirectory(at: configPath.deletingLastPathComponent(), withIntermediateDirectories: true)
 
@@ -81,32 +80,30 @@ struct ServerConfig {
         ]
 
         let jsonData = try JSONSerialization.data(withJSONObject: config, options: .prettyPrinted)
-        try jsonData.write(to: configPath, options: .atomic)
-        Log.server.info("📝 Config written to: \(configPath.path)")
+        try jsonData.write(to: configPath, options: .atomic)        
 
         // Sanity-check the write
-        guard let echo = ServerConfig.read(), echo.instance == instanceUUID else {
+        guard let config = ServerConfig.read(), config.instance == instanceUUID else {
             throw NSError(domain: "RiffMCP", code: 1, userInfo: [NSLocalizedDescriptionKey: "Server config write verification failed"])
         }
     }
-
-    static func remove() async throws {
-        let configPath = ServerConfig.getConfigFilePath()
-        if FileManager.default.fileExists(atPath: configPath.path) {
-            try FileManager.default.removeItem(at: configPath)
-        }
-    }    
     
+    /// Removes stale server configuration files
+    static func remove() {
+        let configPath = getConfigFilePath()
+        do {
+            if FileManager.default.fileExists(atPath: configPath.path) {
+                try FileManager.default.removeItem(at: configPath)
+            }
+        } catch {
+            Log.server.error("❌ Failed to remove server config: \(error.localizedDescription)")
+        }
+    }
+
     /// Returns the canonical path to the server config file
     /// - Returns: URL to the server.json file inside the sandbox container
     static func getConfigFilePath() -> URL {
         let supportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         return supportDir.appendingPathComponent("RiffMCP/server.json")
-    }
-    
-    /// Removes stale server configuration files
-    static func cleanup() {
-        let configPath = getConfigFilePath()
-        try? FileManager.default.removeItem(at: configPath)
     }
 }

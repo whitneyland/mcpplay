@@ -9,6 +9,12 @@ import Foundation
 import AppKit
 import Darwin
 
+enum GUIInstanceCheckResult {
+    case found(port: UInt16, pid: pid_t)
+    case noConfigFile
+    case processNotRunning(staleConfig: (port: UInt16, pid: pid_t))
+}
+
 enum ServerProcess {
     /// Checks if a process with the given PID is still running
     /// - Parameter pid: The process ID to check
@@ -30,32 +36,27 @@ enum ServerProcess {
         }
         if result == -1 && errno == ESRCH {
             // Process does not exist — clean up stale config files
-            ServerConfig.cleanup()
+            ServerConfig.remove()
             return false
         }
         // Other unexpected errors (e.g., invalid pid)
         return false
     }
 
-    /// Return a live `ServerConfig` if the GUI server is confirmed running.
-    static func findRunningServer() -> ServerConfig? {
-
-        // 1. read file
-        guard let cfg = ServerConfig.read() else {
-            return nil
-        }
-        // Log.server.info("📄 StdioProxy: config says port \(cfg.port), pid \(cfg.pid)")
-
-        // 2. verify PID alive
-        guard ServerProcess.isProcessRunning(pid: cfg.pid) else {
-            Log.server.info("⚠️  StdioProxy: process \(cfg.pid) is dead – removing stale server.json")
-            try? FileManager.default.removeItem(at: ServerConfig.getConfigFilePath())
-            return nil
+    /// Checks for an existing GUI instance by looking for a valid server.json file
+    /// - Returns: Result indicating whether an instance was found, no config exists, or process is dead
+    static func checkForExistingGUIInstance() -> GUIInstanceCheckResult {
+        guard let config = ServerConfig.read() else {
+            return .noConfigFile
         }
 
-        // 3. success
-        Log.server.info("✅ StdioProxy: process \(cfg.pid) is running; using existing server")
-        return cfg
+        // Check if the process is still running
+        if ServerProcess.isProcessRunning(pid: config.pid) {
+            return .found(port: config.port, pid: config.pid)
+        } else {
+            // Process is dead, config already cleaned up by ServerConfigUtils
+            return .processNotRunning(staleConfig: (config.port, config.pid))
+        }
     }
 
     static func startAppGUI() throws -> NSRunningApplication {

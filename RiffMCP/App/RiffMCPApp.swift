@@ -26,29 +26,33 @@ struct RiffMCPApp: App {
             // The compiler knows this function is `-> Never`, meaning it will not
             // return. The process will be terminated within this call.
             // The SwiftUI App body will never be initialized.
-            StdioProxy.runAsProxyAndExitIfNeeded()
+            StdioProxy.runStdioMode()
         }
         //
         // CASE 2: Normal GUI Launch. This code is only reached if --stdio is NOT present.
         // Check for an existing instance of the GUI app.
         //
-        Log.app.info("\(AppInfo.name) v\(AppInfo.fullVersion) started no arguments.")
-        if let existingInstance = checkForExistingGUIInstance() {
-            Log.app.info("🔍 GUI: Found existing GUI instance: port \(existingInstance.port), pid \(existingInstance.pid)")
+        Log.app.info("\(AppInfo.name) v\(AppInfo.fullVersion) started in GUI mode (full app)")
+        switch ServerProcess.checkForExistingGUIInstance() {
+        case .found(let port, let pid):
+            Log.app.info("🔍 GUI: Found existing GUI instance: port \(port), pid \(pid)")
 
             // Bring existing window to front.
             bringExistingWindowToFront()
 
             // This new, redundant instance should not launch its UI and should terminate.
             RiffMCPApp.allowLaunchUI = false
-            Log.app.info("🏁 GUI: Terminating duplicate GUI instance")
             DispatchQueue.main.async {      // Wait until after init when NSApp is not nil
                 NSApp.terminate(nil)        // Use this instead of exit() to gracefully terminate this redundant process.
             }
-        } else {
-            // No existing GUI instance was found. Proceed with a normal launch.
-            // `shouldLaunchUI` remains its default `true` value.
-            Log.app.info("✅ GUI: No existing GUI instance, proceeding with normal launch, pid: \(getpid())")
+            
+        case .noConfigFile:
+            RiffMCPApp.allowLaunchUI = true
+            Log.app.info("✅ GUI: No server config file found, proceeding with normal launch, pid: \(getpid())")
+            
+        case .processNotRunning(let staleConfig):
+            RiffMCPApp.allowLaunchUI = true
+            Log.app.info("🧹 GUI: Old process is dead (port \(staleConfig.port), pid \(staleConfig.pid)), proceeding with normal launch, pid: \(getpid())")
         }
     }
 
@@ -94,28 +98,12 @@ struct RiffMCPApp: App {
         }
         .commands { AboutCommands() }
     }
-    
-    /// Checks for an existing GUI instance by looking for a valid server.json file
-    /// - Returns: Server config if found and process is running, nil otherwise
-    private func checkForExistingGUIInstance() -> (port: UInt16, pid: pid_t)? {
-        guard let config = ServerConfig.read() else {
-            return nil
-        }
         
-        // Check if the process is still running
-        if ServerProcess.isProcessRunning(pid: config.pid) {
-            return (config.port, config.pid)
-        } else {
-            // Process is dead, config already cleaned up by ServerConfigUtils
-            return nil
-        }
-    }
-    
     /// Brings the existing window to the front by activating the running process
     private func bringExistingWindowToFront() {
         // Use NSRunningApplication instead of AppleScript to avoid sandbox entitlement requirements
         guard let config = ServerConfig.read() else {
-            Log.server.error("Cannot bring window to front: no server config found")
+            Log.server.error("❌ Cannot bring window to front: no server config found")
             return
         }
         
@@ -124,10 +112,10 @@ struct RiffMCPApp: App {
             if success {
                 Log.server.info("✅ Brought existing window to front")
             } else {
-                Log.server.error("Failed to activate existing application window")
+                Log.server.error("❌ Failed to activate existing application window")
             }
         } else {
-            Log.server.error("Failed to find running application with PID: \(config.pid)")
+            Log.server.error("❌ Failed to find running application with PID: \(config.pid)")
         }
     }
 }
