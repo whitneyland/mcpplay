@@ -1,8 +1,7 @@
 //
-//  ServerConfigUtils.swift
+//  ServerConfig.swift
 //  RiffMCP
 //
-//  Created by Claude on 7/18/2025.
 //
 
 import Foundation

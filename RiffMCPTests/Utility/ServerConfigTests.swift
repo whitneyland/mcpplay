@@ -1,8 +1,7 @@
 //
-//  ServerConfigUtilsTests.swift
+//  ServerConfigTests.swift
 //  RiffMCPTests
 //
-//  Created by Claude on 7/18/2025.
 //
 
 import Testing
@@ -10,7 +9,7 @@ import Foundation
 @testable import RiffMCP
 
 @Suite("ServerConfigUtils Tests")
-struct ServerConfigUtilsTests {
+struct ServerConfigTests {
     
     @Test("Read valid server config")
     func readServerConfig_ValidConfig() throws {
@@ -168,8 +167,8 @@ struct ServerConfigUtilsTests {
         let currentPID = ProcessInfo.processInfo.processIdentifier
         
         // When: Checking if process is running
-        let isRunning = ServerConfig.isProcessRunning(pid: currentPID)
-        
+        let isRunning = ServerProcess.isProcessRunning(pid: currentPID)
+
         // Then: Should return true
         #expect(isRunning == true)
     }
@@ -180,7 +179,7 @@ struct ServerConfigUtilsTests {
         let fakePID: pid_t = 999999
         
         // When: Checking if process is running
-        let isRunning = ServerConfig.isProcessRunning(pid: fakePID)
+        let isRunning = ServerProcess.isProcessRunning(pid: fakePID)
         
         // Then: Should return false
         #expect(isRunning == false)

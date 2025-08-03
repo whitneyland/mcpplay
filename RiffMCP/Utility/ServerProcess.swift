@@ -46,6 +46,7 @@ enum ServerProcess {
     /// Checks for an existing GUI instance by looking for a valid server.json file
     /// - Returns: Result indicating whether an instance was found, no config exists, or process is dead
     static func checkForExistingGUIInstance() -> GUIInstanceCheckResult {
+
         guard let config = ServerConfig.read() else {
             return .noConfigFile
         }
@@ -54,7 +55,7 @@ enum ServerProcess {
         if ServerProcess.isProcessRunning(pid: config.pid) {
             return .found(port: config.port, pid: config.pid)
         } else {
-            // Process is dead, config already cleaned up by ServerConfigUtils
+            // Process is dead
             return .processNotRunning(staleConfig: (config.port, config.pid))
         }
     }
