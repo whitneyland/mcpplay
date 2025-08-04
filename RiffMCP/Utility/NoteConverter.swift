@@ -51,37 +51,57 @@ struct NoteConverter {
         return min(max(midi, 0), 127)
     }
 
-    /// Parses a note name string into its constituent parts: pitch name, octave, and accidental.
+    /// Parses a note name string into pitch letter, octave, and accidental.
+    /// Supports:
+    ///   • Sharps  –  “#”, “♯”, or “s”
+    ///   • Flats   –  “b”, “♭”, or “-” (dash) *when the dash isn’t followed by a digit*
+    ///   • Negative octaves – written with a leading “-” *before* the octave digits
     ///
-    /// - Parameter name: The note name string (e.g., "C#4").
-    /// - Returns: A tuple containing the lowercase pitch name (e.g., "c"), the octave number,
-    ///   and an optional accidental ("s" for sharp, "f" for flat).
-    /// - Throws: `ConversionError.unsupportedPitchFormat` if the regex does not match.
-    static func nameToPitch(_ name: String) throws -> (pname: String, oct: Int, accid: String?) {
-        // Regex: ^([A-Ga-g])([#sb]?)(-?\d+)$
-        // 1: Pitch letter (A-G, case-insensitive)
-        // 2: Accidental (#, s, or b) - optional
-        // 3: Octave number (can be negative)
-        let regex = try! NSRegularExpression(pattern: #"^([A-Ga-g])([#sb]?)(-?\d+)$"#)
-        guard let match = regex.firstMatch(in: name, options: [], range: NSRange(name.startIndex..., in: name)),
-              let pRange = Range(match.range(at: 1), in: name),
-              let aRange = Range(match.range(at: 2), in: name),
-              let oRange = Range(match.range(at: 3), in: name)
-        else {
-            throw ConversionError.unsupportedPitchFormat(name)
+    /// Examples:
+    ///   C4   → ("c", 4, nil)
+    ///   C#4  → ("c", 4, "s")
+    ///   Db3  → ("d", 3, "f")
+    ///   C-1  → ("c", -1, nil)            // minus-sign octave
+    ///   C--1 → ("c", -1, "f")            // flat + minus-sign octave
+    static func nameToPitch(_ raw: String) throws -> (pname: String, oct: Int, accid: String?) {
+        let s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // 1. Pitch letter
+        guard let first = s.first,
+              ("A"..."G").contains(first.uppercased()) else {
+            throw ConversionError.unsupportedPitchFormat(raw)
+        }
+        var i = s.index(after: s.startIndex)
+        var accid: String? = nil
+
+        // 2. Optional accidental
+        if i < s.endIndex {
+            let c = s[i]
+            switch c {
+            case "#", "♯", "s": accid = "s"; i = s.index(after: i)
+            case "b", "♭":     accid = "f"; i = s.index(after: i)
+            case "-":
+                let next = s.index(after: i)
+                if next < s.endIndex, s[next].isNumber { break }   // minus for octave
+                accid = "f"; i = next                              // dash = flat
+            default: break
+            }
         }
 
-        let pname = String(name[pRange]).lowercased()
-        let accidentalStr = String(name[aRange])
-        let oct = Int(name[oRange]) ?? 4 // Default to octave 4 if parsing fails
-
-        let accid: String?
-        switch accidentalStr {
-            case "#", "s": accid = "s"
-            case "b": accid = "f"
-            default: accid = nil
+        // 3. Optional minus for negative octave
+        var octaveSign = ""
+        if i < s.endIndex, s[i] == "-" {
+            octaveSign = "-"
+            i = s.index(after: i)
         }
-        return (pname, oct, accid)
+
+        // 4. Octave digits (must have at least one)
+        guard i < s.endIndex, s[i].isNumber else {
+            throw ConversionError.unsupportedPitchFormat(raw)
+        }
+        let octave = Int(octaveSign + s[i...]) ?? 4   // ← default to 4 on overflow
+
+        return (String(first).lowercased(), octave, accid)
     }
 
     /// Converts a MIDI note number into its constituent parts: pitch name and octave.
