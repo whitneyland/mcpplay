@@ -145,7 +145,7 @@ class AudioManager: AudioManaging, ObservableObject {
     }
 
     private func scheduleSequence(_ sequence: MusicSequence) throws {
-        Log.audio.info("🎶 AudioManager: Scheduling started, tempo=\(sequence.tempo)")
+        // Log.audio.info("🎶 AudioManager: Scheduling started, tempo=\(sequence.tempo)")
 
         sequencer.stop()
 
@@ -191,8 +191,6 @@ class AudioManager: AudioManaging, ObservableObject {
             audioEngine.connect(trackSampler, to: audioEngine.mainMixerNode, format: nil)
             
             let program = instrumentPrograms[track.instrument] ?? 0
-            // Log.audio.info("🎵 AudioManager: Track \(index): Loading \(track.instrument, privacy: .public) (program \(program, privacy: .public))")
-
             do {
                 try trackSampler.loadSoundBankInstrument(at: soundFontURL, program: program, bankMSB: 0x79, bankLSB: 0)
                 // Log.audio.info("🎵 AudioManager: Track \(index, privacy: .public): Successfully loaded soundbank")
@@ -210,8 +208,7 @@ class AudioManager: AudioManaging, ObservableObject {
             
             // Connect the sequencer track to our sampler
             sequencerTrack.destinationAudioUnit = trackSampler
-            Log.audio.info("🎵 AudioManager: Track \(trackIndex): Connected to \(track.instrument) sampler, \(track.events.count) events")
-            
+
             var eventCount = 0
             for event in track.events {
                 let startTime = event.time  // Already in beats
@@ -236,7 +233,7 @@ class AudioManager: AudioManaging, ObservableObject {
                     eventCount += 1
                 }
             }
-            Log.audio.info("🎵 AudioManager: Track \(trackIndex): Added \(eventCount) MIDI events, length \(String(format: "%.3f", sequencerTrack.lengthInBeats)) beats")
+            Log.audio.info("🎵 AudioManager: Track \(trackIndex): \(track.instrument) sampler, added \(eventCount) MIDI events, length \(String(format: "%.3f", sequencerTrack.lengthInBeats)) beats")
         }
         
         // Prepare and start the sequencer
