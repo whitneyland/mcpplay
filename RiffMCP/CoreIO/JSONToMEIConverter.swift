@@ -9,10 +9,13 @@ import Foundation
 
 public enum JSONToMEIConverter {
 
-    /// When a duration isn’t an exact power-of-two or dotted value, we
-    /// “snap” it to the closest power-of-two **only if** the relative error
-    /// is ≤ this value (25 % by default).
-    private static let snapTolerance: Double = 0.25
+    /// When a duration isn’t an exact value, we
+    /// snap it to the closest power-of-twoonly if the relative error
+    /// is ≤ this value (20 % by default).
+    private static let eps: Double = 1e-9
+    private static let tol: Double = 1e-3
+    private static let snapTolerance: Double = 0.02
+
     // ---------------------------------------------------------------------
 
     public enum ConversionError: Error, LocalizedError {
@@ -216,18 +219,36 @@ private extension JSONToMEIConverter {
                               events: [MEIEvent],
                               beatsPerMeasure: Double) throws {
         var beatCursor = 0.0
+
+        // Sort defensively by start time
         for event in events.sorted(by: { $0.time < $1.time }) {
+            // Position of this event within the current measure (0..beatsPerMeasure)
             let eventStartBeat = event.time.truncatingRemainder(dividingBy: beatsPerMeasure)
 
-            if eventStartBeat > beatCursor {
-                try addRests(to: layer, for: eventStartBeat - beatCursor)
+            // Gap from where we last were to this event start (kill microscopic gaps)
+            let gap = eventStartBeat - beatCursor
+            if gap > Self.eps {
+                try addRests(to: layer, for: gap)
+                beatCursor = eventStartBeat
+            } else if gap < -Self.eps {
+                // Overlap or negative drift; clamp forward to avoid negative rest
+                beatCursor = max(beatCursor, eventStartBeat)
+            } else {
+                // Within epsilon → treat as contiguous
+                beatCursor = eventStartBeat
             }
 
+            // Emit the musical event
             layer.addChild(try buildMusicalEventElement(event: event))
-            beatCursor = eventStartBeat + event.dur
+
+            // Advance cursor by the event duration (don’t let tiny negatives pull us back)
+            beatCursor = max(beatCursor, eventStartBeat) + max(0.0, event.dur)
         }
-        if beatCursor < beatsPerMeasure {
-            try addRests(to: layer, for: beatsPerMeasure - beatCursor)
+
+        // Trailing rest to fill the bar (ignore microscopic tail)
+        let tail = beatsPerMeasure - beatCursor
+        if tail > Self.eps {
+            try addRests(to: layer, for: tail)
         }
     }
 }
@@ -266,40 +287,47 @@ private extension JSONToMEIConverter {
         layer.addChild(rest)
     }
 
+    @inline(__always)
+    static func approx(_ a: Double, _ b: Double, tol: Double = 1e-3) -> Bool {
+        let scale = max(1.0, max(abs(a), abs(b)))
+        return abs(a - b) <= tol * scale
+    }
+
     // -----------------------------------------------------------------
     //  Duration → MEI attributes (with snapping)
     // -----------------------------------------------------------------
     static func durationToAttributes(beats: Double) throws -> [XMLNode] {
-
-        guard beats.isFinite, beats > 0 else {
-            Log.io.info("⚠️ JSONToMEI: Invalid duration \(beats); using quarter.")
-            return [att("dur", "4")]
+        guard beats.isFinite, beats > 0, beats >= eps else {
+            return [att("dur","4")]
         }
 
-        // 1) dotted literals
-        switch beats {
-        case 1.5:  return [att("dur","4"), att("dots","1")]
-        case 3.0:  return [att("dur","2"), att("dots","1")]
-        case 0.75: return [att("dur","8"), att("dots","1")]
-        default: break
-        }
+        // dotted (tolerant)
+        if approx(beats, 1.5)  { return [att("dur","4"),  att("dots","1")] }
+        if approx(beats, 3.0)  { return [att("dur","2"),  att("dots","1")] }
+        if approx(beats, 0.75) { return [att("dur","8"),  att("dots","1")] }
 
-        // 2) exact power-of-two lookup
+        // triplet placeholders (no structural tuplet yet)
+        if approx(beats, 1.0/3.0, tol: 0.01) { return [att("dur","8")] }
+        if approx(beats, 2.0/3.0, tol: 0.01) { return [att("dur","4")] }
+        if approx(beats, 1.0/6.0, tol: 0.01) { return [att("dur","16")] }
+
+        // power-of-two with tolerance
         let table: [Double:String] = [4:"1", 2:"2", 1:"4", 0.5:"8",
                                       0.25:"16", 0.125:"32", 0.0625:"64"]
-        if let dur = table[beats] { return [att("dur", dur)] }
+        if let dur = table.first(where: { approx(beats, $0.key) })?.value {
+            return [att("dur", dur)]
+        }
 
-        // 3) snap to nearest power-of-two within tolerance 🛡️
+        // snap to nearest power-of-two using target-relative error
         if let nearest = table.min(by: { abs($0.key - beats) < abs($1.key - beats) }) {
-            let relError = abs(nearest.key - beats) / beats
-            if relError <= snapTolerance {
+            let relErr = abs(nearest.key - beats) / nearest.key
+            if relErr <= snapTolerance {
                 return [att("dur", nearest.value)]
             }
         }
 
-        // 4) unsupported → placeholder
-        Log.io.info("⚠️ JSONToMEI: Unsupported duration \(beats); using quarter.")
-        return [att("dur", "4"), att("artic", "stacc")]
+        // last resort: plain quarter
+        return [att("dur","4")]
     }
 
     static func pitchToAttributes(_ pitch: PitchValue) throws -> [XMLNode] {
