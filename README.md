@@ -79,6 +79,10 @@ First, add RiffMCP.app to the Applications folder and run it. The HTTP server st
 - Press the Play button
 <br><br>
 
+## Further work
+- The sheet music rendering uses the powerful Verovio engine but at this point it's a basic implementation. For example triplets are not acuurately represented and display output is single page.
+- The web server is a minimal, hand-rolled implementation. Eventually it would make sense to swap it out for a more scalable/robust component.
+
 # License
 - Apache License, Version 2.0
 - Copyright 2025 Lee Whitney
