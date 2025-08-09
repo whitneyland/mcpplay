@@ -69,6 +69,13 @@ class AudioManager: AudioManaging, ObservableObject {
     private var playbackStartTicks: CFTimeInterval?
     private var sequencer: AVAudioSequencer
     private let playbackTailTime: TimeInterval = 2.0
+    private var samplerPool: [SamplerKey: AVAudioUnitSampler] = [:]
+
+    private struct SamplerKey: Hashable {
+        let program: UInt8
+        let bankMSB: UInt8
+        let bankLSB: UInt8
+    }
 
     init() {
         audioEngine = AVAudioEngine()
@@ -103,7 +110,7 @@ class AudioManager: AudioManaging, ObservableObject {
     }
 
     func playSequenceFromJSON(_ rawJSON: String) {
-        // Log.audio.info("🎶 AudioManager: Sequence started")
+        Log.audio.info("🎶 AudioManager: Scheduling sequence")
 
         stopSequence()                     // cancel anything already playing
         playbackState = .loading
@@ -143,110 +150,55 @@ class AudioManager: AudioManaging, ObservableObject {
     }
 
     private func scheduleSequence(_ sequence: MusicSequence) throws {
-        // Log.audio.info("🎶 AudioManager: Scheduling started, tempo=\(sequence.tempo)")
 
         sequencer.stop()
 
-        // Clear old tracks (except tempo)
-        for track in sequencer.tracks.reversed()
-        where track != sequencer.tempoTrack {
+        // Clear old sequencer tracks (keep tempo track)
+        for track in sequencer.tracks.reversed() where track != sequencer.tempoTrack {
             sequencer.removeTrack(track)
         }
 
-        // Get tempo track
+        // Tempo
         let tempoTrack = sequencer.tempoTrack
-        
-        // Remove any previous tempo events (skip if track is empty to avoid error -50)
         if tempoTrack.lengthInBeats > 0 {
             tempoTrack.clearEvents(in: AVMakeBeatRange(0, tempoTrack.lengthInBeats))
         }
-        
-        // Insert the new tempo event
-        tempoTrack.addEvent(
-            AVExtendedTempoEvent(tempo: sequence.tempo),
-            at: AVMusicTimeStamp(0)
-        )
-        
-        // Keep the global speed-multiplier at 1×
+        tempoTrack.addEvent(AVExtendedTempoEvent(tempo: sequence.tempo), at: 0)
         sequencer.rate = 1.0
 
-        // Detach previous track samplers
-        for ts in trackSamplers {
-            audioEngine.detach(ts)
-        }
-        trackSamplers.removeAll()
-
-        // Create and setup samplers for each track
-        guard let soundFontURL = loadSoundFont() else {
-            throw AudioError.soundFontNotFound
-        }
-
+        // Map instruments -> programs once
         let instrumentPrograms = Instruments.getInstrumentPrograms()
 
-        for (index, track) in sequence.tracks.enumerated() {
-            let trackSampler = AVAudioUnitSampler()
-            audioEngine.attach(trackSampler)
-            audioEngine.connect(trackSampler, to: audioEngine.mainMixerNode, format: nil)
-            
-            let program = instrumentPrograms[track.instrument] ?? 0
-            do {
-                try trackSampler.loadSoundBankInstrument(at: soundFontURL, program: program, bankMSB: 0x79, bankLSB: 0)
-                // Log.audio.info("🎵 AudioManager: Track \(index, privacy: .public): Successfully loaded soundbank")
-            } catch {
-                Log.audio.error("❌ AudioManager: Track \(index): Failed to load instrument \(track.instrument): \(error.localizedDescription)")
-                throw AudioError.instrumentLoadFailed(track.instrument, error.localizedDescription)
-            }
-            trackSamplers.append(trackSampler)
-        }
-        
-        // Create AVAudioSequencer tracks and schedule events
+        // Create sequencer tracks and hook them to pooled samplers (no reloads if cached)
         for (trackIndex, track) in sequence.tracks.enumerated() {
             let sequencerTrack = sequencer.createAndAppendTrack()
-            let trackSampler = trackSamplers[trackIndex]
-            
-            // Connect the sequencer track to our sampler
-            sequencerTrack.destinationAudioUnit = trackSampler
+
+            let program = UInt8(instrumentPrograms[track.instrument] ?? 0)
+            let bankSel = bank(forInstrument: track.instrument)
+            let samplerForTrack = try ensureSampler(program: program, bankMSB: bankSel.msb, bankLSB: bankSel.lsb)
+
+            sequencerTrack.destinationAudioUnit = samplerForTrack
 
             var eventCount = 0
             for event in track.events {
-                let startTime = event.time  // Already in beats
-                let duration = event.dur    // Already in beats
-                let velocity = UInt8(event.vel ?? 100)
+                let start = AVMusicTimeStamp(event.time)
+                let dur   = AVMusicTimeStamp(event.dur)
+                let vel   = UInt32(UInt8(event.vel ?? 100))
 
                 for pitch in event.pitches {
-                    let midiNote = UInt8(pitch.midiValue)
-                    
-                    // Create MIDI note event (times are in beats)
-                    let noteEvent = AVMIDINoteEvent(
-                        channel: 0,
-                        key: UInt32(midiNote),
-                        velocity: UInt32(velocity),
-                        duration: AVMusicTimeStamp(duration)
-                    )
-                    
-                    // Add to track at specified time (in beats)
-                    sequencerTrack.lengthInBeats = max(sequencerTrack.lengthInBeats, AVMusicTimeStamp(startTime + duration))
-                    let timeStamp = AVMusicTimeStamp(startTime)
-                    sequencerTrack.addEvent(noteEvent, at: timeStamp)
+                    let note = UInt32(UInt8(pitch.midiValue))
+                    let midi = AVMIDINoteEvent(channel: 0, key: note, velocity: vel, duration: dur)
+                    sequencerTrack.lengthInBeats = max(sequencerTrack.lengthInBeats, start + dur)
+                    sequencerTrack.addEvent(midi, at: start)
                     eventCount += 1
                 }
             }
-            Log.audio.info("🎵 AudioManager: Track \(trackIndex): \(track.instrument) sampler, \(eventCount) MIDI events, \(String(format: "%.1f", sequencerTrack.lengthInBeats)) beats")
+            Log.audio.info("🎵 AudioManager: Track \(trackIndex): \(track.instrument) sampler, \(eventCount) events, \(String(format: "%.1f", sequencerTrack.lengthInBeats)) beats")
         }
-        
-        // Prepare and start the sequencer
+
         sequencer.prepareToPlay()
-
-        // Reset position to start of sequence
         sequencer.currentPositionInBeats = 0.0
-
-        do {
-            try sequencer.start()
-            // Log.audio.info("🎶 AudioManager: AVAudioSequencer started")
-        } catch {
-            Log.audio.error("❌ AudioManager: Sequencer failed to start - \(error.localizedDescription)")
-            throw AudioError.sequencerStartFailed(error.localizedDescription)
-        }
+        try sequencer.start()
     }
 
     func playNote(midiNote: UInt8, velocity: UInt8 = 100) {
@@ -280,7 +232,6 @@ class AudioManager: AudioManaging, ObservableObject {
         }
     }
 
-    // MARK: - Elapsed Time Updates
     private func startElapsedTimeUpdates() {
         stopElapsedTimeUpdates()                        // ensure single timer
 
@@ -314,12 +265,12 @@ class AudioManager: AudioManaging, ObservableObject {
         currentlyPlayingInstrument = nil
 
         sequencer.stop()
+
+        // All Notes Off on every sampler we’ve ever created, but keep them alive
         sampler.sendController(123, withValue: 0, onChannel: 0)
-        for ts in trackSamplers {
-            ts.sendController(123, withValue: 0, onChannel: 0)
-            audioEngine.detach(ts)
+        for s in samplerPool.values {
+            s.sendController(123, withValue: 0, onChannel: 0)
         }
-        trackSamplers.removeAll()
 
         stopElapsedTimeUpdates()
     }
@@ -354,5 +305,27 @@ class AudioManager: AudioManaging, ObservableObject {
         if actualElapsed >= totalDuration + playbackTailTime {
             tailCompleted()
         }
+    }
+
+    @inline(__always)
+    private func bank(forInstrument instrument: String) -> (msb: UInt8, lsb: UInt8) {
+        // GM melodic by default. To add drums return (0x78, 0) for those.
+        return (0x79, 0)
+    }
+
+    private func ensureSampler(program: UInt8, bankMSB: UInt8 = 0x79, bankLSB: UInt8 = 0) throws -> AVAudioUnitSampler {
+        let key = SamplerKey(program: program, bankMSB: bankMSB, bankLSB: bankLSB)
+        if let existing = samplerPool[key] { return existing }
+        guard let soundFontURL = loadSoundFont() else { throw AudioError.soundFontNotFound }
+
+        let s = AVAudioUnitSampler()
+        audioEngine.attach(s)
+        audioEngine.connect(s, to: audioEngine.mainMixerNode, format: nil)
+
+        // This is realy slow, so we cache it
+        try s.loadSoundBankInstrument(at: soundFontURL, program: program, bankMSB: bankMSB, bankLSB: bankLSB)
+
+        samplerPool[key] = s
+        return s
     }
 }
