@@ -28,7 +28,8 @@ struct PresetPicker: View {
                         onPresetSelected()
                     }
                 ),
-                color: nil
+                color: nil,
+                menuWidth: 300
             )
         } else {
             Text("No presets available")
