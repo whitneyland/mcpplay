@@ -64,7 +64,6 @@ class AudioManager: AudioManaging, ObservableObject {
     private var audioEngine: AVAudioEngine
     private var sampler: AVAudioUnitSampler
     private var trackSamplers: [AVAudioUnitSampler] = []
-    private var sequenceLength: TimeInterval = 0.0
     private var currentTempo: Double = 120.0
     private var displayTimer: Timer?
     private var playbackStartTicks: CFTimeInterval?
@@ -119,8 +118,7 @@ class AudioManager: AudioManaging, ObservableObject {
             let maxEndBeat = sequence.tracks
                 .flatMap { $0.events.map { $0.time + $0.dur } }
                 .max() ?? 0
-            sequenceLength = maxEndBeat * beat
-            totalDuration  = sequenceLength
+            totalDuration = maxEndBeat * beat
 
             currentlyPlayingTitle       = sequence.title ?? "Untitled Sequence"
             currentlyPlayingInstrument  = sequence.tracks.first?.instrument
@@ -129,7 +127,7 @@ class AudioManager: AudioManaging, ObservableObject {
             playbackStartTicks = CACurrentMediaTime()
             try scheduleSequence(sequence)
             startElapsedTimeUpdates()
-            Log.audio.info("🎶 AudioManager: Audio playback started")
+            Log.audio.info("🎶 AudioManager: Audio playback started, total duration: \(String(format: "%.1f", totalDuration)) seconds")
             playbackState = .playing
 
             // ── 4. Publish prettified JSON to the editor pane ─────
@@ -165,7 +163,7 @@ class AudioManager: AudioManaging, ObservableObject {
         
         // Insert the new tempo event
         tempoTrack.addEvent(
-            AVExtendedTempoEvent(tempo: sequence.tempo),   // <-- <-- the right class
+            AVExtendedTempoEvent(tempo: sequence.tempo),
             at: AVMusicTimeStamp(0)
         )
         
@@ -233,7 +231,7 @@ class AudioManager: AudioManaging, ObservableObject {
                     eventCount += 1
                 }
             }
-            Log.audio.info("🎵 AudioManager: Track \(trackIndex): \(track.instrument) sampler, added \(eventCount) MIDI events, length \(String(format: "%.3f", sequencerTrack.lengthInBeats)) beats")
+            Log.audio.info("🎵 AudioManager: Track \(trackIndex): \(track.instrument) sampler, \(eventCount) MIDI events, \(String(format: "%.1f", sequencerTrack.lengthInBeats)) beats")
         }
         
         // Prepare and start the sequencer
@@ -276,11 +274,8 @@ class AudioManager: AudioManaging, ObservableObject {
                 }
             }
             // Convert to actual time using tempo
-            let duration = maxEndTime * beatDuration
-            sequenceLength = duration
-            totalDuration = duration
+            totalDuration = maxEndTime * beatDuration
         } catch {
-            sequenceLength = 0
             totalDuration = 0
         }
     }
@@ -336,24 +331,27 @@ class AudioManager: AudioManaging, ObservableObject {
 
     // Keep running even after UI flips to .stopped so we can finish the tail.
     private func updateElapsedTime() {
-        guard sequenceLength > 0 else { return }
+        guard totalDuration > 0 else {
+            Log.audio.error("❌ AudioManager: updateElapsedTime called with zero duration")
+            return
+        }
 
         let beatDuration  = 60.0 / currentTempo
         let actualElapsed = sequencer.currentPositionInBeats * beatDuration
 
         // Musical time exposed to the UI (cap at score length)
-        let musicalElapsed = min(actualElapsed, sequenceLength)
+        let musicalElapsed = min(actualElapsed, totalDuration)
         elapsedTime        = musicalElapsed
-        progress           = musicalElapsed / sequenceLength
+        progress           = musicalElapsed / totalDuration
 
         // As soon as the score is done, tell the UI we're stopped.
-        if playbackState == .playing, actualElapsed >= sequenceLength {
+        if playbackState == .playing, actualElapsed >= totalDuration {
             playbackState = .stopped
-            Log.audio.info("🎶 AudioManager: Playback completed \(self.sequenceLength.asTimeString) seconds")
+            Log.audio.info("🎶 AudioManager: Playback completed \(self.totalDuration.asTimeString) seconds")
         }
 
         // When the tail has fully decayed, finish teardown.
-        if actualElapsed >= sequenceLength + playbackTailTime {
+        if actualElapsed >= totalDuration + playbackTailTime {
             tailCompleted()
         }
     }
