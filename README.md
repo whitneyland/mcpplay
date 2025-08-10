@@ -15,7 +15,17 @@ RiffMCP is an MCP server that allows LLMs to create and render music
 - Add RiffMCP to Claude Desktop, Gemini CLI, or any LLM that supports MCP servers (see *Setup* below).  
 - Once configured, you can chat with the LLM to generate music or view the rendered output.  
 
-## Watch demo
+<p align="center">
+  <img src="https://raw.githubusercontent.com/whitneyland/riffmcp/main/docs/images/claude.jpg" alt="Claude" width="30%">
+  &nbsp;&nbsp;&nbsp;
+  <img src="https://raw.githubusercontent.com/whitneyland/riffmcp/main/docs/images/gemini.jpg" alt="Gemini" width="30%">
+</p>
+
+## Demo
+
+<a href="https://youtu.be/Ksfw34dtIro?si=UilcE5AulSvaB_63">
+  <img src="https://raw.githubusercontent.com/whitneyland/riffmcp/main/docs/images/demo.PNG" alt="Watch the video" width="50%">
+</a>
 
 ## Usage examples
 - “Play a happy melody” or “Play a sad melody”  
