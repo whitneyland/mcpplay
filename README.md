@@ -12,10 +12,11 @@ RiffMCP is an MCP server that allows LLMs to play, compose, and render music.
 - Supports basic sheet music rendering  
 
 ## Watch Demo
-
+<p align="center">
 <a href="https://youtu.be/Ksfw34dtIro?si=UilcE5AulSvaB_63">
   <img src="https://raw.githubusercontent.com/whitneyland/riffmcp/main/docs/images/demo.PNG" alt="Watch the video" width="50%">
 </a>
+</p>
 
 ## How It works
 - Add RiffMCP to Claude Desktop, Gemini CLI, or any LLM that supports MCP servers (see *Setup* below).  
@@ -23,7 +24,7 @@ RiffMCP is an MCP server that allows LLMs to play, compose, and render music.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/whitneyland/riffmcp/main/docs/images/claude.jpg" alt="Claude" width="30%">
-  &nbsp;&nbsp;&nbsp;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <img src="https://raw.githubusercontent.com/whitneyland/riffmcp/main/docs/images/gemini.jpg" alt="Gemini" width="30%">
 </p>
 
