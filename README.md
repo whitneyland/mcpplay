@@ -20,7 +20,7 @@ RiffMCP is an MCP server that allows LLMs to play, compose, and render music.
 
 ## Overview
 - Local MCP server that runs as a native macOS app  
-- Handles the MCP stdio protocol, which is routed to a built-in HTTP server  
+- Uses MCP stdio protocol which is routed to a built-in HTTP server  
 - Defines a JSON-based music sequence format used between the LLM and the MCP server  
 - Multi-track music is played back using a high quality soundfont  
 - Supports basic sheet music rendering  
