@@ -63,11 +63,10 @@ RiffMCP is an MCP server that allows LLMs to play, compose, and render music.
 - In addition to MCP functionality, I wanted an interface that allows monitoring MCP activity, a simple JSON editor for experimentation, and a piano roll to see how playback is working.  
 - The challenge became how to implement MCP stdio protocol, an HTTP server, and a GUI simultaneously *without* any Node.js/Electron dependencies or separate daemon processes. The goal is to have only one native app running.  
 - The solution was to use a [smart app / proxy mode architecture](docs/proxy-mode.md).  
-<br>
 
 # Setup
 
-1. [Download & open .dmg]([https://dmg](https://github.com/whitneyland/riffmcp/releases/download/v0.1.0/RiffMCP-0.1.0.dmg))
+1. [Download & open .dmg](https://github.com/whitneyland/riffmcp/releases/download/v0.1.0/RiffMCP-0.1.0.dmg)
 2. Drag app to Applications then run it
 3. Update your LLM config file with 4 lines as shown below, restart the LLM
 4. Try a chat, “Play a happy melody"
