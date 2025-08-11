@@ -86,9 +86,11 @@
                 <i class="ti ti-tool"></i>
                 Why build an MCP server as an app?
             </h2>
-            <li>In addition to MCP functionality, I wanted an interface that allows monitoring MCP activity, a simple JSON editor for experimentation, and a piano roll to see how playback is working.</li>
-            <li>The challenge became how to implement MCP stdio protocol, an HTTP server, and a GUI simultaneously <em>without</em> any Node.js/Electron dependencies or separate daemon processes. The goal is to have only one native app running.</li>
-            <li>The solution was to use a <a href="proxy-mode.md">smart app / proxy mode architecture</a>.</li>
+            <ul>
+                <li>In addition to MCP functionality, I wanted an interface that allows monitoring MCP activity, a simple JSON editor for experimentation, and a piano roll to see how playback is working.</li>
+                <li>The challenge became how to implement MCP stdio protocol, an HTTP server, and a GUI simultaneously <em>without</em> any Node.js/Electron dependencies or separate daemon processes. The goal is to have only one native app running.</li>
+                <li>The solution was to use a <a href="proxy-mode.md">smart app / proxy mode architecture</a>.</li>
+            </ul>
         </article>
 
         <article class="content-card">
