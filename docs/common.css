@@ -1266,7 +1266,7 @@ dialog::backdrop {
 
     .header-section {
         padding: 0 20px;
-        margin-top: 150px;
+        margin-top: 0px;
     }
 
     .header-content {

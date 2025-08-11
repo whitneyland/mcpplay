@@ -18,15 +18,16 @@
         <div class="header-content">            
             <div class="header-text">
                 <h1><img src="images/icon-128.png" alt="RiffMCP" style="width: 96px; height: 96px; vertical-align: middle; margin-right: 8px;"> RiffMCP</h1>
-                <h2>LLM Music generation via Model Context Protocol</h2>
+                <h2>MCP Music generation for LLMs</h2>
             </div>
         </div>
     </div>
-
     <main>
         <div class="content-card">
-            <h3 style="color: white;">RiffMCP is an MCP server that allows LLMs to create and render music.</h3>
-            <a href="images/riffmcp_screenshot_1.png"><img src="images/riffmcp_screenshot_1.png" alt="RiffMCP screenshot 1" style="width: 800px; height: auto;"></a>
+            <h3 style="color: white;">                
+                RiffMCP is an MCP server that allows LLMs to play, compose, and render music
+            </h3>
+            <a href="images/riffmcp_screenshot_1.png"><img src="images/riffmcp_screenshot_1.png" alt="RiffMCP screenshot 1" style="max-width: 100%; height: auto;"></a>
         </div>
 
         <article class="content-card">
@@ -45,6 +46,18 @@
 
         <article class="content-card">
             <h2>
+                <i class="ti ti-video"></i>
+                Watch Demo
+            </h2>
+            <p align="center">
+                <a href="https://youtu.be/Ksfw34dtIro?si=UilcE5AulSvaB_63">
+                    <img src="https://raw.githubusercontent.com/whitneyland/riffmcp/main/docs/images/demo.PNG" alt="Watch the video" width="50%">
+                </a>
+            </p>
+        </article>
+
+        <article class="content-card">
+            <h2>
                 <i class="ti ti-automation"></i>
                 How it works
             </h2>
@@ -52,25 +65,12 @@
                 <li>Add RiffMCP to Claude Desktop, Gemini CLI, or any LLM that supports MCP servers (see <a href="#setup">setup</a> below).</li>
                 <li>Once configured, you can chat with the LLM to generate music or view the rendered output.</li>
                 <p align="center">
-  <img src="https://raw.githubusercontent.com/whitneyland/riffmcp/main/docs/images/claude.jpg" alt="Claude" width="30%">
-  &nbsp;&nbsp;&nbsp;
-  <img src="https://raw.githubusercontent.com/whitneyland/riffmcp/main/docs/images/gemini.jpg" alt="Gemini" width="30%">
-</p>
+                    <img src="https://raw.githubusercontent.com/whitneyland/riffmcp/main/docs/images/claude.jpg" alt="Claude" width="30%">
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    <img src="https://raw.githubusercontent.com/whitneyland/riffmcp/main/docs/images/gemini.jpg" alt="Gemini" width="30%">
+                </p>
             </ul>
-                
             <h2>
-                <i class="ti ti-video"></i>
-                Demo
-                <a href="https://youtu.be/Ksfw34dtIro?si=UilcE5AulSvaB_63">
-  <img src="https://raw.githubusercontent.com/whitneyland/riffmcp/main/docs/images/demo.PNG" alt="Watch the video" width="50%">
-</a>
-            </h2>
-            
-        </article>
-
-        <article class="content-card">
-            <h2>
-                <i class="ti ti-music"></i>
                 Usage examples
             </h2>
             <ul>
@@ -81,7 +81,6 @@
                 <li>"What instruments are available?"</li>
             </ul>
         </article>
-
         <article class="content-card">
             <h2>
                 <i class="ti ti-tool"></i>
@@ -140,6 +139,16 @@
             </ul>
         </article>
 
+        <article class="content-card">
+            <h2>
+                Limitations
+            </h2>
+            <ul>
+                <li>Sheet music rendering uses the powerful Verovio engine, but not all features are implemented. Still needs triplets, multi-page output, etc.</li>
+                <li>Web server is a minimal hand-rolled implementation. swift-nio may be added as a more scalable/robust component.</li>
+            </ul>
+        </article>
+        
         <article class="content-card">
             <h2>
                 <i class="ti ti-brand-github"></i>

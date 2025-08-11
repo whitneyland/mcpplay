@@ -1,6 +1,6 @@
 # RiffMCP
 
-RiffMCP is an MCP server that allows LLMs to create and render music
+RiffMCP is an MCP server that allows LLMs to play, compose, and render music.
 
 [![RiffMCP screenshot 1](docs/images/riffmcp_screenshot_1.png)](docs/images/riffmcp_screenshot_1.png)
 
@@ -11,6 +11,12 @@ RiffMCP is an MCP server that allows LLMs to create and render music
 - Multi-track music is played back using a high quality soundfont  
 - Supports basic sheet music rendering  
 
+## Watch Demo
+
+<a href="https://youtu.be/Ksfw34dtIro?si=UilcE5AulSvaB_63">
+  <img src="https://raw.githubusercontent.com/whitneyland/riffmcp/main/docs/images/demo.PNG" alt="Watch the video" width="50%">
+</a>
+
 ## How It works
 - Add RiffMCP to Claude Desktop, Gemini CLI, or any LLM that supports MCP servers (see *Setup* below).  
 - Once configured, you can chat with the LLM to generate music or view the rendered output.  
@@ -20,12 +26,6 @@ RiffMCP is an MCP server that allows LLMs to create and render music
   &nbsp;&nbsp;&nbsp;
   <img src="https://raw.githubusercontent.com/whitneyland/riffmcp/main/docs/images/gemini.jpg" alt="Gemini" width="30%">
 </p>
-
-## Demo
-
-<a href="https://youtu.be/Ksfw34dtIro?si=UilcE5AulSvaB_63">
-  <img src="https://raw.githubusercontent.com/whitneyland/riffmcp/main/docs/images/demo.PNG" alt="Watch the video" width="50%">
-</a>
 
 ## Usage examples
 - “Play a happy melody” or “Play a sad melody”  
@@ -89,10 +89,10 @@ First, add RiffMCP.app to the Applications folder and run it. The HTTP server st
 - Press the Play button
 <br><br>
 
-## Further work
-- The sheet music rendering uses the powerful Verovio engine but at this point it's a basic implementation. For example triplets are not acuurately represented and display output is single page.
-- The web server is a minimal, hand-rolled implementation. Eventually it would make sense to swap it out for a more scalable/robust component.
-
+# Limitations
+- Sheet music rendering uses the powerful Verovio engine, but not all features are implemented. Still needs triplets, multi-page output, etc.
+- Web server is a minimal hand-rolled implementation. swift-nio may be added as a more scalable/robust component.
+<br><br>
 # License
 - Apache License, Version 2.0
 - Copyright 2025 Lee Whitney
