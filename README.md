@@ -114,12 +114,22 @@ RiffMCP is an MCP server that allows LLMs to play, compose, and render music.
 - This will prompt any LLM to generate RiffMCP json format
 - Copy the output and paste it into the json editor window in the RiffMCP app
 - Press the Play button
-<br><br>
+<br>
 
 # Limitations
 - Sheet music rendering uses the powerful Verovio engine, but not all features are implemented. Still needs triplets, multi-page output, etc.
 - Web server is a minimal hand-rolled implementation. swift-nio may be added as a more scalable/robust component.
-<br><br>
+<br>
+
+# Roadmap
+- Drive external MIDI devices
+- MusicXML support
+- Add support for triplets, multi-page output, more MEI notation features
+- Upgrade web server to use `swift-nio` to be more scalable/robust
+
+# Privacy
+- All playback is local; no audio or prompts leave your Mac
+- No analytics or telemetry
 
 # License
 - Apache License, Version 2.0
