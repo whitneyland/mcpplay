@@ -67,7 +67,7 @@ RiffMCP is an MCP server that allows LLMs to play, compose, and render music.
 
 # Setup
 
-1. [Download & open .dmg](https://dmg)
+1. [Download & open .dmg]([https://dmg](https://github.com/whitneyland/riffmcp/releases/download/v0.1.0/RiffMCP-0.1.0.dmg))
 2. Drag app to Applications then run it
 3. Update your LLM config file with 4 lines as shown below, restart the LLM
 4. Try a chat, “Play a happy melody"
