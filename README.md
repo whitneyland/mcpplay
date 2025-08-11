@@ -5,14 +5,14 @@ RiffMCP is an MCP server that allows LLMs to play, compose, and render music.
 <table>
     <tr>
         <td width="63%">
-        <a href="images/riffmcp_screenshot_1a.png">
-            <img src="images/riffmcp_screenshot_1a.png" alt="RiffMCP screenshot 1a" width="100%">
+        <a href="docs/images/riffmcp_screenshot_1a.png">
+            <img src="docs/images/riffmcp_screenshot_1a.png" alt="RiffMCP screenshot 1a" width="100%">
         </a>
         </td>
         <td>&nbsp;</td>
         <td width="35%">
-        <a href="images/opus41passion.png">
-            <img src="images/opus41passion.png" alt="Opus 4.1 music composition" width="100%">
+        <a href="docs/images/opus41passion.png">
+            <img src="docs/images/opus41passion.png" alt="Opus 4.1 music composition" width="100%">
         </a>
         </td>
     </tr>
@@ -28,7 +28,7 @@ RiffMCP is an MCP server that allows LLMs to play, compose, and render music.
 ## Watch Demo
 <p align="center">
     <a href="https://youtu.be/Ksfw34dtIro?si=UilcE5AulSvaB_63">
-        <img src="images/watchdemo.png" alt="Watch the demo video" width="70%">
+        <img src="docs/images/watchdemo.png" alt="Watch the demo video" width="70%">
     </a>
 </p>
 
@@ -39,14 +39,14 @@ RiffMCP is an MCP server that allows LLMs to play, compose, and render music.
 <table>
     <tr>
         <td width="45%">
-        <a href="images/claude.jpg">
-            <img src="images/claude.jpg" alt="Using RiffMCP with Claude" width="100%">
+        <a href="docs/images/claude.jpg">
+            <img src="docs/images/claude.jpg" alt="Using RiffMCP with Claude" width="100%">
         </a>
         </td>
         <td width="5%">&nbsp;</td>
         <td width="45%">
-        <a href="images/gemini.jpg">
-            <img src="images/gemini.jpg" alt="Using RiffMCP with Gemini CLI" width="100%">
+        <a href="docs/images/gemini.jpg">
+            <img src="docs/images/gemini.jpg" alt="Using RiffMCP with Gemini CLI" width="100%">
         </a>
         </td>
     </tr>
