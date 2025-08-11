@@ -26,7 +26,6 @@
 /* Begin PBXFileReference section */
 		9B5BB77E2DF4AF03003EC64C /* RiffMCP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RiffMCP.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9B7949022E24873600DA0B1A /* RiffMCPTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RiffMCPTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		9B7949112E2490E100DA0B1A /* RiffMCP.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = RiffMCP.xctestplan; sourceTree = "<group>"; };
 		9BA506EC2E01DC00000EFB3E /* lib/libverovio.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = lib/libverovio.a; sourceTree = "<group>"; };
 		9BAECE302E0F04620054DBE2 /* CREDITS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CREDITS.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -73,7 +72,6 @@
 		9B5BB7752DF4AF03003EC64C = {
 			isa = PBXGroup;
 			children = (
-				9B7949112E2490E100DA0B1A /* RiffMCP.xctestplan */,
 				9BAECE302E0F04620054DBE2 /* CREDITS.md */,
 				9B5BB7802DF4AF03003EC64C /* RiffMCP */,
 				9B7949032E24873600DA0B1A /* RiffMCPTests */,
@@ -388,7 +386,7 @@
 				CODE_SIGN_ENTITLEMENTS = RiffMCP/RiffMCP.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = Z9P2U4WT64;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -429,7 +427,7 @@
 				CODE_SIGN_ENTITLEMENTS = RiffMCP/RiffMCP.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = Z9P2U4WT64;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;

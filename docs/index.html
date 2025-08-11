@@ -18,7 +18,7 @@
         <div class="header-content">            
             <div class="header-text">
                 <h1><img src="images/icon-128.png" alt="RiffMCP" style="width: 96px; height: 96px; vertical-align: middle; margin-right: 8px;"> RiffMCP</h1>
-                <h2>MCP Music generation for LLMs</h2>
+                <h2>MCP Music tools for LLMs</h2>
             </div>
         </div>
     </div>
@@ -27,7 +27,21 @@
             <h3 style="color: white;">                
                 RiffMCP is an MCP server that allows LLMs to play, compose, and render music
             </h3>
-            <a href="images/riffmcp_screenshot_1.png"><img src="images/riffmcp_screenshot_1.png" alt="RiffMCP screenshot 1" style="max-width: 100%; height: auto;"></a>
+            <table>
+                <tr>
+                    <td width="63%">
+                    <a href="images/riffmcp_screenshot_1a.png">
+                        <img src="images/riffmcp_screenshot_1a.png" alt="RiffMCP screenshot 1a" width="100%">
+                    </a>
+                    </td>
+                    <td>&nbsp;</td>
+                    <td width="35%">
+                    <a href="images/opus41passion.png">
+                        <img src="images/opus41passion.png" alt="Opus 4.1 music composition" width="100%">
+                    </a>
+                    </td>
+                </tr>
+            </table>
         </div>
 
         <article class="content-card">
@@ -36,7 +50,7 @@
                 Overview
             </h2>
             <ul>
-                <li>Local MCP server that runs as a macOS app</li>
+                <li>Local MCP server that runs as a native macOS app</li>
                 <li>Handles the MCP stdio protocol, which is routed to a built-in HTTP server</li>
                 <li>Defines a JSON-based music sequence format used between the LLM and the MCP server</li>
                 <li>Multi-track music is played back using a high quality soundfont</li>
@@ -51,7 +65,7 @@
             </h2>
             <p align="center">
                 <a href="https://youtu.be/Ksfw34dtIro?si=UilcE5AulSvaB_63">
-                    <img src="https://raw.githubusercontent.com/whitneyland/riffmcp/main/docs/images/demo.PNG" alt="Watch the video" width="50%">
+                    <img src="images/watchdemo.png" alt="Watch the demo video" width="70%">
                 </a>
             </p>
         </article>
@@ -64,11 +78,21 @@
             <ul>
                 <li>Add RiffMCP to Claude Desktop, Gemini CLI, or any LLM that supports MCP servers (see <a href="#setup">setup</a> below).</li>
                 <li>Once configured, you can chat with the LLM to generate music or view the rendered output.</li>
-                <p align="center">
-                    <img src="https://raw.githubusercontent.com/whitneyland/riffmcp/main/docs/images/claude.jpg" alt="Claude" width="30%">
-                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                    <img src="https://raw.githubusercontent.com/whitneyland/riffmcp/main/docs/images/gemini.jpg" alt="Gemini" width="30%">
-                </p>
+            <table>
+                <tr>
+                    <td width="45%">
+                    <a href="images/claude.jpg">
+                        <img src="images/claude.jpg" alt="Using RiffMCP with Claude" width="100%">
+                    </a>
+                    </td>
+                    <td width="5%">&nbsp;</td>
+                    <td width="45%">
+                    <a href="images/gemini.jpg">
+                        <img src="images/gemini.jpg" alt="Using RiffMCP with Gemini CLI" width="100%">
+                    </a>
+                    </td>
+                </tr>
+            </table>
             </ul>
             <h2>
                 Usage examples
@@ -96,13 +120,15 @@
         <article class="content-card">
             <h2 id="setup">
                 <i class="ti ti-settings"></i>
-                Setup
+                Quickstart Setup
             </h2>
-            
-            <h3>RiffMCP</h3>
-            <p>First, add RiffMCP.app to the Applications folder and run it. The HTTP server starts automatically on port 3001. Next, configure an LLM to use it.</p>
-
-            <h3>Setup with Claude Desktop</h3>
+            <ol style="color: white;">
+                <li><a href="https://dmg">Download & open .dmg</a></li>
+                <li>Drag app to Applications then run it</li>
+                <li>Update your LLM config file with 4 lines as shown below, restart the LLM</li>
+                <li>Try a chat, “Play a happy melody"</li>
+            </ol>
+            <h3>Add RiffMCP to Claude Desktop</h3>
             <p>Add this to your Claude Desktop app configuration file:</p>
             <p><strong>Location:</strong> <code>~/Library/Application Support/Claude/claude_desktop_config.json</code></p>
             <p>Create or extend the top-level "mcpServers" object:</p>
@@ -116,7 +142,7 @@
 }</code></pre>
             <p><strong>Restart Claude Desktop</strong> to activate the configuration.</p>
 
-            <h3>Setup with Gemini CLI</h3>
+            <h3>Add RiffMCP to Gemini CLI</h3>
             <ol>
                 <li><strong>Edit &lt;project&gt;/.gemini/settings.json</strong></li>
                 <li><strong>Create or extend the top-level "mcpServers" object:</strong></li>
@@ -133,7 +159,7 @@
 
             <h3>For LLMs that don't support MCP servers</h3>
             <ul>
-                <li>Grab the prompt from <code><a href="prompts/PROMPT_PIANO.md">PROMPT_PIANO.md</a></code> or <code><a href="prompts/PROMPT_MULTITRACK.md">PROMPT_MULTITRACK.md</a></code></li>
+                <li>Grab a prompt from <code><a href="prompts/PROMPT_PIANO.md">PROMPT_PIANO.md</a></code> or <code><a href="prompts/PROMPT_MULTITRACK.md">PROMPT_MULTITRACK.md</a></code></li>
                 <li>This will prompt any LLM to generate RiffMCP json format</li>
                 <li>Copy the output and paste it into the json editor window in the RiffMCP app</li>
                 <li>Press the Play button</li>

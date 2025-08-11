@@ -38,6 +38,14 @@
     }
 }
 
+@media (max-width: 600px) {
+  pre, code {
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+}
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -634,6 +642,8 @@ main {
     border: 1px solid var(--border-light);
     box-shadow: var(--shadow-medium);
     transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    word-break: break-word;
+    overflow-wrap: anywhere;
 }
 
 .content-card:first-child {
